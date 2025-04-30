@@ -13,7 +13,7 @@ interface ResultsTableProps {
 const ResultsTable: React.FC<ResultsTableProps> = ({ title, data }) => {
   // Verifica se há dados para exibir
   if (!data || data.length === 0) {
-    return <p>Sem dados para exibir para "{title}".</p>;
+    return <p>Sem dados para exibir para {title}.</p>;
   }
 
   // Pega os cabeçalhos (nomes das colunas) a partir das chaves do primeiro objeto de dados
