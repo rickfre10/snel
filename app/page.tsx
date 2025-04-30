@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
-import DistrictBarChart from '../components/CandidateDisplay'; // Ou CandidateDisplay; se já o criou
+import DistrictBarChart from '../components/DistrictBarChart'; 
 import ProportionalPieChart from '../components/ProportionalPieChart';
 // --- Importar tipos e DADOS ESTÁTICOS ---
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption } from '../types/election'; // Importar tipos
@@ -185,7 +185,8 @@ const districtResults = useMemo(() => {
                  {/* 2. Gráfico de Barras */}
                  <DistrictBarChart
                    data={districtResults.votes}
-                   leadingId={districtResults.leadingCandidateId} 
+                   colorMap={coalitionColorMap}
+             
                  />
                </div>
             ) : (
