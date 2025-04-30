@@ -59,12 +59,12 @@ const CandidateDisplay: React.FC<CandidateDisplayProps> = ({ data, leadingId }) 
                             alt={candidate.candidate_name}
                             className="w-full h-full rounded-full object-cover border border-gray-300"
                             onError={(e) => {
-                                // Placeholder simples em caso de erro na imagem
+                          
                                 e.currentTarget.style.display = 'none';
                                 const placeholder = e.currentTarget.nextElementSibling;
                                 if (placeholder) placeholder.classList.remove('hidden');
                             } } />
-                            // Adiciona um placeholder oculto que aparece se a imagem falhar
+                            
                             <div className="hidden w-full h-full rounded-full bg-gray-300 flex items-center justify-center text-gray-500">?</div></>
               ) : (
                 // Placeholder padrão se não houver foto
