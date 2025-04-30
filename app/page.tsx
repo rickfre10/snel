@@ -9,6 +9,16 @@ import ProportionalPieChart from '../components/ProportionalPieChart';
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption } from '../types/election'; // Importar tipos
 import { districtsData, partyData } from '../lib/staticData'; // Importar DADOS ESTÁTICOS
 
+const parseNumber = (value: any): number => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const cleanedStr = value.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(cleanedStr);
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
+};
+
 // Interface para os dados de VOTOS vindos da API (não inclui mais estáticos)
 interface ApiVotesData {
   time: number;
@@ -108,6 +118,33 @@ const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         parseInt(String(vote.district_id), 10) === selectedDistrict
     );
   }, [apiVotesData?.candidateVotes, selectedDistrict]);
+
+// Calcular total, %, e líder
+const districtResults = useMemo(() => {
+  if (!filteredCandidateVotes || filteredCandidateVotes.length === 0) {
+    return { votes: [], totalVotes: 0, leadingCandidateId: null };
+  }
+  // Garante que votes_qtn seja número aqui
+  const votesWithNumeric = filteredCandidateVotes.map(v => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
+
+  const totalVotes = votesWithNumeric.reduce((sum, current) => sum + current.numericVotes, 0);
+  let leadingCandidateId: string | number | null = null;
+  let maxVotes = -1;
+
+  const votesWithPercentage = votesWithNumeric.map(vote => {
+      if (vote.numericVotes > maxVotes) {
+          maxVotes = vote.numericVotes;
+          // Use candidate_name como ID fallback se candidate_id não existir/for inconsistente
+          leadingCandidateId = vote.candidate_name;
+      }
+      return {
+        ...vote,
+        percentage: totalVotes > 0 ? ((vote.numericVotes / totalVotes) * 100) : 0,
+      }
+    });
+
+  return { votes: votesWithPercentage, totalVotes, leadingCandidateId };
+}, [filteredCandidateVotes]);
 
   // Filtrar dados proporcionais (agora usa apiVotesData)
   const filteredProportionalVotes = useMemo(() => {

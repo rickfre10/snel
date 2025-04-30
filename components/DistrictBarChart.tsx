@@ -5,6 +5,7 @@ import React from 'react';
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -17,7 +18,8 @@ import {
 // Interface para os dados esperados (deve corresponder à estrutura em page.tsx)
 interface DistrictVoteData {
   candidate_name: string;
-  party_legend?: string; // Usado para legenda ou cor, se disponível
+  parl_front_legend: string | null;
+  party_legend?: string | null; // Usado para legenda ou cor, se disponível
   votes_qtn: number | string; // Pode vir como string, converteremos para número
   // Adicione outras propriedades se precisar delas no tooltip, etc.
   [key: string]: any;
@@ -28,7 +30,7 @@ interface DistrictBarChartProps {
   colorMap: Record<string, string>;
 }
 
-const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data }) => {
+const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data, colorMap }) =>  {
   if (!data || data.length === 0) {
     return <p>Selecione um distrito para ver os resultados.</p>;
   }
@@ -40,6 +42,8 @@ const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data }) => {
   }))
   // Opcional: Ordenar do maior para o menor
   .sort((a, b) => b.votes_qtn - a.votes_qtn);
+
+  const fallbackColor = '#8884d8';
 
   return (
     // ResponsiveContainer ajusta o gráfico ao tamanho do container pai
@@ -63,10 +67,18 @@ const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data }) => {
         <Legend />
         {/* Define a barra. dataKey="votes_qtn" usa essa coluna para o tamanho */}
         {/* 'name' é o que aparece na legenda e tooltip */}
-        <Bar dataKey="votes_qtn" name="Votos" fill="#8884d8">
+        <Bar dataKey="votes_qtn" name="Votos">
              {/* Opcional: mostra o valor em cima/dentro da barra */}
              <LabelList dataKey="votes_qtn" position="right" formatter={(value: number) => value.toLocaleString('pt-BR')} style={{ fill: '#333', fontSize: 10 }}/>
-        
+        {/* Mapeia os dados para criar um Cell colorido para cada barra */}
+        {chartData.map((entry, index) => {
+            // Busca a cor no mapa usando a legenda da frente; usa fallback se não encontrar
+            const color = entry.parl_front_legend ? colorMap[entry.parl_front_legend] : fallbackColor;
+            return <Cell key={`cell-${index}`} fill={color || fallbackColor} />;
+          })}
+           {/* LabelList pode continuar aqui se quiser */}
+           <LabelList dataKey="votes_qtn" position="right" formatter={(value: number) => value.toLocaleString('pt-BR')} style={{ fill: '#333', fontSize: 10 }}/>
+
         </Bar>
          {/* Você poderia adicionar mais <Bar> se tivesse outros dados a comparar */}
       </BarChart>

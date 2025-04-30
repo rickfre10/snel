@@ -15,10 +15,9 @@ interface ProportionalPieChartProps {
   colorMap: Record<string, string>;
 }
 
-// Cores de exemplo - idealmente viriam dos seus dados de partido/frente
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d', '#ffc658'];
+const COLORS_FALLBACK = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'];
 
-const ProportionalPieChart: React.FC<ProportionalPieChartProps> = ({ data }) => {
+const ProportionalPieChart: React.FC<ProportionalPieChartProps> = ({ data, colorMap }) => {
   if (!data || data.length === 0) {
     return <p>Selecione um estado para ver a distribuição proporcional.</p>;
   }
@@ -47,15 +46,16 @@ const ProportionalPieChart: React.FC<ProportionalPieChartProps> = ({ data }) => 
           labelLine={false} // Linha conectando ao label externo (opcional)
           // label={renderCustomizedLabel} // Função para customizar o label (opcional)
           outerRadius={120} // Raio externo
-          fill="#8884d8" // Cor padrão (será sobrescrita pelos Cells)
           dataKey="value" // Chave do objeto de dados que contém o valor numérico
           nameKey="name" // Chave do objeto de dados que contém o nome da fatia
           label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`} // Label simples
         >
-          {/* Mapeia os dados para criar um 'Cell' (fatia) com cor específica */}
-          {chartData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
+           {/* Mapeia os dados para criar um Cell colorido */}
+           {chartData.map((entry, index) => {
+            // Busca a cor no mapa usando o nome da fatia (parl_front_legend); usa fallback
+            const color = colorMap[entry.name] || COLORS_FALLBACK[index % COLORS_FALLBACK.length];
+            return <Cell key={`cell-${index}`} fill={color} />;
+          })}
         </Pie>
         <Tooltip formatter={(value: number) => `${value.toLocaleString('pt-BR')} votos`} />
         <Legend />
