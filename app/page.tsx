@@ -180,6 +180,7 @@ const districtResults = useMemo(() => {
                  <CandidateDisplay
                    data={districtResults.votes}
                    leadingId={districtResults.leadingCandidateId} 
+                   colorMap={coalitionColorMap}
                    />
 
                  {/* 2. Gráfico de Barras */}
