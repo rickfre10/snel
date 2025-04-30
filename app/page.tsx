@@ -3,11 +3,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
-import DistrictBarChart from '../components/DistrictBarChart'; // Ou CandidateDisplay se já o criou
+import DistrictBarChart from '../components/CandidateDisplay'; // Ou CandidateDisplay; se já o criou
 import ProportionalPieChart from '../components/ProportionalPieChart';
 // --- Importar tipos e DADOS ESTÁTICOS ---
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption } from '../types/election'; // Importar tipos
 import { districtsData, partyData } from '../lib/staticData'; // Importar DADOS ESTÁTICOS
+import CandidateDisplay from '../components/CandidateDisplay';
 
 const parseNumber = (value: any): number => {
   if (typeof value === 'number') return value;
@@ -153,44 +154,71 @@ const districtResults = useMemo(() => {
   }, [apiVotesData?.proportionalVotes, selectedState]);
 
 
-  // --- Renderização Condicional ---
+  // --- Renderização Condicional com AMBOS os componentes ---
   let resultsContent;
-  if (isLoadingVotes) { // Usa o loading específico dos votos
+  if (isLoadingVotes) {
     resultsContent = <p>Carregando resultados ({currentTime}%)...</p>;
-  } else if (errorVotes) { // Usa o erro específico dos votos
+  } else if (errorVotes) {
     resultsContent = <p style={{ color: 'red' }}>Erro ao carregar resultados: {errorVotes}</p>;
-  } else if (apiVotesData) { // Usa os dados de votos
+  } else if (apiVotesData) {
      const selectedDistrictName = districts.find(d => d.id === selectedDistrict)?.name || selectedDistrict;
      resultsContent = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        {selectedDistrict && filteredCandidateVotes.length > 0 && (
+      // Container geral para os resultados
+      <div className="space-y-6"> {/* Adiciona espaço vertical entre os blocos */}
+
+        {/* Bloco de Resultados Distritais (Só aparece se distrito selecionado) */}
+        {selectedDistrict && (
+          // Usamos um Fragment <> ou <div> para agrupar título e componentes
           <div>
-            <h3>Resultados Distritais - Distrito {selectedDistrictName} - {currentTime}%</h3>
-            <DistrictBarChart // Ou CandidateDisplay
-                data={filteredCandidateVotes}
-                colorMap={coalitionColorMap} // Usa o mapa derivado dos dados estáticos
-            />
+            <h3 className="text-xl font-semibold mb-4"> {/* Adiciona um título geral */}
+                Resultados Distritais - Distrito {selectedDistrictName} - {currentTime}%
+            </h3>
+            {districtResults.votes.length > 0 ? (
+               // Container para as duas visualizações distritais
+               <div className="space-y-6"> {/* Espaço entre CandidateDisplay e BarChart */}
+                 {/* 1. Novo Display de Candidatos */}
+                 <CandidateDisplay
+                   data={districtResults.votes}
+                   leadingId={districtResults.leadingCandidateId} 
+                   />
+
+                 {/* 2. Gráfico de Barras */}
+                 <DistrictBarChart
+                   data={districtResults.votes}
+                   leadingId={districtResults.leadingCandidateId} 
+                 />
+               </div>
+            ) : (
+              // Mensagem se não houver votos para este distrito
+              <p>Sem dados de candidatos para o distrito {selectedDistrictName}.</p>
+            )}
           </div>
         )}
-        {/* ... (lógica para mostrar 'sem dados') ... */}
 
-         {selectedState && filteredProportionalVotes.length > 0 && (
-          <div>
-            <h3>Distribuição Proporcional - Estado {selectedState} - {currentTime}%</h3>
-            <ProportionalPieChart
-                data={filteredProportionalVotes}
-                colorMap={coalitionColorMap} // Usa o mapa derivado dos dados estáticos
-            />
-          </div>
-         )}
-         {/* ... (lógica para mostrar 'sem dados' ou 'selecione estado') ... */}
-          {!selectedState && (
+        {/* Bloco de Resultados Proporcionais (Só aparece se estado selecionado) */}
+        {selectedState && (
+           <div>
+                <h3 className="text-xl font-semibold mb-4"> {/* Adiciona um título geral */}
+                    Distribuição Proporcional - Estado {selectedState} - {currentTime}%
+                </h3>
+                {filteredProportionalVotes.length > 0 ? (
+                    <ProportionalPieChart
+                        data={filteredProportionalVotes}
+                        colorMap={coalitionColorMap}
+                    />
+                ) : (
+                    <p>Sem dados proporcionais para o estado {selectedState}.</p>
+                )}
+           </div>
+        )}
+
+         {/* Mensagem inicial se nada selecionado */}
+         {!selectedState && !isLoadingVotes && (
             <p>Selecione um Estado e um Distrito para ver os resultados detalhados.</p>
          )}
       </div>
     );
   } else {
-    // Pode acontecer brevemente antes da primeira carga ou se a API falhar sem erro explícito
     resultsContent = <p>Aguardando dados...</p>;
   }
   // ---------------------------------
