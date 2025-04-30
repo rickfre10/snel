@@ -3,115 +3,158 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
-import DistrictBarChart from '../components/DistrictBarChart';
+import DistrictBarChart from '../components/DistrictBarChart'; // Ou CandidateDisplay se já o criou
 import ProportionalPieChart from '../components/ProportionalPieChart';
-// --- Importe os tipos do novo arquivo ---
-import { ApiResultData, CandidateVote, ProportionalVote, DistrictInfoFromData, StateOption, DistrictOption } from '../types/election'; // Ajuste o caminho se necessário
+// --- Importar tipos e DADOS ESTÁTICOS ---
+import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption } from '../types/election'; // Importar tipos
+import { districtsData, partyData } from '../lib/staticData'; // Importar DADOS ESTÁTICOS
 
-
+// Interface para os dados de VOTOS vindos da API (não inclui mais estáticos)
+interface ApiVotesData {
+  time: number;
+  candidateVotes: CandidateVote[];
+  proportionalVotes: ProportionalVote[];
+}
 
 export default function Home() {
   const [currentTime, setCurrentTime] = useState<number>(50);
-  const [apiData, setApiData] = useState<ApiResultData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  // Estado apenas para os dados de VOTOS da API
+  const [apiVotesData, setApiVotesData] = useState<ApiVotesData | null>(null);
+  const [isLoadingVotes, setIsLoadingVotes] = useState<boolean>(true); // Loading específico para votos
+  const [errorVotes, setErrorVotes] = useState<string | null>(null); // Erro específico para votos
 
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
 
-  // Busca dados da API (useEffect permanece igual)
+ // Handler para mudança de estado
+ const handleStateChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const newState = event.target.value;
+  setSelectedState(newState || null);
+  setSelectedDistrict(null); // Reseta o distrito ao mudar o estado
+};
+
+// Handler para mudança de distrito
+const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const newDistrictId = event.target.value ? parseInt(event.target.value, 10) : null;
+  setSelectedDistrict(newDistrictId);
+};
+
+  // Busca dados de VOTOS da API (quando currentTime muda)
   useEffect(() => {
-    const fetchData = async () => {
-       setIsLoading(true); setError(null);
+    const fetchVoteData = async () => {
+      setIsLoadingVotes(true);
+      setErrorVotes(null);
       try {
+        // Chama a API simplificada de resultados
         const response = await fetch(`/api/results?time=${currentTime}`);
-        if (!response.ok) { throw new Error((await response.json()).error || 'Erro ao buscar dados'); }
-        const data: ApiResultData = await response.json(); setApiData(data);
-      } catch (err: unknown) { console.error("Falha API:", err); setError(err instanceof Error ? err.message : 'Erro desconhecido'); setApiData(null);
-      } finally { setIsLoading(false); }
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Erro ${response.status} ao buscar votos`);
+        }
+        const data: ApiVotesData = await response.json();
+        setApiVotesData(data);
+      } catch (err: unknown) {
+        console.error("Falha ao buscar dados de VOTOS da API:", err);
+        setErrorVotes(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido ao buscar votos');
+        setApiVotesData(null);
+      } finally {
+        setIsLoadingVotes(false);
+      }
     };
-    fetchData();
+    fetchVoteData();
   }, [currentTime]);
 
-  // Derivar listas de Estados e Distritos (lógica permanece igual)
+  // --- Derivar listas e mapas a partir dos DADOS ESTÁTICOS importados ---
   const states: StateOption[] = useMemo(() => {
-    if (!apiData?.districtsData) return [];
     const uniqueStates = new Map<string, string>();
-    apiData.districtsData.forEach(d => { if (d.uf && d.uf_name) uniqueStates.set(d.uf, d.uf_name); });
+    districtsData.forEach(district => { // Usa o districtsData importado
+      if (district.uf && district.uf_name) {
+        uniqueStates.set(district.uf, district.uf_name);
+      }
+    });
     return Array.from(uniqueStates, ([id, name]) => ({ id, name }));
-  }, [apiData?.districtsData]);
+  }, []); // Dependência vazia, calcula só uma vez
 
   const districts: DistrictOption[] = useMemo(() => {
-    if (!apiData?.districtsData || !selectedState) return [];
-    return apiData.districtsData
-      .filter(d => d.uf === selectedState)
-      .map(d => ({ id: parseInt(String(d.district_id), 10), name: d.district_name }))
+    if (!selectedState) return [];
+    return districtsData // Usa o districtsData importado
+      .filter(district => district.uf === selectedState)
+      .map(district => ({
+        id: district.district_id, // Já é número no staticData.ts
+        name: district.district_name,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [apiData?.districtsData, selectedState]);
+  }, [selectedState]); // Recalcula quando selectedState mudar
 
-   const handleStateChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newState = event.target.value;
-    setSelectedState(newState || null);
-    setSelectedDistrict(null); // Reseta o distrito ao mudar o estado
-   };
-   // Handler para mudança de distrito
-   const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newDistrictId = event.target.value ? parseInt(event.target.value, 10) : null;
-    setSelectedDistrict(newDistrictId);
-   };
-
-
-  // Filtrar dados de candidatos (permanece igual)
-  const filteredCandidateVotes = useMemo(() => {
-    if (!apiData || !selectedDistrict) return [];
-    return apiData.candidateVotes.filter(vote => parseInt(String(vote.district_id), 10) === selectedDistrict );
-  }, [apiData?.candidateVotes, selectedDistrict]);
-
-  // --- NOVO: Filtrar dados proporcionais para o estado selecionado ---
-  const filteredProportionalVotes = useMemo(() => {
-      if (!apiData?.proportionalVotes || !selectedState) return [];
-      return apiData.proportionalVotes.filter(vote => vote.uf === selectedState);
-  }, [apiData?.proportionalVotes, selectedState]);
+  const coalitionColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    partyData.forEach(party => { // Usa o partyData importado
+        // Garante que temos a legenda e a cor antes de adicionar ao mapa
+      if (party.parl_front_legend && party.parl_front_color && !map[party.parl_front_legend]) {
+        map[party.parl_front_legend] = party.parl_front_color;
+      }
+    });
+    return map;
+  }, []); // Dependência vazia, calcula só uma vez
   // -----------------------------------------------------------------
 
-  // --- Renderização Condicional com GRÁFICOS ---
+
+
+
+  // Filtrar dados de candidatos (agora usa apiVotesData)
+  const filteredCandidateVotes = useMemo(() => {
+    if (!apiVotesData?.candidateVotes || !selectedDistrict) return [];
+    return apiVotesData.candidateVotes.filter(vote =>
+        parseInt(String(vote.district_id), 10) === selectedDistrict
+    );
+  }, [apiVotesData?.candidateVotes, selectedDistrict]);
+
+  // Filtrar dados proporcionais (agora usa apiVotesData)
+  const filteredProportionalVotes = useMemo(() => {
+      if (!apiVotesData?.proportionalVotes || !selectedState) return [];
+      return apiVotesData.proportionalVotes.filter(vote => vote.uf === selectedState);
+  }, [apiVotesData?.proportionalVotes, selectedState]);
+
+
+  // --- Renderização Condicional ---
   let resultsContent;
-  if (isLoading) {
-    resultsContent = <p>Carregando dados ({currentTime}%)...</p>;
-  } else if (error) {
-    resultsContent = <p style={{ color: 'red' }}>Erro ao carregar dados: {error}</p>;
-  } else if (apiData) {
+  if (isLoadingVotes) { // Usa o loading específico dos votos
+    resultsContent = <p>Carregando resultados ({currentTime}%)...</p>;
+  } else if (errorVotes) { // Usa o erro específico dos votos
+    resultsContent = <p style={{ color: 'red' }}>Erro ao carregar resultados: {errorVotes}</p>;
+  } else if (apiVotesData) { // Usa os dados de votos
+     const selectedDistrictName = districts.find(d => d.id === selectedDistrict)?.name || selectedDistrict;
      resultsContent = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        {/* Gráfico de Barras só aparece se um distrito for selecionado */}
         {selectedDistrict && filteredCandidateVotes.length > 0 && (
           <div>
-            <h3>Resultados Distritais - Distrito {selectedDistrict} - {currentTime}%</h3>
-            <DistrictBarChart data={filteredCandidateVotes} />
+            <h3>Resultados Distritais - Distrito {selectedDistrictName} - {currentTime}%</h3>
+            <DistrictBarChart // Ou CandidateDisplay
+                data={filteredCandidateVotes}
+                colorMap={coalitionColorMap} // Usa o mapa derivado dos dados estáticos
+            />
           </div>
         )}
-        {selectedDistrict && filteredCandidateVotes.length === 0 && (
-             <p>Sem dados de candidatos para o distrito {selectedDistrict}.</p>
-        )}
+        {/* ... (lógica para mostrar 'sem dados') ... */}
 
-        {/* Gráfico de Pizza só aparece se um estado for selecionado */}
          {selectedState && filteredProportionalVotes.length > 0 && (
           <div>
             <h3>Distribuição Proporcional - Estado {selectedState} - {currentTime}%</h3>
-            <ProportionalPieChart data={filteredProportionalVotes} />
+            <ProportionalPieChart
+                data={filteredProportionalVotes}
+                colorMap={coalitionColorMap} // Usa o mapa derivado dos dados estáticos
+            />
           </div>
          )}
-         {selectedState && filteredProportionalVotes.length === 0 && (
-             <p>Sem dados proporcionais para o estado {selectedState}.</p>
-         )}
-         {/* Se nenhum estado/distrito selecionado, pode mostrar algo geral ou nada */}
-         {!selectedState && (
+         {/* ... (lógica para mostrar 'sem dados' ou 'selecione estado') ... */}
+          {!selectedState && (
             <p>Selecione um Estado e um Distrito para ver os resultados detalhados.</p>
          )}
       </div>
     );
   } else {
-    resultsContent = <p>Nenhum dado para exibir.</p>;
+    // Pode acontecer brevemente antes da primeira carga ou se a API falhar sem erro explícito
+    resultsContent = <p>Aguardando dados...</p>;
   }
   // ---------------------------------
 
@@ -122,20 +165,18 @@ export default function Home() {
         {/* ... */}
       </Head>
       <main style={{ padding: '2rem' }}>
-        <h1>Painel de Apuração (Gráficos)</h1>
-        {/* Controles de Tempo */}
-        <div>{/* ... controles de tempo ... */}</div>
-         {/* Cole os controles de tempo aqui (igual ao da resposta anterior) */}
-         <h3>Ver Apuração em:</h3>
-          <button onClick={() => setCurrentTime(50)} disabled={currentTime === 50 || isLoading}>50%</button>
-          <button onClick={() => setCurrentTime(100)} disabled={currentTime === 100 || isLoading}>100%</button>
+        <h1>Painel de Apuração (Dados Estáticos + API)</h1>
+         {/* Controles de Tempo (iguais, mas usam isLoadingVotes) */}
+        <div>
+           <h3>Ver Apuração em:</h3>
+          <button onClick={() => setCurrentTime(50)} disabled={currentTime === 50 || isLoadingVotes}>50%</button>
+          <button onClick={() => setCurrentTime(100)} disabled={currentTime === 100 || isLoadingVotes}>100%</button>
           <p>Mostrando resultados para: {currentTime}%</p>
+        </div>
         <hr />
-        {/* Seletores Geográficos */}
+        {/* Seletores Geográficos (iguais, usam dados estáticos agora) */}
         <div style={{ display: 'flex', gap: '1rem', margin: '1rem 0' }}>
-          {/* ... seletores ... */}
-           {/* Cole os seletores aqui (igual ao da resposta anterior) */}
-           <div>
+         <div>
             <label htmlFor="state-select">Estado: </label>
             <select id="state-select" value={selectedState ?? ''} onChange={handleStateChange}>
               <option value="">-- Selecione UF --</option>
@@ -146,7 +187,8 @@ export default function Home() {
           </div>
           <div>
             <label htmlFor="district-select">Distrito: </label>
-            <select id="district-select" value={selectedDistrict ?? ''} onChange={handleDistrictChange} disabled={!selectedState || isLoading}>
+            {/* Desabilita se estado não selecionado OU se votos estiverem carregando */}
+            <select id="district-select" value={selectedDistrict ?? ''} onChange={handleDistrictChange} disabled={!selectedState || isLoadingVotes}>
               <option value="">-- Selecione Distrito --</option>
               {districts.map(district => (
                 <option key={district.id} value={district.id}>{district.name} ({district.id})</option>
@@ -155,7 +197,7 @@ export default function Home() {
           </div>
         </div>
         <hr />
-        {/* Exibe o conteúdo (Carregando, Erro ou Gráficos) */}
+        {/* Exibe o conteúdo */}
         {resultsContent}
       </main>
     </div>

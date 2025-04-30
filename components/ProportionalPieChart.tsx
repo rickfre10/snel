@@ -12,6 +12,7 @@ interface ProportionalVoteData {
 
 interface ProportionalPieChartProps {
   data: ProportionalVoteData[];
+  colorMap: Record<string, string>;
 }
 
 // Cores de exemplo - idealmente viriam dos seus dados de partido/frente

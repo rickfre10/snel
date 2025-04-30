@@ -25,6 +25,7 @@ interface DistrictVoteData {
 
 interface DistrictBarChartProps {
   data: DistrictVoteData[];
+  colorMap: Record<string, string>;
 }
 
 const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data }) => {

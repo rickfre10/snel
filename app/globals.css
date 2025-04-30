@@ -1,27 +1,24 @@
+/* app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+/* Define estilos base para o body usando diretivas @apply do Tailwind (preferido) */
+/* Ou use CSS normal se preferir */
+@layer base {
+  body {
+    @apply bg-gray-100 text-gray-900; /* Fundo cinza claro, texto cinza escuro */
+    /* Alternativa com CSS puro: */
+    /* background-color: #f3f4f6; */
+    /* color: #111827; */
   }
+  /* Você pode adicionar outros estilos base aqui, como fontes */
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+/* Estilização específica para dropdowns (exemplo) - ajuste conforme necessário */
+select {
+  @apply bg-white border border-gray-300 text-gray-900 rounded p-2;
+   /* Garante fundo branco e texto escuro no dropdown */
 }
+
+/* Outros estilos globais que você possa precisar */

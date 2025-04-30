@@ -5,20 +5,22 @@ export interface CandidateVote {
     district_id: string | number; // Planilha pode retornar como string
     candidate_name: string;
     party_legend?: string;
-    parl_front_legend?: string;
-    votes_qtn: string | number; // Planilha pode retornar como string
-    candidate_status?: string | null;
-    candidate_photo?: string | null;
-    [key: string]: any; // Permite outras colunas
-  }
+    parl_front_legend: string | null; // Mudou de ?: string para : string | null
+  votes_qtn: number; // Já convertemos para número na API
+  candidate_status: string | null; // Mudou de ?: string | null para : string | null
+  candidate_photo: string | null;  // Mudou de ?: string | null para : string | null
+  // --------------------------
+  [key: string]: any;
+}
   
   // Votos Proporcionais (ajuste as propriedades/tipos se necessário)
   export interface ProportionalVote {
     uf: string;
-    parlamentar_front?: string;
-    parl_front_legend: string;
-    proportional_votes_qtn: string | number; // Planilha pode retornar como string
-    [key: string]: any; // Permite outras colunas
+    parlamentar_front: string | null; // Mudou de ?: string para : string | null
+    // --------------------------
+    parl_front_legend: string;     // Essencial
+    proportional_votes_qtn: number; // Já convertemos para número na API
+    [key: string]: any;
   }
   
   // Informações dos Distritos (ajuste as propriedades/tipos se necessário)
@@ -36,6 +38,17 @@ export interface CandidateVote {
     candidateVotes: CandidateVote[];
     proportionalVotes: ProportionalVote[];
     districtsData: DistrictInfoFromData[];
+  }
+
+  export interface PartyInfo { // Certifique-se que 'export' existe e o nome está correto
+    party_name: string | null;
+    party_legend: string | null;
+    party_number: number | null;
+    parlamentar_front: string | null;
+    parl_front_legend: string | null; // Importante para o colorMap
+    party_color: string | null;
+    parl_front_color: string | null; // Importante para o colorMap
+    [key: string]: any;
   }
   
   // Tipos para as opções dos seletores
