@@ -9,6 +9,9 @@ import ProportionalPieChart from '../components/ProportionalPieChart';
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption } from '../types/election'; // Importar tipos
 import { districtsData, partyData } from '../lib/staticData'; // Importar DADOS ESTÁTICOS
 import CandidateDisplay from '../components/CandidateDisplay';
+import InteractiveMap from '../components/InteractiveMap'; 
+import { DistrictLayoutInfo } from '../lib/mapLayout'; 
+import { DistrictResultInfo } from '../types/election'; 
 
 const parseNumber = (value: any): number => {
   if (typeof value === 'number') return value;
@@ -74,6 +77,132 @@ const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     };
     fetchVoteData();
   }, [currentTime]);
+
+  const districtResultsSummary: Record<string, DistrictResultInfo> = useMemo(() => {
+    const summary: Record<string, DistrictResultInfo> = {};
+    // 1. Verifica se os dados necessários da API e os dados estáticos existem
+    if (!apiVotesData?.candidateVotes || !districtsData) {
+        console.log("Calculando summary: Dados de votos ou distritos estáticos ausentes.");
+        return summary; // Retorna sumário vazio se dados essenciais faltam
+    }
+
+    // 2. Agrupa os votos por distrito (usando ID como string para a chave do objeto)
+    const votesByDistrict: Record<string, CandidateVote[]> = {};
+    apiVotesData.candidateVotes.forEach(vote => {
+        // Valida se o voto tem as informações mínimas necessárias
+        if (vote.district_id !== undefined && vote.district_id !== null && vote.district_id !== '' &&
+            vote.candidate_name &&
+            vote.votes_qtn !== undefined && vote.votes_qtn !== null)
+        {
+            const districtIdStr = String(vote.district_id);
+            if (!votesByDistrict[districtIdStr]) {
+                votesByDistrict[districtIdStr] = [];
+            }
+            // Adiciona o voto ao grupo do distrito (confiando que o tipo está ok após validação)
+            votesByDistrict[districtIdStr].push(vote);
+        } else {
+             console.warn("Voto inválido ou incompleto ignorado:", vote);
+        }
+    });
+
+    // 3. Processa cada distrito que teve votos registrados
+    Object.keys(votesByDistrict).forEach(districtIdStr => {
+        const votes = votesByDistrict[districtIdStr];
+        if (!votes || votes.length === 0) return; // Segurança extra
+
+        // --- Encontra o objeto 'winner' usando reduce ---
+        const winner = votes.reduce((currentWinner: CandidateVote | null, currentVote: CandidateVote) => {
+            const currentVotesNum = parseNumber(currentVote.votes_qtn); // Usa helper para converter
+
+            // Se ainda não temos um vencedor, o voto atual se torna o primeiro candidato
+            if (currentWinner === null) {
+                return currentVote;
+            }
+
+            // Compara o voto atual com o maior encontrado até agora
+            const winnerVotesNum = parseNumber(currentWinner.votes_qtn);
+            return currentVotesNum > winnerVotesNum ? currentVote : currentWinner;
+        }, null); // O valor inicial do acumulador (currentWinner) é null
+        // -------------------------------------------------
+
+        // Encontra informações adicionais do distrito (nome) nos dados estáticos
+        const districtInfo = districtsData.find(d => String(d.district_id) === districtIdStr);
+        // Pega o número máximo de votos do vencedor encontrado
+        const maxVotes = winner ? parseNumber(winner.votes_qtn) : 0;
+
+        // Adiciona a entrada ao sumário SOMENTE se um vencedor foi encontrado
+        if (winner) {
+            // Dentro deste bloco, 'winner' tem o tipo 'CandidateVote', não 'null'
+            summary[districtIdStr] = {
+                winnerLegend: winner.parl_front_legend ?? null, // Acesso seguro aqui
+                winnerName: winner.candidate_name,             // Acesso seguro aqui
+                districtName: districtInfo?.district_name || `Distrito ${districtIdStr}`,
+                maxVotes: maxVotes,
+            };
+        } else {
+            // Caso raro onde 'votes' não era vazio, mas 'reduce' retornou null (ex: todos votos 0 ou inválidos)
+             summary[districtIdStr] = {
+                winnerLegend: null,
+                winnerName: undefined, // Ou "Nenhum Vencedor"
+                districtName: districtInfo?.district_name || `Distrito ${districtIdStr}`,
+                maxVotes: 0,
+            };
+             console.warn(`Nenhum vencedor encontrado para o distrito ${districtIdStr} apesar de ter votos.`);
+        }
+    });
+
+    // 4. Garante que todos os distritos definidos no layout estático tenham uma entrada no sumário
+    // Isso é importante para o mapa poder renderizar todos os retângulos
+     districtsData.forEach(d => {
+         const districtIdStr = String(d.district_id);
+         if (!summary[districtIdStr]) {
+             // Adiciona uma entrada padrão para distritos sem votos registrados
+             summary[districtIdStr] = {
+                 winnerLegend: null,
+                 districtName: d.district_name,
+                 maxVotes: 0,
+             }
+         }
+     });
+
+    // 5. Retorna o objeto de sumário completo
+    return summary;
+}, [apiVotesData?.candidateVotes, districtsData]); // Dependências do useMemo
+// --- Fim do Bloco useMemo ---
+
+
+
+// --- NOVO: Estado e Handlers para interação com o mapa ---
+const [hoveredDistrictInfo, setHoveredDistrictInfo] = useState<string | null>(null);
+
+// Chamado quando o mouse entra/sai de um distrito no mapa
+const handleDistrictHover = (districtInfo: DistrictResultInfo | null, districtId: string | null) => {
+  if (districtInfo && districtId) {
+      setHoveredDistrictInfo(
+          `Distrito: ${districtInfo.districtName || districtId} | Vencedor: ${districtInfo.winnerName || 'N/A'} (${districtInfo.winnerLegend || 'N/D'})`
+      );
+  } else {
+      setHoveredDistrictInfo(null); // Limpa ao sair
+  }
+};
+
+// Chamado quando um distrito é clicado no mapa
+const handleDistrictClick = (districtInfo: DistrictResultInfo | null, districtId: string) => {
+  if (districtId) {
+      console.log("Clicou no Distrito:", districtId, districtInfo);
+      const districtNum = parseInt(districtId, 10);
+       if (!isNaN(districtNum)) {
+           const distData = districtsData.find(d => d.district_id === districtNum);
+           if (distData) {
+              setSelectedState(distData.uf); // Seleciona o estado no dropdown
+              // Pequeno delay para garantir que o estado atualize ANTES do distrito no dropdown filho
+              setTimeout(() => setSelectedDistrict(districtNum), 0);
+           }
+       }
+  }
+};
+// ---------------------------------------------------------
+
 
   // --- Derivar listas e mapas a partir dos DADOS ESTÁTICOS importados ---
   const states: StateOption[] = useMemo(() => {
@@ -263,6 +392,30 @@ const districtResults = useMemo(() => {
             </select>
           </div>
         </div>
+        {/* --- NOVO: Container para Mapa e Info Hover --- */}
+        <div className="relative my-6"> {/* Adiciona margem vertical */}
+                    <h2 className="text-xl font-semibold mb-2">Mapa Interativo de Haagar</h2>
+                    {/* Renderiza o mapa passando os dados e handlers */}
+                    <InteractiveMap
+                        results={districtResultsSummary}
+                        colorMap={coalitionColorMap}
+                        onDistrictHover={handleDistrictHover}
+                        onDistrictClick={handleDistrictClick}
+                    />
+                    {/* Exibe info do hover (tooltip flutuante simples) */}
+                    {hoveredDistrictInfo && (
+                        <div className="absolute bottom-1 left-1 bg-black bg-opacity-75 text-white p-2 rounded text-xs shadow-lg pointer-events-none z-10">
+                            {hoveredDistrictInfo}
+                        </div>
+                    )}
+                </div>
+                {/* ---------------------------------------------- */}
+
+
+                <hr className="my-6"/> {/* Separador */}
+
+                {/* Exibe o conteúdo dos resultados (CandidateDisplay/Charts) */}
+                {resultsContent}
         <hr />
         {/* Exibe o conteúdo */}
         {resultsContent}

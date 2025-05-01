@@ -51,6 +51,13 @@ export interface CandidateVote {
     [key: string]: any;
   }
   
+  export interface DistrictResultInfo {
+    winnerLegend: string | null;
+    winnerName?: string;
+    districtName?: string;
+    maxVotes?: number;
+}
+
   // Tipos para as opções dos seletores
   export interface StateOption {
     id: string; // uf
