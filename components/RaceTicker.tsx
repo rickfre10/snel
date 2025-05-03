@@ -2,8 +2,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 
-// Interface para os dados que este componente espera para cada "slide"
-// Certifique-se que as propriedades aqui batem com o que é gerado no useMemo em page.tsx
+// Interface (sem mudanças)
 export interface TickerEntry {
   districtId: number;
   districtName: string;
@@ -18,27 +17,27 @@ export interface TickerEntry {
 
 interface RaceTickerProps {
   data: TickerEntry[];
-  colorMap: Record<string, string>; // Mapa de cores { "TDS": "#cor", ... }
-  interval?: number; // Intervalo em milissegundos
+  colorMap: Record<string, string>;
+  interval?: number;
 }
 
 const RaceTicker: React.FC<RaceTickerProps> = ({ data, colorMap, interval = 5000 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const fallbackColor = '#6B7280'; // Cinza para legendas sem cor
+  const fallbackColor = '#A9A9A9'; // Cinza mais escuro para fallback de cor
+  const textColor = '#1F2937'; // Cor de texto escura padrão (Tailwind gray-800)
+  const separatorColor = '#9CA3AF'; // Cor do separador (Tailwind gray-400)
 
-  // Efeito para ciclar o índice
+  // Efeito para ciclar (sem mudanças)
   useEffect(() => {
     if (!data || data.length === 0) return;
-
     const timerId = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % data.length);
     }, interval);
-
-    return () => clearInterval(timerId); // Limpa o timer ao desmontar
+    return () => clearInterval(timerId);
   }, [data, interval]);
 
   if (!data || data.length === 0 || !data[currentIndex]) {
-    return null; // Não renderiza nada se não houver dados
+    return null;
   }
 
   const currentEntry = data[currentIndex];
@@ -46,44 +45,63 @@ const RaceTicker: React.FC<RaceTickerProps> = ({ data, colorMap, interval = 5000
   const runnerUpColor = currentEntry.runnerUpLegend ? (colorMap[currentEntry.runnerUpLegend] ?? fallbackColor) : fallbackColor;
 
   return (
-    <div className="bg-gray-800 text-white p-3 rounded-md shadow overflow-hidden whitespace-nowrap">
-      {/* Animação simples de slide/fade pode ser adicionada com CSS ou libs, mas mantendo simples por enquanto */}
-      <div className="flex items-center space-x-3 sm:space-x-4 text-sm sm:text-base">
-        {/* Info Localização */}
-        <div className="font-semibold flex-shrink-0 min-w-0"> {/* min-w-0 ajuda no truncate */}
-          <span className="bg-gray-600 px-2 py-0.5 rounded text-xs mr-1">{currentEntry.stateId}</span>
-          <span className="truncate inline-block align-middle" title={currentEntry.districtName}>
-            {currentEntry.districtName.length > 20 ? `${currentEntry.districtName.substring(0, 18)}...` : currentEntry.districtName}
+    // Container do Ticker: Fundo claro, texto escuro
+    <div className="bg-[#CFCFCF] text-gray-800 p-3 rounded-md shadow overflow-hidden whitespace-nowrap">
+      {/* Usamos flex para alinhar os itens horizontalmente */}
+      <div className="flex items-center space-x-3 sm:space-x-4 text-sm sm:text-base justify-between">
+
+        {/* Parte Esquerda: Localização */}
+        <div className="flex items-center space-x-2 flex-shrink-0 min-w-0">
+          {/* Label UF */}
+          <span className="bg-gray-500 text-white px-2 py-0.5 rounded text-xs font-medium">{currentEntry.stateId}</span>
+          {/* Nome Distrito (com largura mínima e truncado) */}
+          <span className="font-semibold truncate min-w-[100px] sm:min-w-[150px]" title={currentEntry.districtName}>
+            {currentEntry.districtName}
           </span>
         </div>
 
         {/* Separador */}
-        <span className="text-gray-500">|</span>
+        <span className="text-gray-600 hidden md:inline">|</span>
 
-        {/* Info Vencedor */}
-        {currentEntry.winnerLegend ? (
-          <div className="flex items-center space-x-2 min-w-0">
-            <span className="font-bold flex-shrink-0" style={{ color: winnerColor }}>({currentEntry.winnerLegend})</span>
-            <span className="truncate" title={currentEntry.winnerName ?? ''}>{currentEntry.winnerName || 'N/D'}</span>
-            <span className="font-semibold flex-shrink-0">{currentEntry.winnerPercentage?.toFixed(1) ?? '--'}%</span>
-          </div>
-        ) : (
-            <span className="text-gray-400 italic flex-shrink-0">Sem Vencedor</span>
-        )}
+        {/* Parte Central: Frente Liderando */}
+        <div className={`flex items-center space-x-1.5 flex-shrink-0 min-w-0 ${!currentEntry.winnerLegend ? 'italic text-gray-500' : ''}`}>
+          {currentEntry.winnerLegend ? (
+            <>
+              <span style={{ backgroundColor: winnerColor }} className="w-3 h-3 inline-block rounded-sm flex-shrink-0 border border-gray-400"></span>
+              <span className="font-semibold text-xs uppercase">FRENTE Liderando:</span>
+              <span className="font-bold" style={{ color: winnerColor }}>{currentEntry.winnerLegend}</span>
+            </>
+          ) : (
+            <span>Sem Vencedor</span>
+          )}
+        </div>
 
-        {/* Info Segundo Colocado */}
-        {currentEntry.runnerUpLegend && (
-          <>
-            <span className="text-gray-500 hidden sm:inline">|</span>
-            <div className="hidden sm:flex items-center space-x-2 flex-shrink-0 min-w-0">
-                <span className="font-bold flex-shrink-0" style={{ color: runnerUpColor }}>({currentEntry.runnerUpLegend})</span>
-                <span className="font-semibold flex-shrink-0">{currentEntry.runnerUpPercentage?.toFixed(1) ?? '--'}%</span>
+        {/* Separador */}
+        <span className="text-gray-600 hidden lg:inline">|</span>
+
+        {/* Parte Direita: Detalhes Vencedor e 2º Colocado */}
+        <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Info Vencedor */}
+            {currentEntry.winnerLegend ? (
+            <div className="flex items-center space-x-1 min-w-0">
+                <span className="font-bold truncate" title={currentEntry.winnerName ?? ''}>{currentEntry.winnerName || 'N/D'}</span>
+                <span className="font-semibold text-xs sm:text-sm">({currentEntry.winnerPercentage?.toFixed(1) ?? '--'}%)</span>
             </div>
-          </>
-        )}
+            ) : (
+             '' // Não mostra nada se não houver vencedor
+            )}
+
+            {/* Info Segundo Colocado (sempre ocupa espaço para estabilidade) */}
+            <div className={`hidden sm:flex items-center space-x-1 flex-shrink-0 min-w-0 ${!currentEntry.runnerUpLegend ? 'invisible' : ''}`}> {/* Usa invisible para manter espaço */}
+                <span className="text-gray-500 text-xs">2º:</span>
+                <span className="font-bold text-xs" style={{ color: runnerUpColor }}>({currentEntry.runnerUpLegend || 'N/D'})</span>
+                <span className="font-semibold text-xs">({currentEntry.runnerUpPercentage?.toFixed(1) ?? '--'}%)</span>
+            </div>
+        </div>
+
       </div>
     </div>
   );
 };
 
-export default RaceTicker; // Garante que o componente é exportado por padrão
+export default RaceTicker;

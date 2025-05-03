@@ -292,7 +292,7 @@ export default function Home() {
             </div>
             {/* --- NOVO: Adiciona o Ticker aqui --- */}
             {tickerData.length > 0 && !isLoadingVotes && ( // Mostra só se tiver dados e não estiver carregando
-            <RaceTicker data={tickerData} colorMap={coalitionColorMap} interval={5000} />
+            <RaceTicker data={tickerData} colorMap={coalitionColorMap} interval={8000} />
              )}
             {/* --------------------------------- */}
             
