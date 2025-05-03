@@ -33,7 +33,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     return (
         // Container para o SVG
         // Use aspect-ratio para manter a proporção ou ajuste w/h conforme necessário
-        <div className="w-full bg-gray-50 border border-gray-300" style={{ aspectRatio: `${mapDimensions.width} / ${mapDimensions.height}` }}>
+        <div className="w-full" style={{ aspectRatio: `${mapDimensions.width} / ${mapDimensions.height}` }}> {/* Removeu bg e border */}
             <svg
                 // Width e Height 100% para preencher o container div
                 width="100%"
@@ -63,7 +63,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                             height={districtLayout.height}
                             fill={fillColor}
                             stroke={districtLayout.stroke || 'black'}
-                            strokeWidth={districtLayout.strokeWidth || '15'} // Usa camelCase
+                            strokeWidth={districtLayout.strokeWidth || '10'} // Usa camelCase
                             // Estilo e Interação
                             className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75" // Efeito hover simples
                             onClick={() => onDistrictClick(resultInfo, districtId)}

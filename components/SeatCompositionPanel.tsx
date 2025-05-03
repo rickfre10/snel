@@ -48,9 +48,6 @@ const SeatCompositionPanel: React.FC<SeatCompositionPanelProps> = ({ seatData, c
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 h-full flex flex-col">
-      <h3 className="text-xl font-semibold mb-4 text-center text-gray-700">
-        Composição da Câmara (Distrital)
-      </h3>
 
       {/* Container dos Cards: Flexbox com Wrap e Gap (removido justify-center) */}
       <div className="flex flex-wrap gap-3 mb-4"> {/* Alterado de grid para flex */}
