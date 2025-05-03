@@ -18,11 +18,12 @@ const Header: React.FC = () => {
           priority
           className="h-6 md:h-8 w-auto" // Controla o tamanho exibido na tela
         />
+        <span className="font-bold text-lg">Eleições</span>
       </div>
 
       {/* Lado Direito: Ano da Eleição */}
       <div>
-        <span className="font-semibold">Eleições 2022</span>
+        <span className="font-semibold">2022</span>
       </div>
     </header>
   );
