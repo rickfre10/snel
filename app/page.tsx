@@ -271,7 +271,6 @@ export default function Home() {
       </Head>
 
       <main className="container mx-auto p-4 lg:p-6 space-y-8">
-        <h1 className="text-3xl font-bold text-center text-gray-800">Eleições 2022</h1>
 
         {/* Layout Principal: Mapa e Painel de Assentos */}
         <div className="relative">

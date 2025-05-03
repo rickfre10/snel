@@ -13,20 +13,6 @@ interface SeatCompositionPanelProps {
 const FALLBACK_COLOR = '#D1D5DB';
 const UNDECIDED_COLOR = '#9CA3AF';
 
-// Helper de contraste (sem mudanças)
-function getTextColorForBackground(hexcolor: string): string {
-    // ... (código da função como antes) ...
-    if (!hexcolor) return '#1F2937';
-    hexcolor = hexcolor.replace("#", "");
-    if (hexcolor.length !== 6) return '#1F2937';
-    try {
-        const r = parseInt(hexcolor.substring(0, 2), 16);
-        const g = parseInt(hexcolor.substring(2, 4), 16);
-        const b = parseInt(hexcolor.substring(4, 6), 16);
-        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        return (yiq >= 128) ? '#1F2937' : '#FFFFFF';
-    } catch (e) { return '#1F2937'; }
-}
 
 
 const SeatCompositionPanel: React.FC<SeatCompositionPanelProps> = ({ seatData, colorMap, totalSeats }) => {
@@ -54,13 +40,12 @@ const SeatCompositionPanel: React.FC<SeatCompositionPanelProps> = ({ seatData, c
         {/* Mapeia as frentes com assentos */}
         {sortedEntries.map(({ legend, seats }) => {
           const color = colorMap[legend] ?? FALLBACK_COLOR;
-          const textColor = getTextColorForBackground(color);
 
           return (
             // Card individual: REMOVIDO w-32, ADICIONADO flex-1
             <div
               key={legend}
-              className={`flex-1 h-24 p-3 rounded-lg text-center flex flex-col justify-center items-center shadow ${textColor === '#FFFFFF' ? 'text-white' : 'text-gray-800'}`} // Usa classe de texto baseada no contraste
+              className={`flex-1 h-24 p-3 rounded-lg text-center flex flex-col justify-center items-center shadow text-white`}
               style={{ backgroundColor: color, minWidth: '100px' }} // minWidth evita que fiquem muito estreitos
             >
               <div className="font-bold text-sm sm:text-base break-words">{legend}</div>
