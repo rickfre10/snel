@@ -1,4 +1,7 @@
+// tailwind.config.ts
 import type { Config } from 'tailwindcss';
+// Importa os temas padrão do Tailwind para usar como fallback
+const defaultTheme = require('tailwindcss/defaultTheme');
 
 const config: Config = {
   content: [
@@ -8,17 +11,18 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Adicione a seção colors aqui dentro de extend
+      fontFamily: {
+        // Define a variável CSS --font-poppins como a fonte principal da família 'sans'
+        // Inclui fontes de fallback padrão do sistema
+        sans: ['var(--font-poppins)', ...defaultTheme.fontFamily.sans],
+        // Se você quisesse um nome específico, poderia ser:
+        // poppins: ['var(--font-poppins)', ...defaultTheme.fontFamily.sans],
+      },
       colors: {
-        highlight: '#ff1616', // Define sua cor personalizada com o nome 'highlight'
-        // Você pode adicionar outras cores personalizadas aqui
-        // Exemplo: accent: '#abcdef'
+        highlight: '#ff1616',
+        // ... outras cores personalizadas ...
       },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic':
-          'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-      },
+      // ... outras extensões ...
     },
   },
   plugins: [],

@@ -44,9 +44,6 @@ const SeatCompositionPanel: React.FC<SeatCompositionPanelProps> = ({ seatData, c
   return (
     // Container principal do painel
     <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 h-full flex flex-col">
-      <h3 className="text-xl font-semibold mb-4 text-center text-gray-700">
-        Composição da Câmara (Distrital)
-      </h3>
 
       {/* Grid para os cards das frentes */}
       {/* Ajuste grid-cols-* para o número de colunas desejado em diferentes tamanhos de tela */}
