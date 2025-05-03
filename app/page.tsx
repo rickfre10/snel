@@ -10,6 +10,9 @@ import SeatCompositionPanel from '../components/SeatCompositionPanel';
 import CandidateDisplay from '../components/CandidateDisplay';
 import DistrictBarChart from '../components/DistrictBarChart';
 import ProportionalPieChart from '../components/ProportionalPieChart';
+import RaceTicker from '../components/RaceTicker';
+import { TickerEntry } from '../components/RaceTicker';
+
 
 // Tipos e Dados Estáticos (Ajuste caminho se necessário, ex: @/types/election)
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption, DistrictResultInfo } from '../types/election';
@@ -200,6 +203,62 @@ export default function Home() {
   const handleDistrictHover = (districtInfo: DistrictResultInfo | null, districtId: string | null) => { if (districtInfo && districtId) { setHoveredDistrictInfo( `Distrito: ${districtInfo.districtName || districtId} | Vencedor: ${districtInfo.winnerName || 'N/A'} (${districtInfo.winnerLegend || 'N/D'})` ); } else { setHoveredDistrictInfo(null); } };
   const handleDistrictClick = (districtInfo: DistrictResultInfo | null, districtId: string) => { if (districtId) { console.log("Clicou Distrito:", districtId, districtInfo); const districtNum = parseInt(districtId, 10); if (!isNaN(districtNum)) { const distData = districtsData.find(d => d.district_id === districtNum); if (distData) { setSelectedState(distData.uf); setTimeout(() => setSelectedDistrict(districtNum), 0); setDistrictViewMode('candidates');} } } };
 
+      // --- NOVO: Calcular dados para o Ticker ---
+      const tickerData = useMemo(() => {
+        const dataForTicker: TickerEntry[] = [];
+        if (!apiVotesData?.candidateVotes || !districtsData) {
+            return dataForTicker; // Retorna vazio se não há dados
+        }
+
+        // 1. Agrupa votos por distrito
+        const votesByDistrict: Record<string, CandidateVote[]> = {};
+        apiVotesData.candidateVotes.forEach((vote: CandidateVote) => {
+            const districtIdStr = String(vote.district_id);
+            if (!districtIdStr || !vote.candidate_name || vote.votes_qtn === undefined || vote.votes_qtn === null) return; // Validação mínima
+            if (!votesByDistrict[districtIdStr]) { votesByDistrict[districtIdStr] = []; }
+            votesByDistrict[districtIdStr].push(vote);
+        });
+
+        // 2. Processa cada distrito
+        Object.keys(votesByDistrict).forEach(districtIdStr => {
+            const votes = votesByDistrict[districtIdStr];
+            if (!votes || votes.length === 0) return;
+
+            // Calcula % e votos numéricos para este distrito
+            const votesWithCalc = votes.map(v => ({ ...v, numericVotes: parseNumber(v.votes_qtn) }));
+            const totalVotes = votesWithCalc.reduce((sum, current) => sum + current.numericVotes, 0);
+            const votesProcessed = votesWithCalc.map(v => ({
+                ...v,
+                percentage: totalVotes > 0 ? ((v.numericVotes / totalVotes) * 100) : 0,
+            })).sort((a, b) => b.numericVotes - a.numericVotes); // Ordena por votos
+
+            // Pega info do distrito (nome, uf)
+            const districtNum = parseInt(districtIdStr, 10);
+            const districtInfo = districtsData.find(d => d.district_id === districtNum);
+            if (!districtInfo) return; // Pula se não achar info do distrito
+
+            // Monta a entrada para o ticker
+            const entry: TickerEntry = {
+                districtId: districtNum,
+                districtName: districtInfo.district_name,
+                stateId: districtInfo.uf,
+                stateName: districtInfo.uf_name,
+                winnerName: votesProcessed[0]?.candidate_name || null,
+                winnerLegend: votesProcessed[0]?.parl_front_legend || null,
+                winnerPercentage: votesProcessed[0]?.percentage ?? null,
+                runnerUpLegend: votesProcessed[1]?.parl_front_legend || null, // Pega o segundo (índice 1)
+                runnerUpPercentage: votesProcessed[1]?.percentage ?? null, // Pega % do segundo
+            };
+            dataForTicker.push(entry);
+        });
+
+        // Opcional: Ordenar os distritos (ex: por ID ou nome)
+        dataForTicker.sort((a, b) => a.districtId - b.districtId);
+
+        return dataForTicker;
+    }, [apiVotesData?.candidateVotes, districtsData]); // Depende dos votos e dados estáticos de distrito
+    // -----------------------------------------
+
 
   // --- Renderização ---
   return (
@@ -231,6 +290,12 @@ export default function Home() {
                      totalSeats={districtsData.length}
                  />
             </div>
+            {/* --- NOVO: Adiciona o Ticker aqui --- */}
+            {tickerData.length > 0 && !isLoadingVotes && ( // Mostra só se tiver dados e não estiver carregando
+            <RaceTicker data={tickerData} colorMap={coalitionColorMap} interval={5000} />
+             )}
+            {/* --------------------------------- */}
+            
         </div>
 
         {/* Seletores Geográficos */}

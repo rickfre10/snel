@@ -28,18 +28,18 @@ export interface PartyInfo {
   export const partyData: PartyInfo[] = [
     // { party_name: null, party_legend: null, party_number: null, parlamentar_front: null, parl_front_legend: null, party_color: null, parl_front_color: null }, // Linha de header ou nula, removida se não for necessária
     { party_name: 'Articulação de Esquerda', party_legend: 'AE', party_number: 17, parlamentar_front: 'Frente de Todos', parl_front_legend: 'TDS', party_color: '#ffcb3d', parl_front_color: '#19cf7d' },
-    { party_name: 'Partido Liberal', party_legend: 'LIVRE', party_number: 19, parlamentar_front: 'Unidos por Haagar', parl_front_legend: 'UNI', party_color: '#850099', parl_front_color: '#f5cf11' },
+    { party_name: 'Partido Liberal', party_legend: 'LIVRE', party_number: 19, parlamentar_front: 'Unidos por Haagar', parl_front_legend: 'UNI', party_color: '#850099', parl_front_color: '#1d12b5' },
     { party_name: 'Partido Nacionalista', party_legend: 'NAC', party_number: 30, parlamentar_front: 'NAC', parl_front_legend: 'NAC', party_color: '#ff7700', parl_front_color: '#ff7700' },
     { party_name: 'Partido Conservador', party_legend: 'PCON', party_number: 25, parlamentar_front: 'Frente Conservadora', parl_front_legend: 'CON', party_color: '#858483', parl_front_color: '#858483' },
     { party_name: 'Partido Cristão', party_legend: 'PCRIS', party_number: 32, parlamentar_front: 'Frente Conservadora', parl_front_legend: 'CON', party_color: '#228000', parl_front_color: '#858483' },
-    { party_name: 'Partido do Desenvolvimento Econômico Ardiano', party_legend: 'PDEA', party_number: 45, parlamentar_front: 'Unidos por Haagar', parl_front_legend: 'UNI', party_color: '#352aad', parl_front_color: '#f5cf11' },
+    { party_name: 'Partido do Desenvolvimento Econômico Ardiano', party_legend: 'PDEA', party_number: 45, parlamentar_front: 'Unidos por Haagar', parl_front_legend: 'UNI', party_color: '#352aad', parl_front_color: '#1d12b5' },
     { party_name: 'Partido Ecológico Nacional', party_legend: 'PECO', party_number: 50, parlamentar_front: 'Frente de Todos', parl_front_legend: 'TDS', party_color: '#19cf7d', parl_front_color: '#19cf7d' },
     { party_name: 'Partido Monarquista', party_legend: 'PMONA', party_number: 65, parlamentar_front: 'Conservadores', parl_front_legend: 'CON', party_color: '#292929', parl_front_color: '#858483' }, // Ajustei 'Conservadores' para 'Frente Conservadora' se for o mesmo CON? Verifique. Se for diferente, mantenha.
     { party_name: 'Partido Operário Democrata', party_legend: 'PODE', party_number: 20, parlamentar_front: 'Frente de Todos', parl_front_legend: 'TDS', party_color: '#cb52ff', parl_front_color: '#19cf7d' },
     { party_name: 'Partido da Social Democracia Ardiana', party_legend: 'PSD', party_number: 12, parlamentar_front: 'PSD', parl_front_legend: 'PSD', party_color: '#ff984a', parl_front_color: '#ff984a' },
     { party_name: 'Partido Socialista de Haagar', party_legend: 'PSH', party_number: 22, parlamentar_front: 'PSH', parl_front_legend: 'PSH', party_color: '#e80000', parl_front_color: '#e80000' },
     { party_name: 'Partido dos Trabalhadores', party_legend: 'PT', party_number: 13, parlamentar_front: 'Frente de Todos', parl_front_legend: 'TDS', party_color: '#c90000', parl_front_color: '#19cf7d' },
-    { party_name: 'Movimento Unidos', party_legend: 'UNIDOS', party_number: 30, parlamentar_front: 'Unidos por Haagar', parl_front_legend: 'UNI', party_color: '#f5cf11', parl_front_color: '#f5cf11' }
+    { party_name: 'Movimento Unidos', party_legend: 'UNIDOS', party_number: 30, parlamentar_front: 'Unidos por Haagar', parl_front_legend: 'UNI', party_color: '#1d12b5', parl_front_color: '#1d12b5' }
   ];
   
   // Helper para converter string com ponto em número
