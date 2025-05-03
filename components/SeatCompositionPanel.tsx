@@ -12,22 +12,6 @@ interface SeatCompositionPanelProps {
 // Cor fallback caso uma frente não tenha cor no colorMap
 const FALLBACK_COLOR = '#D1D5DB'; // Cinza claro (Tailwind gray-300)
 
-// --- Helper para Contraste de Texto ---
-// Retorna 'black' ou 'white' dependendo do brilho da cor de fundo (hex)
-function getTextColorForBackground(hexcolor: string): string {
-    if (!hexcolor) return '#111827'; // Retorna cor escura se não houver cor de fundo
-    // Remove o '#' se presente
-    hexcolor = hexcolor.replace("#", "");
-    // Converte hex para RGB
-    const r = parseInt(hexcolor.substring(0, 2), 16);
-    const g = parseInt(hexcolor.substring(2, 4), 16);
-    const b = parseInt(hexcolor.substring(4, 6), 16);
-    // Fórmula YIQ para brilho percebido
-    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    // Retorna preto para fundos claros (YIQ >= 128) e branco para fundos escuros
-    return (yiq >= 128) ? '#1F2937' : '#FFFFFF'; // Cores Tailwind gray-800 e white
-}
-// -----------------------------------
 
 const SeatCompositionPanel: React.FC<SeatCompositionPanelProps> = ({ seatData, colorMap, totalSeats }) => {
 
@@ -42,36 +26,40 @@ const SeatCompositionPanel: React.FC<SeatCompositionPanelProps> = ({ seatData, c
   const majorityThreshold = Math.floor(totalSeats / 2) + 1;
 
   return (
-    // Container principal do painel
     <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 h-full flex flex-col">
 
-      {/* Grid para os cards das frentes */}
-      {/* Ajuste grid-cols-* para o número de colunas desejado em diferentes tamanhos de tela */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-grow content-start">
-        {sortedEntries.map(([legend, seats]) => {
-          const color = colorMap[legend] ?? FALLBACK_COLOR;
-          const textColor = getTextColorForBackground(color); // Calcula cor do texto para contraste
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-grow content-start">
+            {sortedEntries.map(([legend, seats]) => {
+                const color = colorMap[legend] ?? FALLBACK_COLOR;
+                // const textColor = getTextColorForBackground(color); // LINHA REMOVIDA
 
-          return (
-            // Card individual da frente/coalizão
-            <div
-              key={legend}
-              className="p-4 rounded-lg text-center flex flex-col justify-center items-center shadow"
-              style={{ backgroundColor: color, color: textColor, minHeight: '80px' }} // Define cor de fundo, cor do texto e altura mínima
-            >
-              {/* Nome da Frente/Coalizão */}
-              <div className="font-bold text-sm sm:text-base break-words">{legend}</div>
-              {/* Número de Assentos */}
-              <div className="text-2xl font-black mt-1">{seats}</div>
-            </div>
-          );
-        })}
+                return (
+                    <div
+                        key={legend}
+                        // Adiciona text-white ou text-gray-100 aqui
+                        // text-shadow pode ajudar na legibilidade em fundos claros
+                        className="p-4 rounded-lg text-center flex flex-col justify-center items-center shadow text-white"
+                        style={{
+                            backgroundColor: color,
+                            // Removemos 'color: textColor'
+                            minHeight: '80px',
+                            // Exemplo de text-shadow (opcional, ajuste a cor/desfoque se necessário):
+                            // textShadow: '1px 1px 2px rgba(0, 0, 0, 0.6)'
+                        }}
+                    >
+                        {/* Nome da Frente */}
+                        <div className="font-bold text-sm sm:text-base break-words">{legend}</div>
+                        {/* Número de Assentos - Ajustado */}
+                        <div className="text-3xl font-bold mt-1">{seats}</div> {/* Mudado de text-2xl font-black */}
+                    </div>
+                );
+            })}
+        </div>
+        {/* Linha da Maioria */}
+        <div className="mt-4 pt-2 border-t border-gray-200 text-center text-sm text-gray-600">
+            Maioria: {majorityThreshold} assentos
       </div>
-
-      {/* Linha da Maioria */}
-      <div className="mt-4 pt-2 border-t border-gray-200 text-center text-sm text-gray-600">
-        Maioria: {majorityThreshold} assentos
-      </div>
+      
     </div>
   );
 };

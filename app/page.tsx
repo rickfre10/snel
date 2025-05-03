@@ -210,24 +210,12 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="container mx-auto p-4 lg:p-6 space-y-6">
-        <h1 className="text-3xl font-bold text-center text-gray-800">Painel de Apuração - Haagar</h1>
-
-        {/* Controles de Tempo */}
-        <div className="text-center p-4 bg-white rounded-lg shadow-md border border-gray-200">
-          <h3 className="text-lg font-medium mb-2 text-gray-700">Ver Apuração em:</h3>
-          <div className="inline-flex rounded-md shadow-sm" role="group">
-              <button onClick={() => setCurrentTime(50)} disabled={isLoadingVotes} className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${currentTime === 50 ? 'bg-highlight text-white border-highlight' : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100'} disabled:opacity-50 transition-colors`}>50%</button>
-              <button onClick={() => setCurrentTime(100)} disabled={isLoadingVotes} className={`px-4 py-2 text-sm font-medium rounded-r-lg border border-l-0 ${currentTime === 100 ? 'bg-highlight text-white border-highlight' : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100'} disabled:opacity-50 transition-colors`}>100%</button>
-          </div>
-          {isLoadingVotes && <p className="text-sm text-gray-500 mt-2 animate-pulse">Carregando resultados ({currentTime}%)...</p>}
-          {errorVotes && <p className="text-sm text-red-600 mt-2">Erro: {errorVotes}</p>}
-        </div>
+      <main className="container mx-auto p-4 lg:p-6 space-y-8">
+        <h1 className="text-3xl font-bold text-center text-gray-800">Eleições 2022</h1>
 
         {/* Layout Principal: Mapa e Painel de Assentos */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="relative bg-white p-4 rounded-lg shadow-md border border-gray-200">
             <div className="lg:col-span-2 relative bg-white p-4 rounded-lg shadow-md border border-gray-200">
-                 <h2 className="text-xl font-semibold mb-2 text-gray-700">Mapa Interativo de Haagar</h2>
                  <InteractiveMap
                      results={districtResultsSummary}
                      colorMap={coalitionColorMap}
@@ -318,6 +306,16 @@ export default function Home() {
             </div>
         )}
       </main>
+              {/* Controles de Tempo */}
+              <div className="text-center p-4 bg-white rounded-lg shadow-md border border-gray-200">
+          <h3 className="text-lg font-medium mb-2 text-gray-700">Ver Apuração em:</h3>
+          <div className="inline-flex rounded-md shadow-sm" role="group">
+              <button onClick={() => setCurrentTime(50)} disabled={isLoadingVotes} className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${currentTime === 50 ? 'bg-highlight text-white border-highlight' : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100'} disabled:opacity-50 transition-colors`}>50%</button>
+              <button onClick={() => setCurrentTime(100)} disabled={isLoadingVotes} className={`px-4 py-2 text-sm font-medium rounded-r-lg border border-l-0 ${currentTime === 100 ? 'bg-highlight text-white border-highlight' : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100'} disabled:opacity-50 transition-colors`}>100%</button>
+          </div>
+          {isLoadingVotes && <p className="text-sm text-gray-500 mt-2 animate-pulse">Carregando resultados ({currentTime}%)...</p>}
+          {errorVotes && <p className="text-sm text-red-600 mt-2">Erro: {errorVotes}</p>}
+        </div>
     </div>
   );
 }
