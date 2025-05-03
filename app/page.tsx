@@ -11,7 +11,7 @@ import CandidateDisplay from '../components/CandidateDisplay';
 import DistrictBarChart from '../components/DistrictBarChart';
 import ProportionalPieChart from '../components/ProportionalPieChart';
 import RaceTicker from '../components/RaceTicker';
-import { TickerEntry } from '../components/RaceTicker';
+import { TickerEntry } from '../types/election'
 
 
 // Tipos e Dados Estáticos (Ajuste caminho se necessário, ex: @/types/election)
@@ -248,6 +248,7 @@ export default function Home() {
                 winnerPercentage: votesProcessed[0]?.percentage ?? null,
                 runnerUpLegend: votesProcessed[1]?.parl_front_legend || null, // Pega o segundo (índice 1)
                 runnerUpPercentage: votesProcessed[1]?.percentage ?? null, // Pega % do segundo
+                runnerUpName: votesProcessed[1]?.candidate_name || null,
             };
             dataForTicker.push(entry);
         });

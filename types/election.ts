@@ -67,3 +67,16 @@ export interface CandidateVote {
     id: number; // district_id (convertido)
     name: string; // district_name
   }
+  export interface TickerEntry {
+    districtId: number;
+    districtName: string;
+    stateId: string; // uf
+    stateName: string;
+    winnerName: string | null;
+    winnerLegend: string | null;
+    winnerPercentage: number | null;
+    runnerUpLegend: string | null;
+    runnerUpPercentage: number | null;
+    runnerUpName: string | null; // Nome do segundo colocado
+  }
+  

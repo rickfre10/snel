@@ -1,18 +1,12 @@
 // components/RaceTicker.tsx
 "use client";
 import React, { useState, useEffect } from 'react';
+import { TickerEntry } from '../types/election'
 
-// Interface (sem mudanças)
-export interface TickerEntry {
-  districtId: number;
-  districtName: string;
-  stateId: string;
-  stateName: string;
-  winnerName: string | null;
-  winnerLegend: string | null;
-  winnerPercentage: number | null;
-  runnerUpLegend: string | null;
-  runnerUpPercentage: number | null;
+interface RaceTickerProps {
+  data: TickerEntry[]; // Agora o tipo TickerEntry será encontrado
+  colorMap: Record<string, string>;
+  interval?: number;
 }
 
 interface RaceTickerProps {
