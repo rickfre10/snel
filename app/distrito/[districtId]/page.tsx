@@ -80,19 +80,30 @@ export default function DistrictDetailPage() {
       return;
     }
     const fetchVoteData = async () => {
-        setIsLoadingVotes(true); setErrorVotes(null);
-        try {
-            const response = await fetch(`/api/results?time=${currentTime}`);
-            if (!response.ok) {
-                 let errorMsg = 'Erro ao buscar votos';
-                 try { errorMsg = (await response.json()).error || errorMsg; } catch (e) {}
-                 throw new Error(errorMsg);
-            }
-            const data: ApiVotesData = await response.json(); setApiVotesData(data);
-        } catch (err: unknown) { console.error("Falha API Votos:", err); setErrorVotes(err instanceof Error ? err.message : 'Erro desconhecido'); setApiVotesData(null);
-        } finally { setIsLoadingVotes(false); }
-    };
-    fetchVoteData();
+      console.log(`Buscando dados para distrito ${districtId}, tempo ${currentTime}`); // Log 1: Inicio da busca
+      setIsLoadingVotes(true); setErrorVotes(null);
+      try {
+          const response = await fetch(`/api/results?time=${currentTime}`);
+          console.log('Status da resposta da API:', response.status, response.ok); // Log 2: Status da resposta
+          if (!response.ok) {
+               let errorMsg = 'Erro ao buscar votos';
+               try { errorMsg = (await response.json()).error || errorMsg; } catch (e) {}
+               console.error('Erro na resposta da API:', errorMsg); // Log 3a: Erro específico da API
+               throw new Error(errorMsg);
+          }
+          const data: ApiVotesData = await response.json();
+          console.log('Dados recebidos da API:', data); // Log 4: Dados recebidos com sucesso
+          setApiVotesData(data); // Tenta guardar os dados
+      } catch (err: unknown) {
+          console.error("Falha ao buscar/processar dados da API:", err); // Log 3b: Erro geral (rede, json inválido, etc)
+          setErrorVotes(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido');
+          setApiVotesData(null);
+      } finally {
+          setIsLoadingVotes(false);
+          console.log('Busca finalizada. isLoadingVotes = false'); // Log 5: Fim da busca
+      }
+  };
+  fetchVoteData();
   }, [currentTime, districtId]);
 
   // --- Cálculos Derivados (Filtrados) ---
@@ -133,6 +144,15 @@ if (!currentDistrictInfo) {
 // A partir daqui, TypeScript sabe que currentDistrictInfo NÃO é null/undefined
 
 // --- Agora o return principal ---
+console.log('--- ESTADO ANTES DE RENDERIZAR ---');
+console.log('isLoadingVotes:', isLoadingVotes);
+console.log('errorVotes:', errorVotes);
+console.log('apiVotesData:', apiVotesData); // Veja se é null ou tem dados aqui!
+console.log('districtId:', districtId);
+console.log('currentDistrictInfo:', currentDistrictInfo);
+console.log('------------------------------------');
+
+
 return (
   <div className="container mx-auto p-4 lg:p-6 space-y-6">
     {/* Link para Voltar */}
