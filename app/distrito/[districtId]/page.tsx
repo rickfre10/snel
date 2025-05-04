@@ -196,17 +196,47 @@ return (
         </div>
 
 
-        {/* Renderização Condicional da Visualização (como antes) */}
+        {/* Renderização Condicional da Visualização */}
         <div className="mt-4 min-h-[400px]">
-            {isLoadingVotes && <p className="text-center text-gray-500 animate-pulse">Carregando resultados...</p>}
-            {!isLoadingVotes && errorVotes && <p className="text-red-600 text-center">Erro: {errorVotes}</p>}
-            {!isLoadingVotes && !errorVotes && apiVotesData && (
-                <>
-                    {/* ... Lógica com districtViewMode ... */}
-                </>
-            )}
-             {!isLoadingVotes && !errorVotes && !apiVotesData && (<p className="text-center text-gray-500">Não foi possível carregar os dados de votos.</p>)}
-        </div>
+                {isLoadingVotes && <p className="text-center text-gray-500">Carregando...</p>}
+                {!isLoadingVotes && errorVotes && <p className="text-red-600 text-center">Erro: {errorVotes}</p>}
+
+                {/* ---- SUBSTITUIÇÃO TEMPORÁRIA ---- */}
+                {!isLoadingVotes && !errorVotes && apiVotesData && (
+                    <div>
+                        <p style={{color: 'green', fontWeight: 'bold'}}>Bloco de Renderização Ativo!</p>
+                        <p>Modo de Visão: {districtViewMode}</p>
+                        <p>Candidatos Filtrados: {filteredCandidateVotes.length}</p>
+                        <p>Votos Proporcionais Filtrados: {filteredProportionalVotes.length}</p>
+                        <p>Dados de districtResults.votes: {districtResults.votes.length}</p>
+                        <hr/>
+                        {/* Tenta renderizar um deles diretamente */}
+                        {districtResults.votes.length > 0 ?
+                            <CandidateDisplay
+                                data={districtResults.votes}
+                                leadingId={districtResults.leadingCandidateId}
+                                colorMap={coalitionColorMap}
+                            /> : <p>Sem dados para CandidateDisplay.</p>
+                         }
+                         {/* Você pode comentar/descomentar as linhas abaixo para testar os outros isoladamente */}
+                         {/* <hr/>
+                         {districtResults.votes.length > 0 ?
+                            <DistrictBarChart
+                                data={districtResults.votes}
+                                colorMap={coalitionColorMap}
+                            /> : <p>Sem dados para DistrictBarChart.</p>
+                         }
+                         <hr/>
+                         {filteredProportionalVotes.length > 0 ?
+                            <ProportionalPieChart
+                                data={filteredProportionalVotes}
+                                colorMap={coalitionColorMap}
+                            /> : <p>Sem dados para ProportionalPieChart.</p>
+                         } */}
+                    </div>
+                )}
+                 {/* ------------------------------------ */}
+    </div>
     </div>
     </div>
   );
