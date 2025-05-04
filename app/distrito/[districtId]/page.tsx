@@ -143,15 +143,19 @@ if (!currentDistrictInfo) {
 }
 // A partir daqui, TypeScript sabe que currentDistrictInfo NÃO é null/undefined
 
-// --- Agora o return principal ---
 console.log('--- ESTADO ANTES DE RENDERIZAR ---');
 console.log('isLoadingVotes:', isLoadingVotes);
 console.log('errorVotes:', errorVotes);
-console.log('apiVotesData:', apiVotesData); // Veja se é null ou tem dados aqui!
-console.log('districtId:', districtId);
-console.log('currentDistrictInfo:', currentDistrictInfo);
-console.log('------------------------------------');
+// console.log('apiVotesData:', apiVotesData); // Já vimos que este objeto tem dados
 
+console.log('--- DADOS PROCESSADOS ---');
+console.log('District ID p/ Filtro:', districtId); // Deve ser 204
+console.log('Estado p/ Filtro:', currentStateId); // Deve ser o UF de 204
+console.log('API Candidate Votes RAW (amostra):', apiVotesData?.candidateVotes?.slice(0, 10)); // Amostra dos dados brutos
+console.log('Filtrados (Candidatos):', filteredCandidateVotes); // <-- É [] ou tem objetos? Quantos?
+console.log('Filtrados (Proporcionais):', filteredProportionalVotes); // <-- É [] ou tem objetos?
+console.log('Resultados Calculados (districtResults):', districtResults); // <-- O array 'votes' aqui dentro é [] ou tem objetos?
+console.log('--------------------------');
 
 return (
   <div className="container mx-auto p-4 lg:p-6 space-y-6">
