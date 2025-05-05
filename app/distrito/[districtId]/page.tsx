@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'; // Hook para pegar parâmetros da U
 import Link from 'next/link'; // Para um link de "Voltar"
 
 // Componentes de Visualização para esta página
-import CandidateDisplay from '@/components/CandidateDisplay'; // Usando alias @/components/
+import CandidateCardInfo from '@/components/CandidateCardInfo'; // Usando alias @/components/
 import DistrictBarChart from '@/components/DistrictBarChart';
 import ProportionalPieChart from '@/components/ProportionalPieChart';
 
@@ -198,7 +198,7 @@ return (
         <>
                     {districtViewMode === 'candidates' && (
                         districtResults.votes.length > 0 ?
-                        <CandidateDisplay
+                        <CandidateCardInfo
                             data={districtResults.votes}
                             leadingId={districtResults.leadingCandidateId}
                             colorMap={coalitionColorMap}

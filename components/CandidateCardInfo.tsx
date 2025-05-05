@@ -1,4 +1,4 @@
-// components/CandidateDisplay.tsx
+// components/CandidateCardInfo.tsx
 "use client";
 import React from 'react';
 // Ajuste o caminho se 'types/election' for diferente
@@ -11,7 +11,7 @@ interface CandidateVoteProcessed extends CandidateVote {
 }
 
 // Interface de Props SEM partyColorMap
-interface CandidateDisplayProps {
+interface CandidateCardInfoProps {
   data: CandidateVoteProcessed[];
   leadingId: string | number | null;
   coalitionColorMap: Record<string, string>; // Para a borda inferior E agora para a tag
@@ -33,7 +33,7 @@ function getTextColorForBackground(hexcolor: string): string {
     } catch (e) { return '#1F2937'; }
 }
 
-const CandidateDisplay: React.FC<CandidateDisplayProps> = ({ data, leadingId, coalitionColorMap }) => {
+const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, coalitionColorMap }) => {
   if (!data || data.length === 0) {
     return <p>Sem dados de candidatos para exibir.</p>;
   }
@@ -160,4 +160,4 @@ const CandidateDisplay: React.FC<CandidateDisplayProps> = ({ data, leadingId, co
   // --- Fim do JSX Principal ---
 };
 
-export default CandidateDisplay;
+export default CandidateCardInfo;
