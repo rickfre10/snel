@@ -34,7 +34,7 @@ const CustomYAxisTick = (props: any) => {
     const coalition = parts[1] || '';
     return (
       <g transform={`translate(${x},${y})`}>
-        <text x={0} y={0} dy={0} textAnchor="end" fill="#666" fontSize={11}>
+        <text x={0} y={0} dy={0} textAnchor="end" fill="#666" fontSize={24}>
            <tspan x={0} dy="0.355em" fontSize={12} fontWeight="bold">{name}</tspan>
            <tspan x={0} dy="1.1em" fill="#999" fontSize={10}>{coalition}</tspan>
         </text>
@@ -104,7 +104,7 @@ const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data, colorMap }) =
             position="insideRight"
             offset={5}
             fill="#ffffff"
-            style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)', fontSize: 10 }}
+            style={{ fontSize: 50 }}
             formatter={(value: number) => `${value.toFixed(1)}%`}
           />
         </Bar>
