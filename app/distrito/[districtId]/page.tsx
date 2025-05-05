@@ -163,37 +163,35 @@ return (
     <Link href="/" className="text-blue-600 hover:underline mb-4 inline-block">&larr; Voltar para Visão Nacional</Link>
 
     {/* Título - Agora seguro para acessar as propriedades */}
-    <h1 className="text-3xl font-bold text-gray-800">
-      Distrito: {currentDistrictInfo.district_name} ({currentDistrictInfo.uf})
+    <h1 className="text-xl font-semibold text-gray-700">
+      {currentDistrictInfo.uf_name}
     </h1>
-
-    {/* Controles de Tempo (como antes) */}
-    <div className="text-left p-4 bg-white rounded-lg shadow-md border border-gray-200">
-        {/* ... select de tempo ... */}
-        <label htmlFor="time-select" className="text-sm font-medium mr-2">Ver Apuração em:</label>
-        <select
-           id="time-select"
-           value={currentTime}
-           onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))}
-           disabled={isLoadingVotes}
-           className="rounded border-gray-300 shadow-sm"
-        >
-            <option value={50}>50%</option>
-            <option value={100}>100%</option>
-        </select>
-    </div>
+    <h1 className="text-3xl font-bold text-gray-800">
+     {currentDistrictInfo.district_name} 
+    </h1>
 
     {/* Painel Principal de Detalhes (como antes) */}
     <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-        {/* ... Título H2, Botões de Navegação ... */}
-         <h2 className="text-xl font-semibold mb-4 text-gray-700">
-            Resultados - {currentTime}%
-        </h2>
+
+         {/* --- INÍCIO DO BLOCO DOS BOTÕES --- */}
+        {/* Botões de Navegação da Visão */}
         <div className="mb-4 border-b border-gray-200">
             <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
-                  {/* ... botões ... */}
+                <button onClick={() => setDistrictViewMode('candidates')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'candidates' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                    Candidatos
+                </button>
+                <button onClick={() => setDistrictViewMode('bars')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'bars' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                    Gráfico Barras
+                </button>
+                <button onClick={() => setDistrictViewMode('proportional')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'proportional' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                    Prop. Estado ({currentStateId}) {/* currentStateId deve estar definido */}
+                </button>
+                <button disabled title="Dados de eleição anterior não disponíveis" className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-400 cursor-not-allowed`}>
+                    Swing
+                </button>
             </nav>
         </div>
+         {/* --- FIM DO BLOCO DOS BOTÕES --- */}
 
 
         {/* Renderização Condicional da Visualização baseado em districtViewMode */}
@@ -226,6 +224,23 @@ return (
                 </>
                  {/* --- FIM DO BLOCO DE RENDERIZAÇÃO CONDICIONAL --- */}
     </div>
+
+     {/* Controles de Tempo (como antes) */}
+     <div className="text-left p-4 bg-white rounded-lg shadow-md border border-gray-200">
+        {/* ... select de tempo ... */}
+        <label htmlFor="time-select" className="text-sm font-medium mr-2">Ver Apuração em:</label>
+        <select
+           id="time-select"
+           value={currentTime}
+           onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))}
+           disabled={isLoadingVotes}
+           className="rounded border-gray-300 shadow-sm"
+        >
+            <option value={50}>50%</option>
+            <option value={100}>100%</option>
+        </select>
+    </div>
+    
     </div>
   );
 }
