@@ -201,7 +201,7 @@ return (
                         <CandidateCardInfo
                             data={districtResults.votes}
                             leadingId={districtResults.leadingCandidateId}
-                            colorMap={coalitionColorMap}
+                            coalitionColorMap={coalitionColorMap}
                         /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
                     )}
                     {districtViewMode === 'bars' && (
