@@ -2,110 +2,131 @@
 "use client";
 import React from 'react';
 // Ajuste o caminho se 'types/election' for diferente
-import { CandidateVote, PartyInfo } from '../types/election'; // Importe PartyInfo também se precisar de mais detalhes
+import { CandidateVote } from '../types/election';
 
 // Interface estendida que o componente espera receber
-// Certifique-se que os tipos aqui batem com o que é calculado em page.tsx
 interface CandidateVoteProcessed extends CandidateVote {
   percentage: number;
   numericVotes: number;
-  // candidate_id não é mais usado como identificador principal aqui
 }
 
-// Interface de Props atualizada para incluir colorMap
+// Interface de Props SEM partyColorMap
 interface CandidateDisplayProps {
   data: CandidateVoteProcessed[];
-  leadingId: string | number | null; // ID do líder (candidate_name)
-  colorMap: Record<string, string>; // Mapa de cores { "TDS": "#cor", ... }
+  leadingId: string | number | null;
+  coalitionColorMap: Record<string, string>; // Para a borda inferior E agora para a tag
 }
 
-const CandidateDisplay: React.FC<CandidateDisplayProps> = ({ data, leadingId, colorMap }) => {
-  // Verifica se há dados antes de prosseguir
+// Cor fallback e helper de contraste (mantidos)
+const FALLBACK_COLOR = '#D1D5DB'; // Cinza claro fallback
+const COALITION_FALLBACK_COLOR = '#6b7280'; // Para borda
+function getTextColorForBackground(hexcolor: string): string {
+    if (!hexcolor) return '#1F2937';
+    hexcolor = hexcolor.replace("#", "");
+    if (hexcolor.length !== 6) return '#1F2937';
+    try {
+        const r = parseInt(hexcolor.substring(0, 2), 16);
+        const g = parseInt(hexcolor.substring(2, 4), 16);
+        const b = parseInt(hexcolor.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128) ? '#1F2937' : '#FFFFFF';
+    } catch (e) { return '#1F2937'; }
+}
+
+const CandidateDisplay: React.FC<CandidateDisplayProps> = ({ data, leadingId, coalitionColorMap }) => {
   if (!data || data.length === 0) {
     return <p>Sem dados de candidatos para exibir.</p>;
   }
 
-  // Ordena os dados por votos para exibição visual
-  // É importante fazer uma cópia com [...data] para não modificar o array original
+  // Ordena por votos
   const sortedData = [...data].sort((a, b) => b.numericVotes - a.numericVotes);
 
-  // Separa o líder (primeiro do array ordenado) dos demais
+  // Separa o líder e os próximos 4 (totalizando 5)
   const leader = sortedData[0];
-  const others = sortedData.slice(1);
+  const others = sortedData.slice(1, 5); // Pega do índice 1 até (mas não incluindo) o 5
 
-  // Cor padrão caso a frente/coalizão não seja encontrada no mapa de cores
-  const fallbackColor = '#6b7280'; // Um cinza padrão
+  // Calcula diferença para o segundo colocado (se existir nos dados originais)
+  const runnerUp = sortedData[1] || null;
+  const voteDifference = runnerUp ? leader.numericVotes - runnerUp.numericVotes : null;
+  const percentageDifference = runnerUp ? leader.percentage - runnerUp.percentage : null;
 
-  // -- Função interna para renderizar o card de UM candidato --
-  // Isso ajuda a organizar e reutilizar a lógica de renderização do card
+  // --- Função interna para renderizar o card de UM candidato ---
   const renderCandidateCard = (candidate: CandidateVoteProcessed, isLeader: boolean) => {
-    // Usa o nome como identificador único para a key do React
     const idKey = candidate.candidate_name;
-    // Pega a legenda da frente para buscar a cor
     const frontLegend = candidate.parl_front_legend;
-    // Busca a cor no mapa; usa fallback se não encontrar
-    const color = frontLegend ? (colorMap[frontLegend] ?? fallbackColor) : fallbackColor;
+    // Cor da COALIZÃO usada para borda E tag agora
+    const coalitionColor = frontLegend ? (coalitionColorMap[frontLegend] ?? COALITION_FALLBACK_COLOR) : COALITION_FALLBACK_COLOR;
+    // Cor do texto da TAG baseado na cor da COALIZÃO
+    const tagTextColor = getTextColorForBackground(coalitionColor);
 
-    // Define classes de tamanho e estilo condicionalmente
-    const photoSize = isLeader ? 'w-24 h-24' : 'w-16 h-16'; // Foto maior para o líder
-    const nameSize = isLeader ? 'text-2xl' : 'text-lg'; // Nome maior para o líder
-    const infoSize = isLeader ? 'text-base' : 'text-sm';
+    // Define classes baseadas se é líder ou não
+    const photoSize = isLeader ? 'w-32 h-32' : 'w-20 h-20'; // Líder maior
+    const nameSize = isLeader ? 'text-3xl' : 'text-lg'; // Líder maior
+    const infoSize = isLeader ? 'text-xl' : 'text-base'; // % do líder maior
+    const voteSize = isLeader ? 'text-base' : 'text-xs'; // Votos do líder maior
     const cardPadding = isLeader ? 'p-4' : 'p-3';
-    const borderThickness = 'border-b-8'; // Espessura da borda inferior
+    const borderThickness = isLeader ? 'border-b-8' : 'border-b-4'; // Borda do líder mais grossa
 
-    // Classes do container principal do card
     const containerClasses = `
       flex items-center ${cardPadding} bg-white rounded-lg border ${borderThickness} shadow-sm transition-all duration-150 ease-in-out
       ${isLeader ? 'border-gray-300' : 'border-gray-200 hover:bg-gray-50'}
-    `; // Sem cor de fundo/borda especial para o líder, apenas tamanho
+    `;
 
     return (
-      // Card individual com borda inferior colorida dinamicamente
       <div
         key={idKey}
         className={containerClasses}
-        style={{ borderBottomColor: color }} // Aplica a cor dinamicamente
+        style={{ borderBottomColor: coalitionColor }} // Borda inferior com cor da COALIZÃO
       >
-        {/* Coluna da Foto */}
-        <div className={`flex-shrink-0 ${photoSize} mr-4 bg-gray-200 border border-gray-300`}> {/* Foto quadrada por padrão se for div, bg p/ placeholder */}
-          {candidate.candidate_photo ? (
-            <>
-              <img
+         {/* Coluna da Foto - CORRIGIDO */}
+      <div className={`flex-shrink-0 ${photoSize} mr-3 sm:mr-4 bg-gray-200 border border-gray-300 overflow-hidden`}> {/* Adicionado overflow-hidden */}
+        {/* Verifica APENAS UMA VEZ se a foto existe */}
+        {candidate.candidate_photo ? (
+          // Se existe, tenta mostrar a imagem
+          // Usamos um Fragment <> para agrupar img e placeholder de erro
+          <>
+            <img
                 src={candidate.candidate_photo}
                 alt={candidate.candidate_name}
-                className="w-full h-full object-cover" // object-cover para preencher
+                className="w-full h-full object-cover" // object-cover tenta preencher
                 onError={(e) => {
-                  // Esconde a imagem quebrada e mostra o placeholder irmão
-                  e.currentTarget.style.display = 'none';
-                  const placeholder = e.currentTarget.nextElementSibling;
-                  if (placeholder) placeholder.classList.remove('hidden');
+                    console.error(`Falha ao carregar imagem: ${candidate.candidate_photo}`, e);
+                    // Esconde a imagem quebrada
+                    e.currentTarget.style.display = 'none';
+                    // Tenta mostrar o placeholder que é irmão (sibling)
+                    const placeholder = e.currentTarget.nextElementSibling;
+                    if (placeholder) placeholder.classList.remove('hidden');
                 }}
-              />
-              {/* Placeholder oculto que só aparece se a imagem falhar */}
-              <div className={`hidden w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 ${isLeader ? 'text-xl' : 'text-base'}`}>?</div>
-            </>
-          ) : (
-            // Placeholder padrão se não houver foto
-            <div className={`w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 ${isLeader ? 'text-xl' : 'text-base'}`}>?</div>
-          )}
-        </div>
+            />
+            {/* Placeholder que SÓ aparece se onError for acionado */}
+            <div className={`hidden w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 ${isLeader ? 'text-2xl' : 'text-lg'}`}>?</div>
+          </>
+        ) : (
+          // Se não existe foto, mostra o placeholder padrão
+          <div className={`w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 ${isLeader ? 'text-2xl' : 'text-lg'}`}>?</div>
+        )}
+      </div>
+      {/* Fim da Coluna da Foto */}
 
         {/* Coluna das Informações */}
         <div className="flex-grow">
-          {/* Nome do Candidato */}
-          <div className={`${nameSize} font-bold text-gray-800`}>
-            {candidate.candidate_name}
-          </div>
-          {/* Porcentagem e Votos */}
-          <div className={`${infoSize} font-semibold text-gray-700`}>
+          <div className={`${nameSize} font-bold text-gray-800`}>{candidate.candidate_name}</div>
+          {/* Tag da COALIZÃO (Frente) */}
+          {frontLegend && (
+            <span
+              className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold mt-1"
+              style={{ backgroundColor: coalitionColor, color: tagTextColor }}
+            >
+              {frontLegend}
+            </span>
+          )}
+           {/* Porcentagem com Destaque */}
+           <div className={`${infoSize} font-semibold text-gray-700 mt-2`}>
             {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
-            {' '}
-            ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'} votos)
           </div>
-          {/* Partido e Frente */}
-          <div className="text-sm text-gray-500 mt-1">
-            {candidate.party_legend || 'Partido?'}
-            {frontLegend ? ` - ${frontLegend}` : ''}
+          {/* Votos com Menos Destaque */}
+          <div className={`${voteSize} text-gray-500`}>
+            ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'} votos)
           </div>
         </div>
       </div>
@@ -115,16 +136,22 @@ const CandidateDisplay: React.FC<CandidateDisplayProps> = ({ data, leadingId, co
 
   // --- JSX Principal do Componente ---
   return (
-    // Container Geral
-    <div className="space-y-4"> {/* Espaçamento entre líder e grid */}
-
-      {/* Renderiza o Líder (se existir) */}
+    <div className="space-y-4">
+      {/* Renderiza o Líder */}
       {leader && renderCandidateCard(leader, true)}
 
-      {/* Renderiza os Outros Candidatos em um Grid (se existirem) */}
+      {/* Exibição da Vantagem (se houver runnerUp) */}
+      {runnerUp && voteDifference !== null && percentageDifference !== null && (
+          <div className="text-center text-lg font-semibold text-gray-700 py-3 border-y border-dashed border-gray-300">
+              Vantagem: {voteDifference.toLocaleString('pt-BR')} votos ({percentageDifference.toFixed(2)} p.p.)
+          </div>
+      )}
+
+      {/* Container para os Outros Candidatos (agora coluna única) */}
       {others.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-          {/* Mapeia os outros candidatos e chama a função de renderização */}
+        // Removemos o grid, usamos space-y para espaçamento vertical
+        <div className="space-y-3 mt-4">
+          {/* Mapeia apenas os próximos 4 (slice(1, 5) já fez isso) */}
           {others.map((candidate) => renderCandidateCard(candidate, false))}
         </div>
       )}

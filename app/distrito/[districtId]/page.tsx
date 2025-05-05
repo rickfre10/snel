@@ -201,7 +201,7 @@ return (
                         <CandidateDisplay
                             data={districtResults.votes}
                             leadingId={districtResults.leadingCandidateId}
-                            colorMap={coalitionColorMap} // Passa o colorMap
+                            colorMap={coalitionColorMap}
                         /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
                     )}
                     {districtViewMode === 'bars' && (
@@ -240,7 +240,7 @@ return (
             <option value={100}>100%</option>
         </select>
     </div>
-    
+
     </div>
   );
 }

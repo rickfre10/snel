@@ -92,7 +92,7 @@ const RaceTicker: React.FC<RaceTickerProps> = ({ data, colorMap, interval = 5000
               {currentEntry.winnerLegend} liderando
             </span>
           ) : (
-            <span>Sem Vencedor</span>
+            <span>Muito próximo</span>
           )}
         </div>
 

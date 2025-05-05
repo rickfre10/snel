@@ -34,7 +34,7 @@ const CustomYAxisTick = (props: any) => {
     const coalition = parts[1] || '';
     return (
       <g transform={`translate(${x},${y})`}>
-        <text x={0} y={0} dy={0} textAnchor="end" fill="#666" fontSize={24}>
+        <text x={0} y={0} dy={0} textAnchor="end" fill="#666" fontSize={30}>
            <tspan x={0} dy="0.355em" fontSize={12} fontWeight="bold">{name}</tspan>
            <tspan x={0} dy="1.1em" fill="#999" fontSize={10}>{coalition}</tspan>
         </text>
