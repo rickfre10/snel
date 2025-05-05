@@ -104,7 +104,7 @@ const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data, colorMap }) =
             position="insideRight"
             offset={5}
             fill="#ffffff"
-            style={{ fontSize: 50 }}
+            style={{fontWeight:'bold' ,fontSize: 35 }}
             formatter={(value: number) => `${value.toFixed(1)}%`}
           />
         </Bar>
