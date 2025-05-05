@@ -1,7 +1,6 @@
 // components/DistrictBarChart.tsx
 "use client";
-// Adicionado 'useMemo' ao import do React
-import React, { useMemo } from 'react';
+import React, { useMemo } from 'react'; // Garante que useMemo está importado
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LabelList,
@@ -25,7 +24,7 @@ interface DistrictBarChartProps {
   colorMap: Record<string, string>;
 }
 
-// Componente Customizado para o Tick do Eixo Y (sem alterações aqui)
+// Componente Customizado para o Tick do Eixo Y (sem alterações)
 const CustomYAxisTick = (props: any) => {
     const { x, y, payload } = props;
     const label = payload.value as string;
@@ -35,32 +34,47 @@ const CustomYAxisTick = (props: any) => {
     const coalition = parts[1] || '';
     return (
       <g transform={`translate(${x},${y})`}>
-        <text x={0} y={0} dy={0} textAnchor="end" fill="#666" fontSize={24}>
-           <tspan x={0} dy="0.355em">{name}</tspan>
-           <tspan x={0} dy="1.1em" fill="#999">{coalition}</tspan>
+        <text x={0} y={0} dy={0} textAnchor="end" fill="#666" fontSize={11}>
+           <tspan x={0} dy="0.355em" fontSize={12} fontWeight="bold">{name}</tspan>
+           <tspan x={0} dy="1.1em" fill="#999" fontSize={10}>{coalition}</tspan>
         </text>
       </g>
     );
 };
 
 const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data, colorMap }) => {
-  if (!data || data.length === 0) {
-    return <p>Selecione um distrito para ver os resultados.</p>;
-  }
 
+  // --- useMemo AGORA VEM ANTES DO IF ---
   // Prepara os dados (usando useMemo corretamente agora)
   const chartData = useMemo(() => {
+    // Retorna array vazio se 'data' for inválido, mas o hook é chamado
+    if (!data || data.length === 0) {
+        return [];
+    }
+    // Continua com o processamento se 'data' for válido
     return data
       .map(item => ({
         ...item,
         yAxisLabel: `${item.candidate_name}\n(${item.parl_front_legend || 'N/A'})`,
         percentageValue: typeof item.percentage === 'number' ? item.percentage : 0,
+        // Garante que numericVotes é usado, caso venha de props diferentes
+        numericVotes: typeof item.numericVotes === 'number' ? item.numericVotes : 0
       }))
       .sort((a, b) => b.numericVotes - a.numericVotes);
   }, [data]); // Dependência correta
+  // --------------------------------------
+
+  // --- Verificação de dados APÓS o hook ---
+  // Agora verificamos o resultado do useMemo (chartData)
+  if (chartData.length === 0) {
+    // Pode retornar null ou uma mensagem, mas não chama mais hooks depois daqui
+    return <p className="text-center text-gray-500 py-4">Sem dados de candidatos para exibir o gráfico.</p>;
+  }
+  // -----------------------------------------
 
   const fallbackColor = '#8884d8';
 
+  // --- JSX Principal (sem alterações aqui) ---
   return (
     <ResponsiveContainer width="100%" height={300 + chartData.length * 40}>
       <BarChart
@@ -80,10 +94,7 @@ const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data, colorMap }) =
             tick={<CustomYAxisTick />}
          />
         <Tooltip formatter={(value: number) => `${value.toLocaleString('pt-BR')} votos`} />
-        {/* <Legend /> */}
-
         <Bar dataKey="numericVotes" name="Votos" >
-          {/* Tipos explícitos adicionados ao callback do map */}
           {chartData.map((entry: typeof chartData[0], index: number) => {
             const color = entry.parl_front_legend ? colorMap[entry.parl_front_legend] : fallbackColor;
             return <Cell key={`cell-${index}`} fill={color || fallbackColor} />;
@@ -93,7 +104,7 @@ const DistrictBarChart: React.FC<DistrictBarChartProps> = ({ data, colorMap }) =
             position="insideRight"
             offset={5}
             fill="#ffffff"
-            style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)', fontSize: 50 }}
+            style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)', fontSize: 10 }}
             formatter={(value: number) => `${value.toFixed(1)}%`}
           />
         </Bar>
