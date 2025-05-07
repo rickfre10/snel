@@ -1,28 +1,23 @@
 // components/CandidateCardInfo.tsx
 "use client";
 import React from 'react';
-// Certifique-se que o caminho para 'types/election' está correto
-// Se 'types' está na raiz, ao lado de 'app' e 'components', este caminho deve funcionar
-import { CandidateVote } from '../types/election'; // Seu caminho original mantido
+import { CandidateVote } from '../types/election';
 
-// Interface estendida que o componente espera receber
 interface CandidateVoteProcessed extends CandidateVote {
   percentage: number;
   numericVotes: number;
 }
 
-// Interface de Props COM coalitionColorMap
-export interface CandidateCardInfoProps { // Exportar a interface pode ser útil
+export interface CandidateCardInfoProps {
   data: CandidateVoteProcessed[];
   leadingId: string | number | null;
   coalitionColorMap: Record<string, string>;
 }
 
-// Cor fallback e helper de contraste (mantidos)
-const FALLBACK_COLOR = '#D1D5DB'; // Cinza claro fallback
-const COALITION_FALLBACK_COLOR = '#6b7280'; // Para borda
+const FALLBACK_COLOR = '#D1D5DB'; // Cinza claro fallback (usado para status Liderando)
+const COALITION_FALLBACK_COLOR = '#6b7280';
 function getTextColorForBackground(hexcolor: string): string {
-    if (!hexcolor) return '#1F2937'; // Dark Gray
+    if (!hexcolor) return '#1F2937';
     hexcolor = hexcolor.replace("#", "");
     if (hexcolor.length !== 6) return '#1F2937';
     try {
@@ -30,7 +25,7 @@ function getTextColorForBackground(hexcolor: string): string {
         const g = parseInt(hexcolor.substring(2, 4), 16);
         const b = parseInt(hexcolor.substring(4, 6), 16);
         const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        return (yiq >= 128) ? '#1F2937' : '#FFFFFF'; // Dark Gray or White
+        return (yiq >= 128) ? '#1F2937' : '#FFFFFF';
     } catch (e) { return '#1F2937'; }
 }
 
@@ -46,196 +41,189 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
   const voteDifference = leader && runnerUp ? leader.numericVotes - runnerUp.numericVotes : null;
   const percentageDifference = leader && runnerUp ? leader.percentage - runnerUp.percentage : null;
 
-  // --- Função interna para renderizar o card de UM candidato ---
-  // ADICIONADO leaderVoteDifference e leaderPercentageDifference como parâmetros opcionais
   const renderCandidateCard = (
     candidate: CandidateVoteProcessed,
     isLeader: boolean,
-    leaderVoteDifference?: number | null, // Apenas para o líder
-    leaderPercentageDifference?: number | null // Apenas para o líder
+    leaderVoteDifference?: number | null,
+    leaderPercentageDifference?: number | null
   ) => {
     const idKey = candidate.id ? `cand-${candidate.id}` : `${candidate.candidate_name}-${candidate.numericVotes}`;
-    const frontLegend = candidate.parl_front_legend; // Usado para Frente/Coligação
-    const partyLegendDisplay = candidate.party_legend; // Novo: Legenda do Partido
-    const coalitionColor = frontLegend ? (coalitionColorMap[frontLegend] ?? COALITION_FALLBACK_COLOR) : COALITION_FALLBACK_COLOR;
-    const tagTextColor = getTextColorForBackground(coalitionColor);
+    const frontLegend = candidate.parl_front_legend;
+    const partyLegendDisplay = candidate.party_legend;
+    // Cor da coalizão para a borda do líder e tags de frente
+    const leaderCoalitionColor = frontLegend ? (coalitionColorMap[frontLegend] ?? COALITION_FALLBACK_COLOR) : COALITION_FALLBACK_COLOR;
+    // Cor para a tag de status: usa a cor da coalizão se houver status, senão um cinza para "Liderando"
+    const statusTagBgColor = candidate.status ? leaderCoalitionColor : FALLBACK_COLOR;
+    const statusTagTextColor = getTextColorForBackground(statusTagBgColor);
+    // Cor para a tag de frente/partido dos não-líderes
+    const otherPartyTagBgColor = frontLegend ? (coalitionColorMap[frontLegend] ?? COALITION_FALLBACK_COLOR) : COALITION_FALLBACK_COLOR;
+    const otherPartyTagTextColor = getTextColorForBackground(otherPartyTagBgColor);
 
-    // ---- NOVO LAYOUT PARA O LÍDER ----
+
     if (isLeader) {
       return (
         <div
           key={idKey}
-          className="bg-white rounded-lg shadow-xl overflow-hidden border-4"
-          style={{ borderColor: coalitionColor }}
+          className="bg-white rounded-lg shadow-xl overflow-hidden border-2 flex flex-col h-full" // Ajuste: border-2, flex flex-col h-full
+          style={{ borderColor: leaderCoalitionColor }}
         >
-          {/* Seção da Foto - Topo, Largura Total */}
-          <div className="w-full h-53 md:h-78 bg-gray-200">
+          {/* Seção da Foto */}
+          <div className="w-full h-48 md:h-64 bg-gray-200"> {/* Ajuste: altura da foto */}
             {candidate.candidate_photo ? (
-              <img
-                src={candidate.candidate_photo}
-                alt={candidate.candidate_name}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              <img src={candidate.candidate_photo} alt={candidate.candidate_name} className="w-full h-full object-cover" loading="lazy" />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-3xl">?</div>
             )}
           </div>
 
-          {/* Seção de Informações - Abaixo da Foto, com Padding */}
-          <div className="p-4 md:p-6">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm md:text-base">
+          {/* Seção de Informações Principal */}
+          <div className="p-4 md:p-6 flex-grow"> {/* flex-grow para ocupar espaço se necessário */}
+            <div className="grid grid-cols-2 gap-x-4">
               {/* Coluna Esquerda */}
               <div className="space-y-2">
                 <div>
-                  <span className="text-lg md:text-4xl font-bold text-gray-800">{candidate.candidate_name}</span>
+                  <span className="text-lg md:text-4xl font-bold text-gray-800 block">{candidate.candidate_name}</span>
                 </div>
-                <div>
-                  {frontLegend ? (
+                {/* Frente e Legenda do Partido na mesma linha */}
+                <div className="flex items-center space-x-2 flex-wrap">
+                  {frontLegend && (
                      <span
-                        className="inline-block px-2 py-0.5 rounded text-sm font-semibold"
-                        style={{ backgroundColor: coalitionColor, color: tagTextColor }}
+                        className="inline-block px-2 py-0.5 rounded text-xs sm:text-sm font-semibold" // text-xs sm:text-sm para melhor responsividade
+                        style={{ backgroundColor: leaderCoalitionColor, color: getTextColorForBackground(leaderCoalitionColor) }}
                     >
                         {frontLegend}
                     </span>
-                  ) : <span className="text-gray-700">-</span>}
-                </div>
-                <div>
-                  <span className=" text-sm text-gray-700">{partyLegendDisplay || 'N/D'}</span>
-                </div>
-                <div>
-                  <span className="text-gray-700">
-                  <span className="text-sm font-semibold text-gray-600 block">Vantagem:</span>
-                  {typeof leaderVoteDifference === 'number' ? `${leaderVoteDifference.toLocaleString('pt-BR')} votos` : '-'}
-                  </span>
+                  )}
+                  {partyLegendDisplay && (
+                    <span className="text-xs sm:text-sm text-gray-600 font-medium">{partyLegendDisplay}</span>
+                  )}
+                   {(!frontLegend && !partyLegendDisplay) && <span className="text-xs sm:text-sm text-gray-500">-</span>}
                 </div>
               </div>
 
               {/* Coluna Direita */}
-              <div className="space-y-2">
+              <div className="space-y-2 text-right">
                 <div>
-                  <span className="text-lg md:text-4xl font-bold" style={{color: coalitionColor || COALITION_FALLBACK_COLOR}}>
+                  <span className="text-lg md:text-4xl font-bold" style={{color: leaderCoalitionColor || COALITION_FALLBACK_COLOR}}>
                     {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-700">{typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos </span>
+                  {/* Votos com parênteses */}
+                  <span className="text-sm text-gray-700">
+                    ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos)
+                  </span>
                 </div>
                 <div>
-                  {candidate.status ? (
-                     <span
-                        className="inline-block px-2 py-0.5 rounded text-sm font-semibold"
-                        style={{ backgroundColor: coalitionColor, color: tagTextColor }}
-                    >
-                        {candidate.status || 'Liderando'}
-                    </span>
-                  ) : <span className="text-gray-700">-</span>}
-                </div>              
-                <div>
-                  <br></br>
-                  <span className="text-gray-700">
-                  {typeof leaderPercentageDifference === 'number' ? `${leaderPercentageDifference.toFixed(2)} p.p.` : '-'}
+                  {/* Status com fallback "Liderando" */}
+                  <span
+                      className="inline-block px-2 py-0.5 rounded text-xs sm:text-sm font-semibold"
+                      style={{ backgroundColor: statusTagBgColor, color: statusTagTextColor }}
+                  >
+                      {candidate.status || 'Liderando'}
                   </span>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Nova Seção de Vantagem */}
+          {(typeof leaderVoteDifference === 'number' || typeof leaderPercentageDifference === 'number') && ( // Só mostra se houver alguma vantagem
+            <div className="p-3 md:p-4 bg-gray-100 mt-auto"> {/* mt-auto para empurrar para baixo se houver espaço flex */}
+              <div className="flex flex-col sm:flex-row justify-between items-center text-sm">
+                <span className="font-semibold text-gray-700 mb-1 sm:mb-0">Vantagem:</span>
+                <div className="text-left sm:text-right space-x-0 sm:space-x-2 flex flex-col sm:flex-row"> {/* Ajustes para mobile */}
+                  <span className="text-gray-800 font-medium">
+                    {typeof leaderVoteDifference === 'number' ? `${leaderVoteDifference.toLocaleString('pt-BR')} votos` : '-'}
+                  </span>
+                  <span className="text-gray-600">
+                    ({typeof leaderPercentageDifference === 'number' ? `${leaderPercentageDifference.toFixed(2)} p.p.` : '-'})
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     } else {
-      // ---- LAYOUT EXISTENTE PARA OS OUTROS CANDIDATOS (CÓDIGO ORIGINAL FORNECIDO POR VOCÊ) ----
-      // Define classes baseadas se é líder ou não (aqui isLeader será sempre false)
-      const photoSize = 'w-20 h-20'; // Ajustado para não-líder
-      const nameSize = 'text-lg';     // Ajustado para não-líder
-      const infoSize = 'text-base';   // % Ajustado para não-líder
-      const voteSize = 'text-xs';   // Votos Ajustado para não-líder
-      const cardPadding = 'p-3';      // Ajustado para não-líder
-      const borderThickness = 'border-b-4'; // Ajustado para não-líder
+      // ---- LAYOUT PARA OS OUTROS CANDIDATOS ----
+      const photoSize = 'w-16 h-16 md:w-20 md:h-20'; // Ligeiramente menor para caber mais
+      const nameSize = 'text-base md:text-lg';
+      const infoSize = 'text-sm md:text-base';
+      const voteSize = 'text-xs md:text-sm';
+      const cardPadding = 'p-3 md:p-4';
+      const borderThickness = 'border-b-4';
 
+      // Ajuste: Adicionado h-full e flex flex-col para que o card tente ocupar altura
       const containerClasses = `
-        flex items-center ${cardPadding} bg-white rounded-lg border ${borderThickness} shadow-sm transition-all duration-150 ease-in-out
-        border-gray-200 hover:bg-gray-50 w-full
-      `; // Removida lógica condicional de isLeader daqui, pois é o bloco 'else'
+        flex items-center ${cardPadding} bg-white rounded-lg border ${borderThickness} shadow-sm 
+        transition-all duration-150 ease-in-out border-gray-200 hover:bg-gray-50 w-full h-full flex flex-col justify-center
+      `; // Adicionado h-full, flex, flex-col, justify-center
 
       return (
         <div
           key={idKey}
-          className={containerClasses}
-          style={{ borderBottomColor: coalitionColor }}
+          className={containerClasses} // h-full aqui para que o card individual preencha o espaço dado pelo grid pai
+          style={{ borderBottomColor: otherPartyTagBgColor }}
         >
-           {/* Coluna da Foto */}
-          <div className={`flex-shrink-0 ${photoSize} mr-3 sm:mr-4 bg-gray-200 border border-gray-300 overflow-hidden rounded`}>
-            {candidate.candidate_photo ? (
-              <>
-                <img
-                    src={candidate.candidate_photo}
-                    alt={candidate.candidate_name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                        const imgElement = e.currentTarget;
-                        imgElement.style.display = 'none';
-                        const placeholder = imgElement.nextElementSibling as HTMLElement | null;
-                        if (placeholder) {
-                            placeholder.classList.remove('hidden');
-                        }
-                        console.error(`Falha ao carregar imagem: ${candidate.candidate_photo}`, e);
-                    }}
-                />
-                <div className={`hidden w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-lg`}>?</div>
-              </>
-            ) : (
-              <div className={`w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-lg`}>?</div>
-            )}
-          </div>
-          {/* Fim da Coluna da Foto */}
-
-          {/* Coluna das Informações */}
-          <div className="flex-grow">
-            <div className={`${nameSize} font-bold text-gray-800`}>{candidate.candidate_name}</div>
-            {frontLegend && (
-              <span
-                className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold mt-1 mb-1"
-                style={{ backgroundColor: coalitionColor, color: tagTextColor }}
-              >
-                {frontLegend}
-              </span>
-            )}
-             <div className={`${infoSize} font-semibold text-gray-700 mt-2`}>
-              {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
+           {/* Conteúdo do card (foto e infos) */}
+          <div className="flex items-center w-full">
+            <div className={`flex-shrink-0 ${photoSize} mr-3 bg-gray-200 border border-gray-300 overflow-hidden rounded`}>
+              {candidate.candidate_photo ? (
+                <>
+                  <img src={candidate.candidate_photo} alt={candidate.candidate_name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const placeholder = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null; if (placeholder) placeholder.classList.remove('hidden');}} />
+                  <div className={`hidden w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-lg`}>?</div>
+                </>
+              ) : (
+                <div className={`w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-lg`}>?</div>
+              )}
             </div>
-            <div className={`${voteSize} text-gray-500`}>
-              ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'} votos)
+            <div className="flex-grow">
+              <div className={`${nameSize} font-bold text-gray-800`}>{candidate.candidate_name}</div>
+              {frontLegend && (
+                <span
+                  className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold mt-1 mb-0.5" // mb-0.5
+                  style={{ backgroundColor: otherPartyTagBgColor, color: otherPartyTagTextColor }}
+                >
+                  {frontLegend}
+                </span>
+              )}
+              {partyLegendDisplay && !frontLegend && ( // Mostrar sigla do partido se não houver frente
+                 <span className="inline-block text-xs text-gray-500 font-medium mt-1 mb-0.5">{partyLegendDisplay}</span>
+              )}
+               <div className={`${infoSize} font-semibold text-gray-700 mt-1`}> {/* mt-1 */}
+                {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
+              </div>
+              {/* Votos com parênteses */}
+              <div className={`${voteSize} text-gray-500`}>
+                ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'} votos)
+              </div>
             </div>
           </div>
         </div>
       );
     }
   };
-  // -- Fim da função renderCandidateCard --
 
-  // --- JSX Principal do Componente (Layout de 2 Colunas Externo) ---
   return (
+    // O grid principal (md:grid-cols-2) já faz com que as colunas tenham a mesma altura.
+    // A coluna do líder define a altura.
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
       {/* Coluna 1: Líder */}
-      {/* MODIFICADO: Removido space-y-4 pois a vantagem agora está DENTRO do card do líder */}
-      <div className="flex flex-col">
-        {/* MODIFICADO: Passando voteDifference e percentageDifference para o card do líder */}
+      <div className="flex flex-col"> {/* Este flex-col é para o caso de haver algo abaixo do card do líder no futuro */}
         {leader && renderCandidateCard(leader, true, voteDifference, percentageDifference)}
-
-        {/* REMOVIDO: Bloco de exibição da Vantagem que ficava aqui, pois foi movido para dentro do card do líder */}
-
         {!leader && <p className="text-center text-red-600">Não foi possível determinar o líder.</p>}
       </div>
 
-      {/* Coluna 2: Outros Candidatos (sem alterações aqui) */}
-      <div className="space-y-3">
-        {others.length > 0 ? (
-          others.map((candidate) => renderCandidateCard(candidate, false)) // Não passa as props de vantagem
-        ) : (
-          leader && <div className="text-gray-500 pt-4 text-center md:text-left h-full flex items-center justify-center">Não há outros candidatos entre os 4 primeiros para exibir aqui.</div>
-        )}
-      </div>
+      {/* Coluna 2: Outros Candidatos */}
+      {/* Ajuste: Usando grid aqui com auto-rows-fr para que os cards internos dividam a altura */}
+      {others.length > 0 ? (
+        <div className="grid grid-flow-row auto-rows-fr gap-3 h-full">
+          {others.map((candidate) => renderCandidateCard(candidate, false))}
+        </div>
+      ) : (
+        leader && <div className="text-gray-500 pt-4 text-center md:text-left h-full flex items-center justify-center">Não há outros candidatos entre os 4 primeiros para exibir aqui.</div>
+      )}
     </div>
   );
 };
