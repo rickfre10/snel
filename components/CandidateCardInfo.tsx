@@ -15,7 +15,7 @@ export interface CandidateCardInfoProps {
 }
 
 const FALLBACK_COLOR = '#D1D5DB';
-const COALITION_FALLBACK_COLOR = '#6b7280'; // Cinza para fallback de coalizão
+const COALITION_FALLBACK_COLOR = '#6b7280';
 function getTextColorForBackground(hexcolor: string): string {
     if (!hexcolor) return '#1F2937';
     hexcolor = hexcolor.replace("#", "");
@@ -52,11 +52,11 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
     const partyLegendDisplay = candidate.party_legend;
 
     const baseCoalitionColor = frontLegend ? (coalitionColorMap[frontLegend] ?? COALITION_FALLBACK_COLOR) :
-                              partyLegendDisplay && coalitionColorMap[partyLegendDisplay] ? (coalitionColorMap[partyLegendDisplay]) : // Tenta cor do partido se existir no map
+                              partyLegendDisplay && coalitionColorMap[partyLegendDisplay] ? (coalitionColorMap[partyLegendDisplay]) :
                               COALITION_FALLBACK_COLOR;
 
     const leaderCoalitionColor = baseCoalitionColor;
-    const statusTagBgColor = candidate.status ? leaderCoalitionColor : FALLBACK_COLOR;
+    const statusTagBgColor = candidate.status ? leaderCoalitionColor : FALLBACK_COLOR; // Se houver status, usa a cor, senão fallback
     const statusTagTextColor = getTextColorForBackground(statusTagBgColor);
     
     const otherCardBorderColor = baseCoalitionColor;
@@ -77,11 +77,16 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-3xl">?</div>
             )}
           </div>
-          <div className="p-4 md:p-6 flex-grow">
-            <div className="grid grid-cols-2 gap-x-4">
-              <div className="space-y-2">
+          {/* Conteúdo principal do card do líder */}
+          <div className="p-4 md:p-6 flex-grow"> {/* flex-grow para ocupar espaço vertical */}
+            <div className="grid grid-cols-2 gap-x-4 h-full"> {/* h-full para que as colunas internas possam usar altura total se necessário */}
+
+              {/* Coluna Esquerda: Nome e Partido/Frente */}
+              <div className="flex flex-col justify-between space-y-1"> {/* justify-between para nome em cima, legenda em baixo */}
                 <div>
-                  <span className="text-lg md:text-4xl font-bold text-gray-800 block">{candidate.candidate_name}</span>
+                  <span className="text-lg md:text-4xl font-bold text-gray-800 block break-words">
+                    {candidate.candidate_name}
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2 flex-wrap">
                   {frontLegend && (
@@ -98,30 +103,39 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                    {(!frontLegend && !partyLegendDisplay) && <span className="text-xs sm:text-sm text-gray-500">-</span>}
                 </div>
               </div>
-              <div className="space-y-2 text-right">
+
+              {/* Coluna Direita: Porcentagem, Votos e Status */}
+              {/* Usamos flex flex-col e justify-between para distribuir o conteúdo verticalmente */}
+              <div className="flex flex-col justify-between text-right space-y-1">
+                {/* Bloco Porcentagem e Votos - agrupados para ficarem juntos no topo da distribuição */}
                 <div>
-                  <span className="text-lg md:text-4xl font-bold" style={{color: leaderCoalitionColor }}>
-                    {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
-                  </span>
+                  <div>
+                    <span className="text-lg md:text-4xl font-bold block" style={{color: leaderCoalitionColor }}>
+                      {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-700 block">
+                      ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos)
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-sm text-gray-700">
-                    ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos)
-                  </span>
-                </div>
+                
+                {/* Status Tag - ficará na parte de baixo devido ao justify-between */}
                 <div>
                   <span
                       className="inline-block px-2 py-0.5 rounded text-xs sm:text-sm font-semibold"
                       style={{ backgroundColor: statusTagBgColor, color: statusTagTextColor }}
                   >
-                      {candidate.status || 'Liderando'}
+                      {candidate.status || 'Liderando'} {/* Default "Liderando" se status for null/undefined/vazio */}
                   </span>
                 </div>
               </div>
             </div>
           </div>
+          {/* Vantagem (rodapé) */}
           {(typeof leaderVoteDifference === 'number' || typeof leaderPercentageDifference === 'number') && (
-            <div className="p-3 md:p-4 bg-gray-100 mt-auto">
+            <div className="p-3 md:p-4 bg-gray-100"> {/* Removido mt-auto, pois o flex-grow acima deve cuidar da expansão */}
               <div className="flex flex-col sm:flex-row justify-between items-center text-sm">
                 <span className="font-semibold text-gray-700 mb-1 sm:mb-0">Vantagem:</span>
                 <div className="text-left sm:text-right space-x-0 sm:space-x-2 flex flex-col sm:flex-row">
@@ -129,7 +143,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                     {typeof leaderVoteDifference === 'number' ? `${leaderVoteDifference.toLocaleString('pt-BR')} votos` : '-'}
                   </span>
                   <span className="text-gray-600">
-                    ({typeof leaderPercentageDifference === 'number' ? `${leaderPercentageDifference.toFixed(2)} p.p.` : '-'})
+                  ({typeof leaderPercentageDifference === 'number' ? `${leaderPercentageDifference.toFixed(2)} p.p.` : '-'})
                   </span>
                 </div>
               </div>
@@ -138,14 +152,14 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
         </div>
       );
     } else {
-      // ---- LAYOUT REVISADO PARA OS OUTROS CANDIDATOS (FOTO | INFORMAÇÕES) ----
-      const photoWidthClass = 'w-16 md:w-20'; // Largura da coluna da foto
-      const cardPadding = 'p-3'; // Padding geral do card, um pouco menor que o do líder
+      // Layout para os outros candidatos (sem alterações nesta rodada, mas mantendo consistência)
+      const photoWidthClass = 'w-16 md:w-20';
+      const cardPadding = 'p-3';
 
       const containerClasses = `
         bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out 
-        hover:bg-gray-50 w-full h-full border-2 flex ${cardPadding} 
-      `; // Usar flex diretamente no container para foto | infos
+        hover:bg-gray-50 w-full h-full border-2 flex ${cardPadding}
+      `;
 
       return (
         <div
@@ -153,7 +167,6 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           className={containerClasses}
           style={{ borderColor: otherCardBorderColor }}
         >
-          {/* Coluna 1: Foto - ocupa toda a altura */}
           <div className={`flex-shrink-0 ${photoWidthClass} mr-3 bg-gray-200 border border-gray-300 overflow-hidden rounded h-full`}>
             {candidate.candidate_photo ? (
               <img src={candidate.candidate_photo} alt={candidate.candidate_name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const placeholder = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null; if (placeholder) placeholder.classList.remove('hidden');}} />
@@ -161,35 +174,29 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xl">?</div>
             )}
           </div>
-
-          {/* Coluna 2: Bloco de Informações */}
-          <div className="flex flex-col flex-grow justify-between"> {/* flex-grow para ocupar o restante, justify-between para espaçar */}
-            
-            {/* Seção Superior: Nome e Partido/Frente */}
+          <div className="flex flex-col flex-grow justify-between">
             <div>
               <div className="text-base md:text-xl font-bold text-gray-800 break-words">
                 {candidate.candidate_name}
               </div>
-              <div className="flex items-center space-x-2 flex-wrap mt-0.5"> {/* mt-0.5 para pequeno espaço */}
+              <div className="flex items-center space-x-2 flex-wrap mt-0.5">
                 {frontLegend && (
                   <span
-                    className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold" // Um pouco menor
+                    className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold"
                     style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
                   >
                     {frontLegend}
                   </span>
                 )}
                 {partyLegendDisplay && (
-                  <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'ml-1' : ''}`}> {/* ml-1 se houver frente */}
+                  <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'ml-1' : ''}`}>
                     {partyLegendDisplay}
                   </span>
                 )}
                 {(!frontLegend && !partyLegendDisplay) && <span className="text-xs text-gray-500">-</span>}
               </div>
             </div>
-
-            {/* Seção Inferior: Percentual e Votos */}
-            <div className="flex items-end justify-between mt-1"> {/* items-end para alinhar na base, justify-between */}
+            <div className="flex items-end justify-between mt-1">
               <div className="text-xl md:text-base font-bold" style={{ color: otherCardBorderColor }}>
                 {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
               </div>
@@ -210,7 +217,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
         {!leader && <p className="text-center text-red-600">Não foi possível determinar o líder.</p>}
       </div>
       {others.length > 0 ? (
-        <div className="grid grid-flow-row auto-rows-fr gap-3 h-full">
+        <div className="grid grid-flow-row auto-rows-fr gap-3 h-full"> {/* Mantido h-full */}
           {others.map((candidate) => renderCandidateCard(candidate, false))}
         </div>
       ) : (
