@@ -52,14 +52,14 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
     const partyLegendDisplay = candidate.party_legend;
 
     const baseCoalitionColor = frontLegend ? (coalitionColorMap[frontLegend] ?? COALITION_FALLBACK_COLOR) :
-                              partyLegendDisplay ? (coalitionColorMap[partyLegendDisplay] ?? COALITION_FALLBACK_COLOR) : // Tenta usar a legenda do partido para cor se não houver frente
+                              partyLegendDisplay ? (coalitionColorMap[partyLegendDisplay] ?? COALITION_FALLBACK_COLOR) :
                               COALITION_FALLBACK_COLOR;
 
-    const leaderCoalitionColor = baseCoalitionColor; // Para o líder, a cor base é a principal
+    const leaderCoalitionColor = baseCoalitionColor;
     const statusTagBgColor = candidate.status ? leaderCoalitionColor : FALLBACK_COLOR;
     const statusTagTextColor = getTextColorForBackground(statusTagBgColor);
     
-    const otherCardBorderColor = baseCoalitionColor; // Cor da borda e de destaque para "outros"
+    const otherCardBorderColor = baseCoalitionColor;
     const otherPartyTagTextColor = getTextColorForBackground(otherCardBorderColor);
 
 
@@ -92,7 +92,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                         {frontLegend}
                     </span>
                   )}
-                  {partyLegendDisplay && ( // Mostrar legenda do partido ao lado da frente, ou sozinha se não houver frente
+                  {partyLegendDisplay && (
                     <span className={`text-xs sm:text-sm text-gray-600 font-medium ${frontLegend ? 'ml-2' : ''}`}>{partyLegendDisplay}</span>
                   )}
                    {(!frontLegend && !partyLegendDisplay) && <span className="text-xs sm:text-sm text-gray-500">-</span>}
@@ -139,24 +139,26 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
       );
     } else {
       // ---- NOVO LAYOUT PARA OS OUTROS CANDIDATOS (3 COLUNAS) ----
-      const photoSize = 'w-16 h-16 md:w-20 md:h-20';
+      const photoWidthClass = 'w-16 md:w-20'; // Apenas largura para a foto
       const cardPadding = 'p-3 md:p-4';
 
       const containerClasses = `
         bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out 
         hover:bg-gray-50 w-full h-full border-2 flex flex-col ${cardPadding} 
-      `; // Removido justify-center, padding adicionado aqui
+      `;
 
       return (
         <div
           key={idKey}
           className={containerClasses}
-          style={{ borderColor: otherCardBorderColor }} // Borda completa com a cor da coalizão/partido
+          style={{ borderColor: otherCardBorderColor }}
         >
           {/* Layout interno de 3 colunas */}
-          <div className="grid grid-cols-[auto_1fr_1fr] gap-x-3 md:gap-x-4 items-start flex-grow w-full">
-            {/* Coluna 1: Foto */}
-            <div className={`flex-shrink-0 ${photoSize} bg-gray-200 border border-gray-300 overflow-hidden rounded`}>
+          {/* AJUSTE: removido items-start para usar o padrão items-stretch */}
+          <div className="grid grid-cols-[auto_1fr_1fr] gap-x-3 md:gap-x-4 flex-grow w-full">
+            {/* Coluna 1: Foto - agora ocupa toda a altura da célula do grid */}
+            {/* AJUSTE: removida altura fixa, usa photoWidthClass para largura */}
+            <div className={`flex-shrink-0 ${photoWidthClass} bg-gray-200 border border-gray-300 overflow-hidden rounded`}>
               {candidate.candidate_photo ? (
                 <>
                   <img src={candidate.candidate_photo} alt={candidate.candidate_name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const placeholder = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null; if (placeholder) placeholder.classList.remove('hidden');}} />
@@ -168,20 +170,21 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
             </div>
 
             {/* Coluna 2: Informações (Nome, Frente/Legenda) */}
-            <div className="space-y-1 md:space-y-1.5">
-              <div className="text-base md:text-lg font-bold text-gray-800 break-words"> {/* break-words para nomes longos */}
+            {/* O conteúdo aqui se alinhará ao topo da célula esticada */}
+            <div className="space-y-1 md:space-y-1.5 py-1"> {/* Adicionado py-1 para um pequeno respiro vertical se necessário */}
+              <div className="text-base md:text-lg font-bold text-gray-800 break-words">
                 {candidate.candidate_name}
               </div>
-              <div className="flex items-center space-x-2 flex-wrap"> {/* flex-wrap para caso ambos sejam longos */}
+              <div className="flex items-center space-x-2 flex-wrap">
                 {frontLegend && (
                   <span
-                    className="inline-block px-2 py-0.5 rounded text-xs font-semibold" // Semelhante ao líder mas menor
+                    className="inline-block px-2 py-0.5 rounded text-xs font-semibold"
                     style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
                   >
                     {frontLegend}
                   </span>
                 )}
-                {partyLegendDisplay && ( // Mostrar legenda do partido ao lado da frente, ou sozinha
+                {partyLegendDisplay && (
                   <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'ml-2' : ''}`}>
                     {partyLegendDisplay}
                   </span>
@@ -191,7 +194,8 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
             </div>
 
             {/* Coluna 3: Informações (Percentual, Votos) */}
-            <div className="space-y-1 md:space-y-1.5 text-right">
+            {/* O conteúdo aqui se alinhará ao topo da célula esticada */}
+            <div className="space-y-1 md:space-y-1.5 text-right py-1"> {/* Adicionado py-1 */}
               <div className="text-sm md:text-base font-bold" style={{ color: otherCardBorderColor }}>
                 {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
               </div>
