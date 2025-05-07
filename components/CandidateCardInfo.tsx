@@ -153,18 +153,19 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
       );
     
     } else {
-      // Novo Layout para os outros candidatos com 3 colunas
-      const cardPadding = 'p-3 md:p-4'; // Ajuste opcional de padding
+      // Layout para os outros candidatos com 3 colunas, foto integrada
+      const cardPadding = 'p-3 md:p-4';
 
-      // Container principal do card, agora usando grid para as 3 colunas
+      // Container principal do card, usando grid para as 3 colunas.
+      // A foto será o primeiro item deste grid.
       const containerClasses = `
         bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out
-        hover:bg-gray-50 w-full h-full border-2 grid grid-cols-[auto_1fr_auto] gap-x-3 md:gap-x-4 items-center ${cardPadding}
+        hover:bg-gray-50 w-full h-full border-2 grid grid-cols-[auto_minmax(0,_1fr)_auto] gap-x-3 md:gap-x-4 items-center ${cardPadding}
       `;
-      // grid-cols-[auto_1fr_auto] define 3 colunas:
-      // 1ª coluna (auto): tamanho da foto
-      // 2ª coluna (1fr): ocupa o espaço restante flexivelmente (Nome e %)
-      // 3ª coluna (auto): tamanho do conteúdo (Frente/Partido e Votos)
+      // grid-cols-[auto_minmax(0,_1fr)_auto]:
+      // 1ª coluna (auto): Largura definida pela foto.
+      // 2ª coluna (minmax(0, 1fr)): Ocupa o espaço restante, permitindo que o nome quebre linha sem expandir o card desnecessariamente.
+      // 3ª coluna (auto): Largura definida pelo conteúdo (legendas, votos).
 
       return (
         <div
@@ -172,27 +173,27 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           className={containerClasses}
           style={{ borderColor: otherCardBorderColor }}
         >
-          {/* Coluna 1: Foto do Candidato */}
-          {/* A foto agora é uma coluna direta do grid.
-              A altura da foto deve ser consistente com a altura do card.
-              Usamos h-20 ou h-24 como exemplo, ajuste conforme necessário.
-              object-cover garante que a imagem cubra a área sem distorcer.
-              rounded para manter as bordas arredondadas.
+          {/* --- COLUNA 1: FOTO DO CANDIDATO --- */}
+          {/* Este é o primeiro elemento filho direto do 'div' com 'containerClasses'.
+              Ele se tornará a primeira coluna do grid.
+              'h-full' aqui tentará fazer a foto ocupar a altura do card,
+              mas para um visual mais parecido com o do líder, talvez uma altura fixa ou aspect-ratio seja melhor.
+              Vamos usar uma altura fixa para consistência com a imagem de referência.
           */}
-          <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-gray-200 border border-gray-300 overflow-hidden rounded">
+          <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded overflow-hidden flex-shrink-0">
             {candidate.candidate_photo ? (
               <img
                 src={candidate.candidate_photo}
                 alt={candidate.candidate_name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover" // object-cover é crucial aqui
                 loading="lazy"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  // Se precisar de um placeholder de texto quando a imagem falha:
-                  const parent = (e.currentTarget as HTMLImageElement).parentNode;
-                  if (parent) {
+                  const imgElement = e.currentTarget as HTMLImageElement;
+                  imgElement.style.display = 'none'; // Esconde a imagem quebrada
+                  const parent = imgElement.parentNode as HTMLElement | null;
+                  if (parent && !parent.querySelector('.placeholder-img')) { // Evita adicionar múltiplos placeholders
                     const placeholder = document.createElement('div');
-                    placeholder.className = "w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xl";
+                    placeholder.className = "placeholder-img w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xl";
                     placeholder.textContent = "?";
                     parent.appendChild(placeholder);
                   }
@@ -203,14 +204,10 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
             )}
           </div>
 
-          {/* Coluna 2: Nome e Porcentagem */}
-          {/* Este div agrupa o Nome e a Porcentagem verticalmente.
-              justify-between para alinhar o nome acima e a porcentagem abaixo,
-              se o conteúdo não preencher toda a altura.
-              items-start para alinhar o texto à esquerda dentro desta coluna.
-          */}
-          <div className="flex flex-col justify-center space-y-1"> {/* Ajuste o space-y se necessário */}
-            <span className="text-xl md:text-2xl font-bold text-gray-800 break-words leading-tight">
+          {/* --- COLUNA 2: NOME E PORCENTAGEM --- */}
+          {/* Este é o segundo elemento filho direto. Será a segunda coluna. */}
+          <div className="flex flex-col justify-center overflow-hidden"> {/* Adicionado overflow-hidden para o nome */}
+            <span className="text-xl md:text-2xl font-bold text-gray-800 break-words leading-tight truncate"> {/* truncate para nomes muito longos */}
               {candidate.candidate_name}
             </span>
             <span className="text-3xl md:text-4xl font-bold leading-none" style={{ color: otherCardBorderColor }}>
@@ -218,17 +215,13 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
             </span>
           </div>
 
-          {/* Coluna 3: Frente/Partido e Número de Votos */}
-          {/* Este div agrupa Frente/Partido e os votos verticalmente.
-              items-end para alinhar o conteúdo à direita.
-              justify-between para distribuir os elementos verticalmente se houver espaço.
-              text-right para alinhar o texto à direita.
-          */}
-          <div className="flex flex-col justify-center items-end space-y-1 text-right">
-            <div className="flex flex-col items-end space-y-0.5"> {/* Agrupador para legendas */}
+          {/* --- COLUNA 3: FRENTE/PARTIDO E NÚMERO DE VOTOS --- */}
+          {/* Este é o terceiro elemento filho direto. Será a terceira coluna. */}
+          <div className="flex flex-col justify-center items-end text-right space-y-1">
+            <div className="flex flex-col items-end">
               {frontLegend && (
                 <span
-                  className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap" // whitespace-nowrap para evitar quebra de linha
+                  className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap"
                   style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
                 >
                   {frontLegend}
@@ -247,7 +240,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           </div>
         </div>
       );
-    }
+    }  
 
   };
 
