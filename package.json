@@ -27,6 +27,7 @@
     "typescript": "5.2.2"
   },
   "devDependencies": {
+    "@tailwindcss/aspect-ratio": "^0.4.2",
     "@types/d3-array": "^3.2.1"
   }
 }
