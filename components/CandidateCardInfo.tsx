@@ -41,6 +41,13 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
   const voteDifference = leader && runnerUp ? leader.numericVotes - runnerUp.numericVotes : null;
   const percentageDifference = leader && runnerUp ? leader.percentage - runnerUp.percentage : null;
 
+  // ### DEFINA A SUA NOVA PROPORÇÃO AQUI ###
+  // Exemplos:
+  // const aspectRatioPaddingTop = '75%'; // 4:3
+  // const aspectRatioPaddingTop = '66.6667%'; // 3:2
+  const aspectRatioPaddingTop = '62.5%'; // 16:10 (menos alto que 4:3)
+  // const aspectRatioPaddingTop = '56.25%'; // 16:9 (ainda menos alto / mais largo)
+
   const renderCandidateCard = (
     candidate: CandidateVoteProcessed,
     isLeader: boolean,
@@ -69,9 +76,8 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           className="bg-white rounded-lg shadow-xl overflow-hidden border-2 flex flex-col h-full"
           style={{ borderColor: leaderCoalitionColor }}
         >
-          {/* Contêiner da Foto do Líder com proporção 4:3 (Padding-Top Hack) */}
-          <div className="w-full relative bg-gray-200" style={{ paddingTop: '75%' }}> {/* 75% para 4:3 (3/4) */}
-            <div className="absolute inset-0"> {/* Camada para a imagem preencher */}
+          <div className="w-full relative" style={{ paddingTop: aspectRatioPaddingTop }}>
+            <div className="absolute inset-0 bg-gray-200 overflow-hidden"> {/* bg-gray-200 aqui */}
               {candidate.candidate_photo ? (
                 <img 
                   src={candidate.candidate_photo} 
@@ -80,7 +86,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                   loading="lazy" 
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-3xl">?</div>
+                <div className="w-full h-full flex items-center justify-center text-gray-500 text-3xl">?</div>
               )}
             </div>
           </div>
@@ -166,12 +172,9 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           className={containerClasses}
           style={{ borderColor: otherCardBorderColor }}
         >
-          {/* Coluna que define a LARGURA da área da foto */}
           <div className={`flex-shrink-0 ${photoWidthClass}`}>
-            {/* Elemento que cria a proporção 4:3 usando padding-top */}
-            {/* O 'paddingTop' é relativo à LARGURA deste elemento (que é definida por photoWidthClass) */}
-            <div className="relative bg-gray-200" style={{ paddingTop: '75%' }}> 
-              <div className="absolute inset-0"> {/* Camada para a imagem preencher */}
+            <div className="relative" style={{ paddingTop: aspectRatioPaddingTop }}>
+              <div className="absolute inset-0 bg-gray-200 overflow-hidden"> {/* bg-gray-200 e overflow-hidden aqui */}
                 {candidate.candidate_photo ? (
                   <img
                     src={candidate.candidate_photo}
@@ -191,7 +194,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xl">?</div>
+                  <div className="w-full h-full flex items-center justify-center text-gray-500 text-xl">?</div>
                 )}
               </div>
             </div>
