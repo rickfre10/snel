@@ -88,11 +88,9 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               {/* Coluna Esquerda */}
               <div className="space-y-2">
                 <div>
-                  <span className="font-semibold text-gray-600 block">Nome:</span>
                   <span className="text-lg md:text-xl font-bold text-gray-800">{candidate.candidate_name}</span>
                 </div>
                 <div>
-                  <span className="font-semibold text-gray-600 block">Frente/Coligação:</span>
                   {frontLegend ? (
                      <span
                         className="inline-block px-2 py-0.5 rounded text-xs font-semibold"
@@ -103,12 +101,11 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                   ) : <span className="text-gray-700">-</span>}
                 </div>
                 <div>
-                  <span className="font-semibold text-gray-600 block">Legenda do Partido:</span>
                   <span className="text-gray-700">{partyLegendDisplay || 'N/D'}</span>
                 </div>
                 <div>
-                  <span className="font-semibold text-gray-600 block">Vantagem (Votos):</span>
                   <span className="text-gray-700">
+                  <span className="font-semibold text-gray-600 block">Vantagem:</span>
                   {typeof leaderVoteDifference === 'number' ? `${leaderVoteDifference.toLocaleString('pt-BR')} votos` : '-'}
                   </span>
                 </div>
@@ -117,23 +114,19 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               {/* Coluna Direita */}
               <div className="space-y-2">
                 <div>
-                  <span className="font-semibold text-gray-600 block">Percentual:</span>
                   <span className="text-lg md:text-xl font-bold" style={{color: coalitionColor || COALITION_FALLBACK_COLOR}}>
                     {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
                   </span>
                 </div>
                 <div>
-                  <span className="font-semibold text-gray-600 block">Status:</span>
+                  <span className="text-gray-700">{typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'}</span>
+                </div>
+                <div>
                   <span className={`font-bold ${candidate.status === 'Eleito' ? 'text-green-600' : 'text-gray-700'}`}>
                     {candidate.status || 'N/D'} {/* DADO NOVO - NECESSÁRIO NA FONTE DE DADOS */}
                   </span>
                 </div>
                 <div>
-                  <span className="font-semibold text-gray-600 block">Votos Recebidos:</span>
-                  <span className="text-gray-700">{typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="font-semibold text-gray-600 block">Vantagem (p.p.):</span>
                   <span className="text-gray-700">
                   {typeof leaderPercentageDifference === 'number' ? `${leaderPercentageDifference.toFixed(2)} p.p.` : '-'}
                   </span>
