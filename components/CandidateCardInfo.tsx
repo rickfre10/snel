@@ -162,7 +162,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
       );
     } else { // Cards dos "Outros" Candidatos
       // Ajuste photoWidthClass conforme sua preferência. Ex: w-3/5 para todos, ou w-2/5 md:w-3/5
-      const photoWidthClass = 'w-9/20'; // Largura da foto: 3/5 (60%) do card
+      const photoWidthClass = 'w-2/5'; // Largura da foto: 2/5 (60%) do card
 
       // Removido 'h-full' de containerClasses
       const containerClasses = `
