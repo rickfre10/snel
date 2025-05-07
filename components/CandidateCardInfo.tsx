@@ -151,15 +151,20 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           )}
         </div>
       );
+    
     } else {
-      // Layout para os outros candidatos (sem alterações nesta rodada, mas mantendo consistência)
-      const photoWidthClass = 'w-16 md:w-20';
-      const cardPadding = 'p-3';
+      // Novo Layout para os outros candidatos com 3 colunas
+      const cardPadding = 'p-3 md:p-4'; // Ajuste opcional de padding
 
+      // Container principal do card, agora usando grid para as 3 colunas
       const containerClasses = `
-        bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out 
-        hover:bg-gray-50 w-full h-full border-2 flex ${cardPadding}
+        bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out
+        hover:bg-gray-50 w-full h-full border-2 grid grid-cols-[auto_1fr_auto] gap-x-3 md:gap-x-4 items-center ${cardPadding}
       `;
+      // grid-cols-[auto_1fr_auto] define 3 colunas:
+      // 1ª coluna (auto): tamanho da foto
+      // 2ª coluna (1fr): ocupa o espaço restante flexivelmente (Nome e %)
+      // 3ª coluna (auto): tamanho do conteúdo (Frente/Partido e Votos)
 
       return (
         <div
@@ -167,47 +172,83 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           className={containerClasses}
           style={{ borderColor: otherCardBorderColor }}
         >
-          <div className={`flex-shrink-0 ${photoWidthClass} mr-3 bg-gray-200 border border-gray-300 overflow-hidden rounded h-full`}>
+          {/* Coluna 1: Foto do Candidato */}
+          {/* A foto agora é uma coluna direta do grid.
+              A altura da foto deve ser consistente com a altura do card.
+              Usamos h-20 ou h-24 como exemplo, ajuste conforme necessário.
+              object-cover garante que a imagem cubra a área sem distorcer.
+              rounded para manter as bordas arredondadas.
+          */}
+          <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-gray-200 border border-gray-300 overflow-hidden rounded">
             {candidate.candidate_photo ? (
-              <img src={candidate.candidate_photo} alt={candidate.candidate_name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const placeholder = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null; if (placeholder) placeholder.classList.remove('hidden');}} />
+              <img
+                src={candidate.candidate_photo}
+                alt={candidate.candidate_name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  // Se precisar de um placeholder de texto quando a imagem falha:
+                  const parent = (e.currentTarget as HTMLImageElement).parentNode;
+                  if (parent) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = "w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xl";
+                    placeholder.textContent = "?";
+                    parent.appendChild(placeholder);
+                  }
+                }}
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xl">?</div>
             )}
           </div>
-          <div className="flex flex-col flex-grow justify-between">
-            <div>
-              <div className="text-base md:text-xl font-bold text-gray-800 break-words">
-                {candidate.candidate_name}
-              </div>
-              <div className="flex items-center space-x-2 flex-wrap mt-0.5">
-                {frontLegend && (
-                  <span
-                    className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold"
-                    style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
-                  >
-                    {frontLegend}
-                  </span>
-                )}
-                {partyLegendDisplay && (
-                  <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'ml-1' : ''}`}>
-                    {partyLegendDisplay}
-                  </span>
-                )}
-                {(!frontLegend && !partyLegendDisplay) && <span className="text-xs text-gray-500">-</span>}
-              </div>
+
+          {/* Coluna 2: Nome e Porcentagem */}
+          {/* Este div agrupa o Nome e a Porcentagem verticalmente.
+              justify-between para alinhar o nome acima e a porcentagem abaixo,
+              se o conteúdo não preencher toda a altura.
+              items-start para alinhar o texto à esquerda dentro desta coluna.
+          */}
+          <div className="flex flex-col justify-center space-y-1"> {/* Ajuste o space-y se necessário */}
+            <span className="text-xl md:text-2xl font-bold text-gray-800 break-words leading-tight">
+              {candidate.candidate_name}
+            </span>
+            <span className="text-3xl md:text-4xl font-bold leading-none" style={{ color: otherCardBorderColor }}>
+              {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
+            </span>
+          </div>
+
+          {/* Coluna 3: Frente/Partido e Número de Votos */}
+          {/* Este div agrupa Frente/Partido e os votos verticalmente.
+              items-end para alinhar o conteúdo à direita.
+              justify-between para distribuir os elementos verticalmente se houver espaço.
+              text-right para alinhar o texto à direita.
+          */}
+          <div className="flex flex-col justify-center items-end space-y-1 text-right">
+            <div className="flex flex-col items-end space-y-0.5"> {/* Agrupador para legendas */}
+              {frontLegend && (
+                <span
+                  className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap" // whitespace-nowrap para evitar quebra de linha
+                  style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
+                >
+                  {frontLegend}
+                </span>
+              )}
+              {partyLegendDisplay && (
+                <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'mt-0.5' : ''} whitespace-nowrap`}>
+                  {partyLegendDisplay}
+                </span>
+              )}
+              {(!frontLegend && !partyLegendDisplay) && <span className="text-xs text-gray-500">-</span>}
             </div>
-            <div className="flex items-end justify-between mt-1">
-              <div className="text-xl md:text-base font-bold" style={{ color: otherCardBorderColor }}>
-                {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
-              </div>
-              <div className="text-xs md:text-sm text-gray-500">
-                ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos)
-              </div>
-            </div>
+            <span className="text-xs md:text-sm text-gray-500 whitespace-nowrap">
+              ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos)
+            </span>
           </div>
         </div>
       );
     }
+
   };
 
   return (
