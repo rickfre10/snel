@@ -71,7 +71,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           style={{ borderColor: leaderCoalitionColor }}
         >
           {/* Foto do Líder com proporção 16:9 */}
-          <div className="w-full bg-gray-200 aspect-w-16 aspect-h-9"> {/* MODIFICADO: Altura fixa removida, proporção adicionada */}
+          <div className="w-full bg-gray-200 aspect-w-4 aspect-h-3"> {/* MODIFICADO: Altura fixa removida, proporção adicionada */}
             {candidate.candidate_photo ? (
               <img src={candidate.candidate_photo} alt={candidate.candidate_name} className="w-full h-full object-cover" loading="lazy" />
             ) : (
@@ -165,7 +165,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
         >
           {/* Seção da Foto (Esquerda) com proporção 16:9 */}
           {/* MODIFICADO: h-full removido, aspect-w-16 aspect-h-9 adicionado */}
-          <div className={`flex-shrink-0 ${photoWidthClass} bg-gray-200 aspect-w-16 aspect-h-9`}>
+          <div className={`flex-shrink-0 ${photoWidthClass} bg-gray-200 aspect-w-4 aspect-h-3`}>
             {candidate.candidate_photo ? (
               <img
                 src={candidate.candidate_photo}
