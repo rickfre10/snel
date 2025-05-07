@@ -15,7 +15,7 @@ export interface CandidateCardInfoProps {
 }
 
 const FALLBACK_COLOR = '#D1D5DB';
-const COALITION_FALLBACK_COLOR = '#6b7280';
+const COALITION_FALLBACK_COLOR = '#6b7280'; // Cinza para fallback de coalizão
 function getTextColorForBackground(hexcolor: string): string {
     if (!hexcolor) return '#1F2937';
     hexcolor = hexcolor.replace("#", "");
@@ -52,7 +52,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
     const partyLegendDisplay = candidate.party_legend;
 
     const baseCoalitionColor = frontLegend ? (coalitionColorMap[frontLegend] ?? COALITION_FALLBACK_COLOR) :
-                              partyLegendDisplay ? (coalitionColorMap[partyLegendDisplay] ?? COALITION_FALLBACK_COLOR) :
+                              partyLegendDisplay && coalitionColorMap[partyLegendDisplay] ? (coalitionColorMap[partyLegendDisplay]) : // Tenta cor do partido se existir no map
                               COALITION_FALLBACK_COLOR;
 
     const leaderCoalitionColor = baseCoalitionColor;
@@ -138,14 +138,14 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
         </div>
       );
     } else {
-      // ---- NOVO LAYOUT PARA OS OUTROS CANDIDATOS (3 COLUNAS) ----
-      const photoWidthClass = 'w-16 md:w-20'; // Apenas largura para a foto
-      const cardPadding = 'p-3 md:p-4';
+      // ---- LAYOUT REVISADO PARA OS OUTROS CANDIDATOS (FOTO | INFORMAÇÕES) ----
+      const photoWidthClass = 'w-16 md:w-20'; // Largura da coluna da foto
+      const cardPadding = 'p-3'; // Padding geral do card, um pouco menor que o do líder
 
       const containerClasses = `
         bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out 
-        hover:bg-gray-50 w-full h-full border-2 flex flex-col ${cardPadding} 
-      `;
+        hover:bg-gray-50 w-full h-full border-2 flex ${cardPadding} 
+      `; // Usar flex diretamente no container para foto | infos
 
       return (
         <div
@@ -153,39 +153,34 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           className={containerClasses}
           style={{ borderColor: otherCardBorderColor }}
         >
-          {/* Layout interno de 3 colunas */}
-          {/* AJUSTE: removido items-start para usar o padrão items-stretch */}
-          <div className="grid grid-cols-[auto_1fr_1fr] gap-x-3 md:gap-x-4 flex-grow w-full">
-            {/* Coluna 1: Foto - agora ocupa toda a altura da célula do grid */}
-            {/* AJUSTE: removida altura fixa, usa photoWidthClass para largura */}
-            <div className={`flex-shrink-0 ${photoWidthClass} bg-gray-200 border border-gray-300 overflow-hidden rounded`}>
-              {candidate.candidate_photo ? (
-                <>
-                  <img src={candidate.candidate_photo} alt={candidate.candidate_name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const placeholder = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null; if (placeholder) placeholder.classList.remove('hidden');}} />
-                  <div className={`hidden w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-lg`}>?</div>
-                </>
-              ) : (
-                <div className={`w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-lg`}>?</div>
-              )}
-            </div>
+          {/* Coluna 1: Foto - ocupa toda a altura */}
+          <div className={`flex-shrink-0 ${photoWidthClass} mr-3 bg-gray-200 border border-gray-300 overflow-hidden rounded h-full`}>
+            {candidate.candidate_photo ? (
+              <img src={candidate.candidate_photo} alt={candidate.candidate_name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const placeholder = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null; if (placeholder) placeholder.classList.remove('hidden');}} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xl">?</div>
+            )}
+          </div>
 
-            {/* Coluna 2: Informações (Nome, Frente/Legenda) */}
-            {/* O conteúdo aqui se alinhará ao topo da célula esticada */}
-            <div className="space-y-1 md:space-y-1.5 py-1"> {/* Adicionado py-1 para um pequeno respiro vertical se necessário */}
-              <div className="text-base md:text-lg font-bold text-gray-800 break-words">
+          {/* Coluna 2: Bloco de Informações */}
+          <div className="flex flex-col flex-grow justify-between"> {/* flex-grow para ocupar o restante, justify-between para espaçar */}
+            
+            {/* Seção Superior: Nome e Partido/Frente */}
+            <div>
+              <div className="text-base md:text-xl font-bold text-gray-800 break-words">
                 {candidate.candidate_name}
               </div>
-              <div className="flex items-center space-x-2 flex-wrap">
+              <div className="flex items-center space-x-2 flex-wrap mt-0.5"> {/* mt-0.5 para pequeno espaço */}
                 {frontLegend && (
                   <span
-                    className="inline-block px-2 py-0.5 rounded text-xs font-semibold"
+                    className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold" // Um pouco menor
                     style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
                   >
                     {frontLegend}
                   </span>
                 )}
                 {partyLegendDisplay && (
-                  <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'ml-2' : ''}`}>
+                  <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'ml-1' : ''}`}> {/* ml-1 se houver frente */}
                     {partyLegendDisplay}
                   </span>
                 )}
@@ -193,14 +188,13 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               </div>
             </div>
 
-            {/* Coluna 3: Informações (Percentual, Votos) */}
-            {/* O conteúdo aqui se alinhará ao topo da célula esticada */}
-            <div className="space-y-1 md:space-y-1.5 text-right py-1"> {/* Adicionado py-1 */}
-              <div className="text-sm md:text-base font-bold" style={{ color: otherCardBorderColor }}>
-                {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
+            {/* Seção Inferior: Percentual e Votos */}
+            <div className="flex items-end justify-between mt-1"> {/* items-end para alinhar na base, justify-between */}
+              <div className="text-xl md:text-base font-bold" style={{ color: otherCardBorderColor }}>
+                {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
               </div>
               <div className="text-xs md:text-sm text-gray-500">
-                ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'} votos)
+                ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos)
               </div>
             </div>
           </div>
