@@ -2,33 +2,29 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation'; // Hook para pegar parâmetros da URL
-import Link from 'next/link'; // Para um link de "Voltar"
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
 
-// Componentes de Visualização para esta página
-import CandidateCardInfo from '@/components/CandidateCardInfo'; // Usando alias @/components/
+import CandidateCardInfo from '@/components/CandidateCardInfo';
 import DistrictBarChart from '@/components/DistrictBarChart';
 import ProportionalPieChart from '@/components/ProportionalPieChart';
 
-// Tipos e Dados Estáticos (Usando alias @/)
-import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption, DistrictOption, TickerEntry } from '@/types/election'; // Adicionado TickerEntry só para garantir
+import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption, DistrictOption, TickerEntry } from '@/types/election';
 import { districtsData, partyData } from '@/lib/staticData';
 
-// --- Definição do Tipo para a View do Distrito ---
 type DistrictViewMode = 'candidates' | 'bars' | 'proportional';
-// --------------------------------------------------
 
-// Interface para os dados de VOTOS vindos da API
 interface ApiVotesData {
   time: number;
   candidateVotes: CandidateVote[];
   proportionalVotes: ProportionalVote[];
-  // Adicionar campos para urnas se vierem da API no futuro
-  // processed_urns?: number;
-  // total_urns?: number;
+  // processed_urns?: number; // Futuro
+  // total_urns?: number;   // Futuro
 }
 
-// Helper parseNumber
+const FALLBACK_COLOR = '#D1D5DB';
+const COALITION_FALLBACK_COLOR = '#6B7280';
+
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
@@ -39,7 +35,19 @@ const parseNumber = (value: any): number => {
     return 0;
 };
 
-// --- Componente da Página de Detalhe do Distrito ---
+function getTextColorForBackground(hexcolor: string): string {
+    if (!hexcolor) return '#1F2937';
+    hexcolor = hexcolor.replace("#", "");
+    if (hexcolor.length !== 6) return '#1F2937';
+    try {
+        const r = parseInt(hexcolor.substring(0, 2), 16);
+        const g = parseInt(hexcolor.substring(2, 4), 16);
+        const b = parseInt(hexcolor.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128) ? '#1F2937' : '#FFFFFF';
+    } catch (e) { return '#1F2937'; }
+}
+
 export default function DistrictDetailPage() {
   const params = useParams();
 
@@ -68,6 +76,10 @@ export default function DistrictDetailPage() {
       if (party.parl_front_legend && party.parl_front_color && !map[party.parl_front_legend]) {
         map[party.parl_front_legend] = party.parl_front_color;
       }
+      // Adicionar também cores de partidos individuais se necessário para fallback
+      if (party.party_legend && party.party_color && !map[party.party_legend]) {
+          map[party.party_legend] = party.party_color;
+      }
     });
     return map;
   }, []);
@@ -79,27 +91,21 @@ export default function DistrictDetailPage() {
       return;
     }
     const fetchVoteData = async () => {
-      console.log(`Buscando dados para distrito ${districtId}, tempo ${currentTime}`);
       setIsLoadingVotes(true); setErrorVotes(null);
       try {
           const response = await fetch(`/api/results?time=${currentTime}`);
-          console.log('Status da resposta da API:', response.status, response.ok);
           if (!response.ok) {
                let errorMsg = 'Erro ao buscar votos';
                try { errorMsg = (await response.json()).error || errorMsg; } catch (e) {}
-               console.error('Erro na resposta da API:', errorMsg);
                throw new Error(errorMsg);
           }
           const data: ApiVotesData = await response.json();
-          console.log('Dados recebidos da API:', data);
           setApiVotesData(data);
       } catch (err: unknown) {
-          console.error("Falha ao buscar/processar dados da API:", err);
           setErrorVotes(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido');
           setApiVotesData(null);
       } finally {
           setIsLoadingVotes(false);
-          console.log('Busca finalizada. isLoadingVotes = false');
       }
   };
   fetchVoteData();
@@ -119,15 +125,21 @@ export default function DistrictDetailPage() {
         if (!filteredCandidateVotes || filteredCandidateVotes.length === 0) { return { votes: [], totalVotes: 0, leadingCandidateId: null }; }
         const votesWithNumeric = filteredCandidateVotes.map((v: CandidateVote) => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
         const totalVotes = votesWithNumeric.reduce((sum: number, current: { numericVotes: number }) => sum + current.numericVotes, 0);
-        let leadingCandidateId: string | number | null = null; let maxVotes = -1;
-        const votesWithPercentage = votesWithNumeric.map(vote => {
-            if (vote.numericVotes > maxVotes) { maxVotes = vote.numericVotes; leadingCandidateId = vote.candidate_name; }
-            return { ...vote, percentage: totalVotes > 0 ? ((vote.numericVotes / totalVotes) * 100) : 0, }
-        });
+        
+        // Ordena para garantir que o primeiro é o líder (necessário para status)
+        const sortedVotes = [...votesWithNumeric].sort((a,b) => b.numericVotes - a.numericVotes);
+
+        let leadingCandidateId: string | number | null = null; 
+        if (sortedVotes.length > 0) {
+            leadingCandidateId = sortedVotes[0].candidate_name; // Ou ID se preferir
+        }
+
+        const votesWithPercentage = sortedVotes.map(vote => ({ 
+            ...vote, 
+            percentage: totalVotes > 0 ? ((vote.numericVotes / totalVotes) * 100) : 0, 
+        }));
         return { votes: votesWithPercentage as (CandidateVote & { numericVotes: number, percentage: number })[], totalVotes, leadingCandidateId };
     }, [filteredCandidateVotes]);
-
-   // const selectedDistrictName = currentDistrictInfo?.district_name || `ID ${districtId}`;
 
   if (!districtId) {
     return <div className="container mx-auto p-6 text-center text-red-600">ID do Distrito inválido na URL. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>
@@ -136,59 +148,83 @@ export default function DistrictDetailPage() {
     return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>
   }
 
-  // Placeholders para dados de apuração de urnas
-  // No futuro, estes viriam de `apiVotesData` ou `currentDistrictInfo` se disponíveis
-  const urnasApuradas = 1230; // Exemplo, substitua por dados reais
-  const urnasTotais = 1500;    // Exemplo, substitua por dados reais
+  const urnasApuradas = 1230;
+  const urnasTotais = 1500;
   const percentualApurado = urnasTotais > 0 ? (urnasApuradas / urnasTotais) * 100 : 0;
 
+  // Lógica para o Status do Distrito
+  const leaderCandidate = districtResults.votes.length > 0 ? districtResults.votes[0] : null;
+  let districtWinnerLegend: string | null = null;
+  let districtWinnerColor: string = COALITION_FALLBACK_COLOR; // Cor de fallback inicial
+  let districtWinnerTagTextColor: string = getTextColorForBackground(districtWinnerColor);
+
+  if (leaderCandidate) {
+    const legend = leaderCandidate.parl_front_legend || leaderCandidate.party_legend;
+    if (legend) {
+        districtWinnerLegend = legend;
+        districtWinnerColor = coalitionColorMap[legend] || COALITION_FALLBACK_COLOR;
+        districtWinnerTagTextColor = getTextColorForBackground(districtWinnerColor);
+    }
+  }
 
   return (
     <div className="container mx-auto p-4 lg:p-6 space-y-6">
-      {/* Link para Voltar - Permanece no topo */}
-      <div className="mb-4"> {/* Adicionado mb-4 para dar espaço antes da próxima seção */}
+      <div className="mb-4">
         <Link href="/" className="text-blue-600 hover:underline inline-block">&larr; Voltar para Visão Nacional</Link>
       </div>
 
-      {/* NOVA SEÇÃO DE CABEÇALHO DO DISTRITO */}
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
         {/* Coluna Esquerda: Informações do Local */}
         <div className="space-y-1">
-          {/* Tag do Estado (UF) - Futuramente um Link */}
-          {/* <Link href={`/estado/${currentStateId}`}> */}
             <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-gray-300 transition-colors cursor-pointer">
               {currentDistrictInfo.uf_name}
             </span>
-          {/* </Link> */}
-          {/* Nome do Distrito */}
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
             {currentDistrictInfo.district_name}
           </h1>
         </div>
 
-        {/* Coluna Direita: Informações de Apuração (Placeholders) */}
-        <div className="text-sm md:text-right space-y-1">
-          <div className="text-gray-600">
-            {urnasApuradas.toLocaleString('pt-BR')} / {urnasTotais.toLocaleString('pt-BR')} urnas
+        {/* Coluna Direita: Status do Distrito e Informações de Apuração */}
+        <div className="flex flex-col items-start md:flex-row md:items-end md:justify-end gap-2 md:gap-4">
+          {/* Status do Distrito (Tag) */}
+          <div className="flex-shrink-0 order-1 md:order-none"> {/* order-1 para mobile, se necessário, ou manter a ordem natural */}
+            {isLoadingVotes ? (
+              <span className="text-xs italic text-gray-500 whitespace-nowrap">Carregando status...</span>
+            ) : districtWinnerLegend && leaderCandidate ? (
+              <span
+                className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
+                style={{ backgroundColor: districtWinnerColor, color: districtWinnerTagTextColor }}
+              >
+                {districtWinnerLegend} liderando
+              </span>
+            ) : (
+              <span className="text-xs italic text-gray-500 whitespace-nowrap">
+                {districtResults.votes.length > 0 ? 'Disputa acirrada' : 'Aguardando dados'}
+              </span>
+            )}
           </div>
-          <div className="w-full md:w-48 bg-gray-200 rounded-full h-2.5">
-            <div 
-              className="bg-blue-600 h-2.5 rounded-full" 
-              style={{ width: `${percentualApurado.toFixed(2)}%` }}
-              title={`${percentualApurado.toFixed(2)}% apuradas`}
-            ></div>
-          </div>
-          <div className="text-gray-800">
-            <span className="font-bold">{percentualApurado.toFixed(2)}%</span> apuradas
+
+          {/* Bloco de Urnas */}
+          <div className="text-sm space-y-0.5 text-left md:text-right order-2 md:order-none">
+            <div className="text-gray-600">
+              {urnasApuradas.toLocaleString('pt-BR')} / {urnasTotais.toLocaleString('pt-BR')} urnas
+            </div>
+            {/* Aumentei um pouco a largura da barra para melhor visualização em telas menores */}
+            <div className="w-32 sm:w-36 md:w-40 lg:w-48 bg-gray-200 rounded-full h-2.5">
+              <div 
+                className="bg-blue-600 h-2.5 rounded-full" 
+                style={{ width: `${percentualApurado.toFixed(2)}%` }}
+                title={`${percentualApurado.toFixed(2)}% apuradas`}
+              ></div>
+            </div>
+            <div className="text-gray-800">
+              <span className="font-bold">{percentualApurado.toFixed(2)}%</span> apuradas
+            </div>
           </div>
         </div>
       </div>
-      {/* FIM DA NOVA SEÇÃO DE CABEÇALHO DO DISTRITO */}
 
-
-      {/* Painel Principal de Detalhes (Botões de Navegação e Conteúdo) */}
       <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-         {/* Botões de Navegação da Visão */}
         <div className="mb-4 border-b border-gray-200">
             <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
                 <button onClick={() => setDistrictViewMode('candidates')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'candidates' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
@@ -206,7 +242,6 @@ export default function DistrictDetailPage() {
             </nav>
         </div>
 
-        {/* Renderização Condicional da Visualização */}
         <>
             {districtViewMode === 'candidates' && (
                 districtResults.votes.length > 0 ?
@@ -234,7 +269,6 @@ export default function DistrictDetailPage() {
         </>
       </div>
 
-     {/* Controles de Tempo */}
      <div className="text-left p-4 bg-white rounded-lg shadow-md border border-gray-200">
         <label htmlFor="time-select" className="text-sm font-medium mr-2">Ver Apuração em:</label>
         <select
@@ -248,7 +282,6 @@ export default function DistrictDetailPage() {
             <option value={100}>100%</option>
         </select>
     </div>
-
     </div>
   );
 }
