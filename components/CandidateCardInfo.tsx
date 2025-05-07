@@ -41,7 +41,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
   const voteDifference = leader && runnerUp ? leader.numericVotes - runnerUp.numericVotes : null;
   const percentageDifference = leader && runnerUp ? leader.percentage - runnerUp.percentage : null;
 
-  const aspectRatioPaddingTop = '62.5%'; // 16:10. Ajuste conforme necessário (ex: '56.25%' para 16:9)
+  const aspectRatioPaddingTop = '62.5%'; // Ex: 16:10. Ajuste conforme necessário.
 
   const renderCandidateCard = (
     candidate: CandidateVoteProcessed,
@@ -58,20 +58,23 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                               COALITION_FALLBACK_COLOR;
 
     const leaderCoalitionColor = baseCoalitionColor;
-    const statusTagBgColor = candidate.status ? leaderCoalitionColor : FALLBACK_COLOR; // Usa cor da coalizão para status se houver
+    const statusTagBgColor = candidate.status ? leaderCoalitionColor : FALLBACK_COLOR;
     const statusTagTextColor = getTextColorForBackground(statusTagBgColor);
     
     const otherCardBorderColor = baseCoalitionColor;
     const otherPartyTagTextColor = getTextColorForBackground(otherCardBorderColor);
-    const otherStatusTagBgColor = candidate.status ? baseCoalitionColor : FALLBACK_COLOR; // Para status em cards "outros"
+    const otherStatusTagBgColor = candidate.status ? baseCoalitionColor : FALLBACK_COLOR;
     const otherStatusTagTextColor = getTextColorForBackground(otherStatusTagBgColor);
 
 
     if (isLeader) {
+      // Card do Líder permanece com h-full para definir uma altura base, se necessário,
+      // ou pode também ter altura livre se desejado (removendo h-full daqui também).
+      // Por enquanto, vamos manter o líder potencialmente definindo a altura máxima da linha.
       return (
         <div
           key={idKey}
-          className="bg-white rounded-lg shadow-xl overflow-hidden border-2 flex flex-col h-full" // h-full permite que este card defina a altura da linha no grid
+          className="bg-white rounded-lg shadow-xl overflow-hidden border-2 flex flex-col h-full"
           style={{ borderColor: leaderCoalitionColor }}
         >
           <div className="w-full relative" style={{ paddingTop: aspectRatioPaddingTop }}>
@@ -89,15 +92,15 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
             </div>
           </div>
           
-          <div className="p-4 md:p-6 flex-grow flex flex-col justify-between"> {/* Adicionado flex flex-col justify-between aqui */}
-            <div className="grid grid-cols-2 gap-x-4"> {/* Removido h-full daqui, pois o pai controla */}
-              <div className="flex flex-col justify-start space-y-1"> {/* justify-start para alinhar ao topo */}
+          <div className="p-4 md:p-6 flex-grow flex flex-col justify-between">
+            <div className="grid grid-cols-2 gap-x-4">
+              <div className="flex flex-col justify-start space-y-1">
                 <div>
                   <span className="text-lg md:text-4xl font-bold text-gray-800 block break-words">
                     {candidate.candidate_name}
                   </span>
                 </div>
-                <div className="flex items-center space-x-2 flex-wrap mt-1"> {/* mt-1 para pequeno espaço */}
+                <div className="flex items-center space-x-2 flex-wrap mt-1">
                   {frontLegend && (
                      <span
                         className="inline-block px-2 py-0.5 rounded text-xs sm:text-sm font-semibold"
@@ -113,7 +116,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                 </div>
               </div>
 
-              <div className="flex flex-col justify-start text-right space-y-1"> {/* justify-start para alinhar ao topo */}
+              <div className="flex flex-col justify-start text-right space-y-1">
                 <div>
                   <div>
                     <span className="text-lg md:text-4xl font-bold block" style={{color: leaderCoalitionColor }}>
@@ -127,7 +130,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                   </div>
                 </div>
                 
-                <div className="mt-1"> {/* mt-1 para pequeno espaço */}
+                <div className="mt-1">
                   <span
                       className="inline-block px-2 py-0.5 rounded text-xs sm:text-sm font-semibold"
                       style={{ backgroundColor: statusTagBgColor, color: statusTagTextColor }}
@@ -137,10 +140,9 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                 </div>
               </div>
             </div>
-             {/* Div de vantagem permanece no final */}
             {(typeof leaderVoteDifference === 'number' || typeof leaderPercentageDifference === 'number') && (
-                <div className="mt-auto pt-3"> {/* mt-auto para empurrar para baixo, pt-3 para espaço */}
-                    <div className="p-3 md:p-4 bg-gray-100 -mx-4 -mb-4 md:-mx-6 md:-mb-6 rounded-b-lg"> {/* Ajuste de padding negativo para preencher */}
+                <div className="mt-auto pt-3">
+                    <div className="p-3 md:p-4 bg-gray-100 -mx-4 -mb-4 md:-mx-6 md:-mb-6 rounded-b-lg">
                         <div className="flex flex-col sm:flex-row justify-between items-center text-sm">
                             <span className="font-semibold text-gray-700 mb-1 sm:mb-0">Vantagem:</span>
                             <div className="text-left sm:text-right space-x-0 sm:space-x-2 flex flex-col sm:flex-row">
@@ -159,22 +161,22 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
         </div>
       );
     } else { // Cards dos "Outros" Candidatos
-      const photoWidthClass = 'w-1/3 md:w-5/9';
+      // Ajuste photoWidthClass conforme sua preferência. Ex: w-3/5 para todos, ou w-2/5 md:w-3/5
+      const photoWidthClass = 'w-3/5'; // Largura da foto: 3/5 (60%) do card
 
+      // Removido 'h-full' de containerClasses
       const containerClasses = `
         bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out
-        hover:bg-gray-50 w-full border-2 flex overflow-hidden h-full 
-      `; // h-full para esticar junto com o líder
+        hover:bg-gray-50 w-full border-2 flex overflow-hidden 
+      `; // <<< h-full REMOVIDO DAQUI
 
       return (
         <div
           key={idKey}
-          className={containerClasses}
+          className={containerClasses} // Agora sem h-full
           style={{ borderColor: otherCardBorderColor }}
         >
-          {/* Coluna da Imagem */}
-          <div className={`flex-shrink-0 ${photoWidthClass}`}> {/* Esta coluna define a largura da imagem */}
-            {/* Este div cria a proporção. Sua altura é baseada na largura da coluna acima e no paddingTop. */}
+          <div className={`flex-shrink-0 ${photoWidthClass}`}>
             <div className="relative" style={{ paddingTop: aspectRatioPaddingTop }}> 
               <div className="absolute inset-0 bg-gray-200 overflow-hidden">
                 {candidate.candidate_photo ? (
@@ -192,13 +194,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
             </div>
           </div>
 
-          {/* Coluna de Texto */}
-          {/* flex-grow permite que esta coluna ocupe o espaço restante.
-              flex-col organiza o conteúdo verticalmente.
-              justify-start alinha todo o conteúdo agrupado ao topo.
-          */}
           <div className="flex flex-col flex-grow p-3 md:p-4 overflow-hidden justify-start">
-            {/* Bloco de informações principal */}
             <div>
               <span className="block text-xl md:text-2xl font-bold text-gray-800 break-words leading-tight truncate">
                 {candidate.candidate_name}
@@ -211,11 +207,10 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               </span>
             </div>
 
-            {/* Legendas e Status (se houver) - aparecerão abaixo do bloco principal */}
-            <div className="mt-2 flex flex-col items-start"> {/* items-start para alinhar à esquerda */}
+            <div className="mt-2 flex flex-col items-start">
               {frontLegend && (
                 <span
-                  className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap mb-0.5" // mb-0.5 para pequeno espaço entre legendas
+                  className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap mb-0.5"
                   style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
                 >
                   {frontLegend}
@@ -226,7 +221,6 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                   {partyLegendDisplay}
                 </span>
               )}
-              {/* Mostrar status se não houver legendas, ou sempre se desejado */}
               {candidate.status && (!frontLegend && !partyLegendDisplay) && ( 
                 <span
                   className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap mt-1"
@@ -236,9 +230,14 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                 </span>
               )}
             </div>
-            {/* Para garantir que o card estique se o conteúdo for pouco e o card do líder for alto: */}
-             <div className="mt-auto"></div> {/* Este div com mt-auto empurrará todo o conteúdo acima para o topo se houver espaço vertical */}
-
+             {/* O mt-auto aqui garante que, se o conteúdo acima for pouco,
+                 ele será empurrado para o topo e o card não colapsará
+                 desnecessariamente se a coluna de texto tiver algum min-height implícito
+                 ou se você quiser um comportamento de preenchimento interno.
+                 Com a altura do card agora livre, ele pode não ser estritamente necessário
+                 para o problema da "bordinha", mas não deve prejudicar.
+             */}
+             <div className="mt-auto"></div>
           </div>
         </div>
       );
@@ -253,12 +252,14 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
       </div>
       
       {others.length > 0 ? (
-        <div className="grid grid-flow-row auto-rows-fr gap-3 h-full"> {/* h-full e auto-rows-fr para igualar alturas */}
+        // Removido 'h-full' e 'auto-rows-fr' do grid dos "outros"
+        <div className="grid grid-flow-row gap-3"> {/* <<< h-full e auto-rows-fr REMOVIDOS DAQUI */}
           {others.map((candidate) => renderCandidateCard(candidate, false))}
         </div>
       ) : (
         leader && (
-          <div className="text-gray-500 pt-4 text-center md:text-left h-full flex items-center justify-center">
+          // Este div também não precisa mais forçar h-full se o grid não o faz.
+          <div className="text-gray-500 pt-4 text-center md:text-left flex items-center justify-center">
             Não há outros candidatos entre os 4 primeiros para exibir aqui.
           </div>
         )
