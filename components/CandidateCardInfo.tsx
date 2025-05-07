@@ -69,7 +69,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           style={{ borderColor: coalitionColor }}
         >
           {/* Seção da Foto - Topo, Largura Total */}
-          <div className="w-full h-56 md:h-72 bg-gray-200">
+          <div className="w-full h-40 md:h-60 bg-gray-200">
             {candidate.candidate_photo ? (
               <img
                 src={candidate.candidate_photo}
@@ -88,7 +88,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               {/* Coluna Esquerda */}
               <div className="space-y-2">
                 <div>
-                  <span className="text-lg md:text-xl font-bold text-gray-800">{candidate.candidate_name}</span>
+                  <span className="text-lg md:text-xxl font-bold text-gray-800">{candidate.candidate_name}</span>
                 </div>
                 <div>
                   {frontLegend ? (
@@ -114,7 +114,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               {/* Coluna Direita */}
               <div className="space-y-2">
                 <div>
-                  <span className="text-lg md:text-xl font-bold" style={{color: coalitionColor || COALITION_FALLBACK_COLOR}}>
+                  <span className="text-lg md:text-xxl font-bold" style={{color: coalitionColor || COALITION_FALLBACK_COLOR}}>
                     {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
                   </span>
                 </div>
