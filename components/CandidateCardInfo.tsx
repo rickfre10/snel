@@ -3,7 +3,7 @@
 import React from 'react';
 // Certifique-se que o caminho para 'types/election' está correto
 // Se 'types' está na raiz, ao lado de 'app' e 'components', este caminho deve funcionar
-import { CandidateVote } from '../types/election'; // Ajustado para subir dois níveis
+import { CandidateVote } from '../types/election'; // Seu caminho original mantido
 
 // Interface estendida que o componente espera receber
 interface CandidateVoteProcessed extends CandidateVote {
@@ -39,137 +39,206 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
     return <p>Sem dados de candidatos para exibir.</p>;
   }
 
-  // Ordena por votos (mantido)
   const sortedData = [...data].sort((a, b) => b.numericVotes - a.numericVotes);
-
-  // Separa o líder e os próximos 3 (para exibir 2º, 3º, 4º)
   const leader = sortedData[0];
-  // Pegamos do índice 1 até (mas não incluindo) o 4 -> [1, 2, 3]
   const others = sortedData.slice(1, 4);
-
-  // Calcula diferença para o segundo colocado (mantido)
-  const runnerUp = sortedData[1] || null; // Pode ser null se só houver 1 candidato
+  const runnerUp = sortedData[1] || null;
   const voteDifference = leader && runnerUp ? leader.numericVotes - runnerUp.numericVotes : null;
   const percentageDifference = leader && runnerUp ? leader.percentage - runnerUp.percentage : null;
 
   // --- Função interna para renderizar o card de UM candidato ---
-  const renderCandidateCard = (candidate: CandidateVoteProcessed, isLeader: boolean) => {
-    // Usa 'id' se existir, senão combina nome e votos para uma chave mais robusta
+  // ADICIONADO leaderVoteDifference e leaderPercentageDifference como parâmetros opcionais
+  const renderCandidateCard = (
+    candidate: CandidateVoteProcessed,
+    isLeader: boolean,
+    leaderVoteDifference?: number | null, // Apenas para o líder
+    leaderPercentageDifference?: number | null // Apenas para o líder
+  ) => {
     const idKey = candidate.id ? `cand-${candidate.id}` : `${candidate.candidate_name}-${candidate.numericVotes}`;
-    const frontLegend = candidate.parl_front_legend;
+    const frontLegend = candidate.parl_front_legend; // Usado para Frente/Coligação
+    const partyLegendDisplay = candidate.party_legend; // Novo: Legenda do Partido
     const coalitionColor = frontLegend ? (coalitionColorMap[frontLegend] ?? COALITION_FALLBACK_COLOR) : COALITION_FALLBACK_COLOR;
     const tagTextColor = getTextColorForBackground(coalitionColor);
 
-    // Define classes baseadas se é líder ou não
-    const photoSize = isLeader ? 'w-32 h-32 md:w-40 md:h-40' : 'w-20 h-20';
-    const nameSize = isLeader ? 'text-2xl md:text-3xl' : 'text-lg';
-    const infoSize = isLeader ? 'text-lg md:text-xl' : 'text-base'; // %
-    const voteSize = isLeader ? 'text-base' : 'text-xs'; // Votos
-    const cardPadding = isLeader ? 'p-4 md:p-5' : 'p-3';
-    const borderThickness = isLeader ? 'border-b-8' : 'border-b-4';
-
-    const containerClasses = `
-      flex items-center ${cardPadding} bg-white rounded-lg border ${borderThickness} shadow-sm transition-all duration-150 ease-in-out
-      ${isLeader ? 'border-gray-300' : 'border-gray-200 hover:bg-gray-50'}
-      w-full // Garantir que o card ocupe a largura da coluna
-    `;
-
-    return (
-      <div
-        key={idKey}
-        className={containerClasses}
-        style={{ borderBottomColor: coalitionColor }}
-      >
-         {/* Coluna da Foto */}
-        <div className={`flex-shrink-0 ${photoSize} mr-3 sm:mr-4 bg-gray-200 border border-gray-300 overflow-hidden rounded`}>
-          {candidate.candidate_photo ? (
-            <>
+    // ---- NOVO LAYOUT PARA O LÍDER ----
+    if (isLeader) {
+      return (
+        <div
+          key={idKey}
+          className="bg-white rounded-lg shadow-xl overflow-hidden border-2"
+          style={{ borderColor: coalitionColor }}
+        >
+          {/* Seção da Foto - Topo, Largura Total */}
+          <div className="w-full h-56 md:h-72 bg-gray-200">
+            {candidate.candidate_photo ? (
               <img
-                  src={candidate.candidate_photo}
-                  alt={candidate.candidate_name}
-                  className="w-full h-full object-cover" // object-cover tenta preencher sem distorcer
-                  loading="lazy" // Adiciona lazy loading para imagens não visíveis imediatamente
-                  onError={(e) => {
-                      // Tenta esconder a imagem quebrada e mostrar o placeholder
-                      const imgElement = e.currentTarget;
-                      imgElement.style.display = 'none'; // Esconde a imagem
-                      const placeholder = imgElement.nextElementSibling as HTMLElement | null; // Pega o próximo elemento (o div placeholder)
-                      if (placeholder) {
-                          placeholder.classList.remove('hidden'); // Mostra o placeholder
-                      }
-                      console.error(`Falha ao carregar imagem: ${candidate.candidate_photo}`, e);
-                  }}
+                src={candidate.candidate_photo}
+                alt={candidate.candidate_name}
+                className="w-full h-full object-cover"
+                loading="lazy"
               />
-              {/* Placeholder que SÓ aparece se onError for acionado */}
-              <div className={`hidden w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 ${isLeader ? 'text-2xl' : 'text-lg'}`}>?</div>
-            </>
-          ) : (
-            // Se não existe foto na URL, mostra o placeholder padrão
-            <div className={`w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 ${isLeader ? 'text-2xl' : 'text-lg'}`}>?</div>
-          )}
-        </div>
-        {/* Fim da Coluna da Foto */}
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-3xl">?</div>
+            )}
+          </div>
 
-        {/* Coluna das Informações */}
-        <div className="flex-grow">
-          <div className={`${nameSize} font-bold text-gray-800`}>{candidate.candidate_name}</div>
-          {/* Tag da COALIZÃO (Frente) */}
-          {frontLegend && (
-            <span
-              className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold mt-1 mb-1" // Adicionado margin bottom
-              style={{ backgroundColor: coalitionColor, color: tagTextColor }}
-            >
-              {frontLegend}
-            </span>
-          )}
-           {/* Porcentagem com Destaque */}
-           <div className={`${infoSize} font-semibold text-gray-700 mt-2`}>
-            {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
-          </div>
-          {/* Votos com Menos Destaque */}
-          <div className={`${voteSize} text-gray-500`}>
-            ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'} votos)
+          {/* Seção de Informações - Abaixo da Foto, com Padding */}
+          <div className="p-4 md:p-6">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm md:text-base">
+              {/* Coluna Esquerda */}
+              <div className="space-y-2">
+                <div>
+                  <span className="font-semibold text-gray-600 block">Nome:</span>
+                  <span className="text-lg md:text-xl font-bold text-gray-800">{candidate.candidate_name}</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Frente/Coligação:</span>
+                  {frontLegend ? (
+                     <span
+                        className="inline-block px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{ backgroundColor: coalitionColor, color: tagTextColor }}
+                    >
+                        {frontLegend}
+                    </span>
+                  ) : <span className="text-gray-700">-</span>}
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Legenda do Partido:</span>
+                  <span className="text-gray-700">{partyLegendDisplay || 'N/D'}</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Vantagem (Votos):</span>
+                  <span className="text-gray-700">
+                  {typeof leaderVoteDifference === 'number' ? `${leaderVoteDifference.toLocaleString('pt-BR')} votos` : '-'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Coluna Direita */}
+              <div className="space-y-2">
+                <div>
+                  <span className="font-semibold text-gray-600 block">Percentual:</span>
+                  <span className="text-lg md:text-xl font-bold" style={{color: coalitionColor || COALITION_FALLBACK_COLOR}}>
+                    {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Status:</span>
+                  <span className={`font-bold ${candidate.status === 'Eleito' ? 'text-green-600' : 'text-gray-700'}`}>
+                    {candidate.status || 'N/D'} {/* DADO NOVO - NECESSÁRIO NA FONTE DE DADOS */}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Votos Recebidos:</span>
+                  <span className="text-gray-700">{typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Vantagem (p.p.):</span>
+                  <span className="text-gray-700">
+                  {typeof leaderPercentageDifference === 'number' ? `${leaderPercentageDifference.toFixed(2)} p.p.` : '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      // ---- LAYOUT EXISTENTE PARA OS OUTROS CANDIDATOS (CÓDIGO ORIGINAL FORNECIDO POR VOCÊ) ----
+      // Define classes baseadas se é líder ou não (aqui isLeader será sempre false)
+      const photoSize = 'w-20 h-20'; // Ajustado para não-líder
+      const nameSize = 'text-lg';     // Ajustado para não-líder
+      const infoSize = 'text-base';   // % Ajustado para não-líder
+      const voteSize = 'text-xs';   // Votos Ajustado para não-líder
+      const cardPadding = 'p-3';      // Ajustado para não-líder
+      const borderThickness = 'border-b-4'; // Ajustado para não-líder
+
+      const containerClasses = `
+        flex items-center ${cardPadding} bg-white rounded-lg border ${borderThickness} shadow-sm transition-all duration-150 ease-in-out
+        border-gray-200 hover:bg-gray-50 w-full
+      `; // Removida lógica condicional de isLeader daqui, pois é o bloco 'else'
+
+      return (
+        <div
+          key={idKey}
+          className={containerClasses}
+          style={{ borderBottomColor: coalitionColor }}
+        >
+           {/* Coluna da Foto */}
+          <div className={`flex-shrink-0 ${photoSize} mr-3 sm:mr-4 bg-gray-200 border border-gray-300 overflow-hidden rounded`}>
+            {candidate.candidate_photo ? (
+              <>
+                <img
+                    src={candidate.candidate_photo}
+                    alt={candidate.candidate_name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                        const imgElement = e.currentTarget;
+                        imgElement.style.display = 'none';
+                        const placeholder = imgElement.nextElementSibling as HTMLElement | null;
+                        if (placeholder) {
+                            placeholder.classList.remove('hidden');
+                        }
+                        console.error(`Falha ao carregar imagem: ${candidate.candidate_photo}`, e);
+                    }}
+                />
+                <div className={`hidden w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-lg`}>?</div>
+              </>
+            ) : (
+              <div className={`w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-lg`}>?</div>
+            )}
+          </div>
+          {/* Fim da Coluna da Foto */}
+
+          {/* Coluna das Informações */}
+          <div className="flex-grow">
+            <div className={`${nameSize} font-bold text-gray-800`}>{candidate.candidate_name}</div>
+            {frontLegend && (
+              <span
+                className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold mt-1 mb-1"
+                style={{ backgroundColor: coalitionColor, color: tagTextColor }}
+              >
+                {frontLegend}
+              </span>
+            )}
+             <div className={`${infoSize} font-semibold text-gray-700 mt-2`}>
+              {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
+            </div>
+            <div className={`${voteSize} text-gray-500`}>
+              ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'} votos)
+            </div>
+          </div>
+        </div>
+      );
+    }
   };
   // -- Fim da função renderCandidateCard --
 
-  // --- NOVO JSX Principal do Componente (Layout de 2 Colunas) ---
+  // --- JSX Principal do Componente (Layout de 2 Colunas Externo) ---
   return (
-    // Grid principal: 1 coluna em mobile, 2 colunas em telas médias ou maiores (md:)
-    // gap-6 adiciona espaço entre as colunas
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+      {/* Coluna 1: Líder */}
+      {/* MODIFICADO: Removido space-y-4 pois a vantagem agora está DENTRO do card do líder */}
+      <div className="flex flex-col">
+        {/* MODIFICADO: Passando voteDifference e percentageDifference para o card do líder */}
+        {leader && renderCandidateCard(leader, true, voteDifference, percentageDifference)}
 
-      {/* Coluna 1: Líder e Vantagem */}
-      <div className="flex flex-col space-y-4"> {/* Empilha o card do líder e a vantagem */}
-        {leader && renderCandidateCard(leader, true)}
+        {/* REMOVIDO: Bloco de exibição da Vantagem que ficava aqui, pois foi movido para dentro do card do líder */}
 
-        {/* Exibição da Vantagem (APENAS se houver runnerUp) */}
-        {runnerUp && voteDifference !== null && percentageDifference !== null && (
-            <div className="text-center text-base md:text-lg font-semibold text-gray-700 py-3 border-t border-dashed border-gray-300 mt-2">
-                Vantagem: {voteDifference.toLocaleString('pt-BR')} votos ({percentageDifference.toFixed(2)} p.p.)
-            </div>
-        )}
-        {/* Se não houver líder (caso extremo), pode adicionar uma mensagem aqui */}
         {!leader && <p className="text-center text-red-600">Não foi possível determinar o líder.</p>}
       </div>
 
-      {/* Coluna 2: Outros Candidatos (2º, 3º, 4º) */}
-      <div className="space-y-3"> {/* Empilha os cards dos outros candidatos */}
+      {/* Coluna 2: Outros Candidatos (sem alterações aqui) */}
+      <div className="space-y-3">
         {others.length > 0 ? (
-          others.map((candidate) => renderCandidateCard(candidate, false))
+          others.map((candidate) => renderCandidateCard(candidate, false)) // Não passa as props de vantagem
         ) : (
-          // Mensagem se houver líder mas nenhum outro candidato (ou menos de 4)
           leader && <div className="text-gray-500 pt-4 text-center md:text-left h-full flex items-center justify-center">Não há outros candidatos entre os 4 primeiros para exibir aqui.</div>
         )}
-        {/* Se não houver líder, talvez não mostrar nada ou outra mensagem */}
       </div>
-
-    </div> // Fim do grid principal
+    </div>
   );
-  // --- Fim do NOVO JSX Principal ---
 };
 
 export default CandidateCardInfo;

@@ -9,10 +9,10 @@ export interface CandidateVote {
   votes_qtn: number; // Já convertemos para número na API
   candidate_status: string | null; // Mudou de ?: string | null para : string | null
   candidate_photo: string | null;  // Mudou de ?: string | null para : string | null
+  status?: string;            // Ex: "Eleito", "Não Eleito", "2º Turno"
   // --------------------------
   [key: string]: any;
 }
-  
   // Votos Proporcionais (ajuste as propriedades/tipos se necessário)
   export interface ProportionalVote {
     uf: string;
