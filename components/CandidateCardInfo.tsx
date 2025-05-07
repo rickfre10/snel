@@ -153,19 +153,15 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
       );
     
     } else {
-      // Layout para os outros candidatos com 3 colunas, foto integrada
-      const cardPadding = 'p-3 md:p-4';
+      // Novo Layout para os outros candidatos: Foto à esquerda, Informações à direita
+      const cardPadding = 'p-0'; // O padding será interno às seções, se necessário
+      const photoWidthClass = 'w-1/3 md:w-2/5'; // Foto ocupa 1/3 ou 2/5 da largura
 
-      // Container principal do card, usando grid para as 3 colunas.
-      // A foto será o primeiro item deste grid.
       const containerClasses = `
         bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out
-        hover:bg-gray-50 w-full h-full border-2 grid grid-cols-[auto_minmax(0,_1fr)_auto] gap-x-3 md:gap-x-4 items-center ${cardPadding}
+        hover:bg-gray-50 w-full h-full border-2 flex overflow-hidden
       `;
-      // grid-cols-[auto_minmax(0,_1fr)_auto]:
-      // 1ª coluna (auto): Largura definida pela foto.
-      // 2ª coluna (minmax(0, 1fr)): Ocupa o espaço restante, permitindo que o nome quebre linha sem expandir o card desnecessariamente.
-      // 3ª coluna (auto): Largura definida pelo conteúdo (legendas, votos).
+      // Usamos flex para dividir o card em Foto | Informações
 
       return (
         <div
@@ -173,25 +169,20 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
           className={containerClasses}
           style={{ borderColor: otherCardBorderColor }}
         >
-          {/* --- COLUNA 1: FOTO DO CANDIDATO --- */}
-          {/* Este é o primeiro elemento filho direto do 'div' com 'containerClasses'.
-              Ele se tornará a primeira coluna do grid.
-              'h-full' aqui tentará fazer a foto ocupar a altura do card,
-              mas para um visual mais parecido com o do líder, talvez uma altura fixa ou aspect-ratio seja melhor.
-              Vamos usar uma altura fixa para consistência com a imagem de referência.
-          */}
-          <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+          {/* --- SEÇÃO DA FOTO (Esquerda) --- */}
+          {/* A foto agora ocupa uma fração da largura e toda a altura do card. */}
+          <div className={`flex-shrink-0 ${photoWidthClass} bg-gray-200 h-full`}>
             {candidate.candidate_photo ? (
               <img
                 src={candidate.candidate_photo}
                 alt={candidate.candidate_name}
-                className="w-full h-full object-cover" // object-cover é crucial aqui
+                className="w-full h-full object-cover" // object-cover é crucial
                 loading="lazy"
                 onError={(e) => {
                   const imgElement = e.currentTarget as HTMLImageElement;
-                  imgElement.style.display = 'none'; // Esconde a imagem quebrada
+                  imgElement.style.display = 'none';
                   const parent = imgElement.parentNode as HTMLElement | null;
-                  if (parent && !parent.querySelector('.placeholder-img')) { // Evita adicionar múltiplos placeholders
+                  if (parent && !parent.querySelector('.placeholder-img')) {
                     const placeholder = document.createElement('div');
                     placeholder.className = "placeholder-img w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xl";
                     placeholder.textContent = "?";
@@ -204,39 +195,41 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
             )}
           </div>
 
-          {/* --- COLUNA 2: NOME E PORCENTAGEM --- */}
-          {/* Este é o segundo elemento filho direto. Será a segunda coluna. */}
-          <div className="flex flex-col justify-center overflow-hidden"> {/* Adicionado overflow-hidden para o nome */}
-            <span className="text-xl md:text-2xl font-bold text-gray-800 break-words leading-tight truncate"> {/* truncate para nomes muito longos */}
-              {candidate.candidate_name}
-            </span>
-            <span className="text-3xl md:text-4xl font-bold leading-none" style={{ color: otherCardBorderColor }}>
-              {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
-            </span>
-          </div>
-
-          {/* --- COLUNA 3: FRENTE/PARTIDO E NÚMERO DE VOTOS --- */}
-          {/* Este é o terceiro elemento filho direto. Será a terceira coluna. */}
-          <div className="flex flex-col justify-center items-end text-right space-y-1">
-            <div className="flex flex-col items-end">
-              {frontLegend && (
-                <span
-                  className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap"
-                  style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
-                >
-                  {frontLegend}
-                </span>
-              )}
-              {partyLegendDisplay && (
-                <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'mt-0.5' : ''} whitespace-nowrap`}>
-                  {partyLegendDisplay}
-                </span>
-              )}
-              {(!frontLegend && !partyLegendDisplay) && <span className="text-xs text-gray-500">-</span>}
+          {/* --- SEÇÃO DAS INFORMAÇÕES (Direita) --- */}
+          {/* Este div ocupa o restante do espaço. Adicionamos padding interno aqui. */}
+          <div className="flex flex-col flex-grow justify-between p-3 md:p-4 overflow-hidden">
+            {/* Bloco Superior: Nome e Porcentagem */}
+            <div>
+              <span className="block text-xl md:text-2xl font-bold text-gray-800 break-words leading-tight truncate">
+                {candidate.candidate_name}
+              </span>
+              <span className="block text-3xl md:text-4xl font-bold leading-none mt-1" style={{ color: otherCardBorderColor }}>
+                {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
+              </span>
             </div>
-            <span className="text-xs md:text-sm text-gray-500 whitespace-nowrap">
-              ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos)
-            </span>
+
+            {/* Bloco Inferior: Frente/Partido e Votos */}
+            <div className="text-right mt-2"> {/* Alinha este bloco à direita e adiciona margem superior */}
+              <div className="flex flex-col items-end space-y-0.5">
+                {frontLegend && (
+                  <span
+                    className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap"
+                    style={{ backgroundColor: otherCardBorderColor, color: otherPartyTagTextColor }}
+                  >
+                    {frontLegend}
+                  </span>
+                )}
+                {partyLegendDisplay && (
+                  <span className={`text-xs text-gray-500 font-medium ${frontLegend ? 'mt-0.5' : ''} whitespace-nowrap`}>
+                    {partyLegendDisplay}
+                  </span>
+                )}
+                {(!frontLegend && !partyLegendDisplay) && <span className="text-xs text-gray-500">-</span>}
+              </div>
+              <span className="block text-xs md:text-sm text-gray-500 whitespace-nowrap mt-1">
+                ({typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos)
+              </span>
+            </div>
           </div>
         </div>
       );
