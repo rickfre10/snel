@@ -65,11 +65,11 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
       return (
         <div
           key={idKey}
-          className="bg-white rounded-lg shadow-xl overflow-hidden border-2"
+          className="bg-white rounded-lg shadow-xl overflow-hidden border-4"
           style={{ borderColor: coalitionColor }}
         >
           {/* Seção da Foto - Topo, Largura Total */}
-          <div className="w-full h-40 md:h-60 bg-gray-200">
+          <div className="w-full h-53 md:h-78 bg-gray-200">
             {candidate.candidate_photo ? (
               <img
                 src={candidate.candidate_photo}
@@ -88,12 +88,12 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               {/* Coluna Esquerda */}
               <div className="space-y-2">
                 <div>
-                  <span className="text-lg md:text-xxl font-bold text-gray-800">{candidate.candidate_name}</span>
+                  <span className="text-lg md:text-4xl font-bold text-gray-800">{candidate.candidate_name}</span>
                 </div>
                 <div>
                   {frontLegend ? (
                      <span
-                        className="inline-block px-2 py-0.5 rounded text-xs font-semibold"
+                        className="inline-block px-2 py-0.5 rounded text-sm font-semibold"
                         style={{ backgroundColor: coalitionColor, color: tagTextColor }}
                     >
                         {frontLegend}
@@ -101,11 +101,11 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
                   ) : <span className="text-gray-700">-</span>}
                 </div>
                 <div>
-                  <span className="text-gray-700">{partyLegendDisplay || 'N/D'}</span>
+                  <span className=" text-sm text-gray-700">{partyLegendDisplay || 'N/D'}</span>
                 </div>
                 <div>
                   <span className="text-gray-700">
-                  <span className="font-semibold text-gray-600 block">Vantagem:</span>
+                  <span className="text-sm font-semibold text-gray-600 block">Vantagem:</span>
                   {typeof leaderVoteDifference === 'number' ? `${leaderVoteDifference.toLocaleString('pt-BR')} votos` : '-'}
                   </span>
                 </div>
@@ -114,19 +114,25 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
               {/* Coluna Direita */}
               <div className="space-y-2">
                 <div>
-                  <span className="text-lg md:text-xxl font-bold" style={{color: coalitionColor || COALITION_FALLBACK_COLOR}}>
-                    {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : 'N/A'}%
+                  <span className="text-lg md:text-4xl font-bold" style={{color: coalitionColor || COALITION_FALLBACK_COLOR}}>
+                    {typeof candidate.percentage === 'number' ? candidate.percentage.toFixed(2) : '0'}%
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-700">{typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : 'N/A'}</span>
+                  <span className="text-gray-700">{typeof candidate.numericVotes === 'number' ? candidate.numericVotes.toLocaleString('pt-BR') : '0'} votos </span>
                 </div>
                 <div>
-                  <span className={`font-bold ${candidate.status === 'Eleito' ? 'text-green-600' : 'text-gray-700'}`}>
-                    {candidate.status || 'N/D'} {/* DADO NOVO - NECESSÁRIO NA FONTE DE DADOS */}
-                  </span>
-                </div>
+                  {candidate.status ? (
+                     <span
+                        className="inline-block px-2 py-0.5 rounded text-sm font-semibold"
+                        style={{ backgroundColor: coalitionColor, color: tagTextColor }}
+                    >
+                        {candidate.status || 'Liderando'}
+                    </span>
+                  ) : <span className="text-gray-700">-</span>}
+                </div>              
                 <div>
+                  <br></br>
                   <span className="text-gray-700">
                   {typeof leaderPercentageDifference === 'number' ? `${leaderPercentageDifference.toFixed(2)} p.p.` : '-'}
                   </span>
