@@ -159,7 +159,7 @@ const CandidateCardInfo: React.FC<CandidateCardInfoProps> = ({ data, leadingId, 
         </div>
       );
     } else { // Cards dos "Outros" Candidatos
-      const photoWidthClass = 'w-1/3 md:w-1/3';
+      const photoWidthClass = 'w-1/3 md:w-3/5';
 
       const containerClasses = `
         bg-white rounded-lg shadow-sm transition-all duration-150 ease-in-out
