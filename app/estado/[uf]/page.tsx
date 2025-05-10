@@ -13,7 +13,7 @@ import type { ProportionalVote, CandidateVote, TickerEntry, DistrictInfoFromData
 // Componentes (ajuste os caminhos se @/ não funcionar)
 import SeatCompositionPanel from '@/components/SeatCompositionPanel';
 import RaceTicker from '@/components/RaceTicker';
-import ProportionalSeatAllocation from '@/components/ProportionalSeatAllocation';
+import ProportionalSeatAllocation from '@/components/ProportionalSeatAllocationDetails';
 
 // Dados de configuração dos assentos proporcionais (como você forneceu)
 const totalProportionalSeatsByState: Record<string, number> = {
