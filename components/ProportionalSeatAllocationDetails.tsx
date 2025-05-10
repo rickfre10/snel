@@ -95,7 +95,7 @@ const ProportionalSeatAllocation: React.FC<ProportionalSeatAllocationProps> = ({
       </div>
       {totalAllocated < totalSeatsInState && totalAllocated > 0 && (
         <p className="text-xs text-amber-700 mt-3">
-          Nota: {totalSeatsInState - totalAllocated} assento(s) proporcional(is) não foi(ram) alocado(s), possivelmente devido à cláusula de barreira ou regras de arredondamento do método D'Hondt quando poucas legendas são elegíveis.
+          Nota: {totalSeatsInState - totalAllocated} assento(s) proporcional(is) não foi(ram) alocado(s), possivelmente devido à cláusula de barreira ou regras de arredondamento do método DHondt quando poucas legendas são elegíveis.
         </p>
       )}
     </div>
