@@ -19,6 +19,18 @@ import RaceTicker from '../components/RaceTicker';
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption, DistrictResultInfo, TickerEntry } from '../types/election';
 import { districtsData, partyData } from '../lib/staticData';
 
+// --- IMPORTAR LÓGICA DE CÁLCULO E DADOS DE CONFIGURAÇÃO PR ---
+import { calculateProportionalSeats, ProportionalVotesInput } from '../lib/electionCalculations';
+
+const totalProportionalSeatsByState: Record<string, number> = {
+  "TP": 1,
+  "MA": 40,
+  "MP": 23,
+  "BA": 16,
+  "PB": 9,
+  "PN": 4
+};
+
 // Interface para os dados de VOTOS vindos da API
 interface ApiVotesData {
   time: number;
@@ -49,6 +61,18 @@ export default function Home() {
   const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
   const [hoveredDistrictInfo, setHoveredDistrictInfo] = useState<string | null>(null);
   // REMOVIDO: districtViewMode
+
+  const handleNavigate = () => {
+    if (selectedDistrict && selectedState) { // Se AMBOS estão selecionados, vai para o distrito
+      console.log("Navegando para Distrito via botão:", selectedDistrict, "com tempo:", currentTime);
+      router.push(`/distrito/${selectedDistrict}?time=${currentTime}`);
+    } else if (selectedState) { // Se SÓ o estado está selecionado, vai para o estado
+      console.log("Navegando para Estado via botão:", selectedState, "com tempo:", currentTime);
+      // Garante que o UF vai em minúsculas para a URL da página de estado
+      router.push(`/estado/${selectedState.toLowerCase()}?time=${currentTime}`);
+    }
+    // Se nada estiver selecionado, o botão estará desabilitado, então não faz nada aqui
+  };
 
   const router = useRouter(); // Hook para navegação
 
@@ -120,6 +144,70 @@ export default function Home() {
     return seatCounts;
   }, [districtResultsSummary]);
 
+    // --- NOVO: useMemo para calcular ASSENTOS PROPORCIONAIS NACIONAIS por frente ---
+    const nationalProportionalSeatsByCoalition = useMemo(() => {
+      const nationalPRCounts: Record<string, number> = {};
+      if (!apiVotesData?.proportionalVotes) return nationalPRCounts;
+  
+      // Itera sobre cada estado que tem assentos proporcionais definidos
+      Object.keys(totalProportionalSeatsByState).forEach(uf => {
+        const seatsForThisState = totalProportionalSeatsByState[uf];
+        if (seatsForThisState === 0) return; // Pula se o estado não tem assentos PR
+  
+        // Filtra os votos proporcionais apenas para o estado atual
+        const votesInThisState = apiVotesData.proportionalVotes.filter(vote => vote.uf === uf);
+  
+        // Prepara os dados de entrada para a função de cálculo
+        const proportionalVotesInputForState: ProportionalVotesInput[] = votesInThisState
+          .filter(vote => vote.parl_front_legend) // Garante que a legenda existe
+          .map(vote => ({
+            legend: vote.parl_front_legend!, // Sabemos que existe por causa do filtro
+            votes: parseNumber(vote.proportional_votes_qtn)
+          }));
+  
+        // Calcula os assentos proporcionais para este estado
+        const prSeatsThisState = calculateProportionalSeats(
+          proportionalVotesInputForState,
+          seatsForThisState,
+          5 // Cláusula de barreira de 5%
+        );
+  
+        // Soma os assentos ao total nacional de cada frente
+        Object.entries(prSeatsThisState).forEach(([legend, seats]) => {
+          nationalPRCounts[legend] = (nationalPRCounts[legend] || 0) + seats;
+        });
+      });
+      return nationalPRCounts;
+    }, [apiVotesData?.proportionalVotes]);
+    // --------------------------------------------------------------------------
+  
+    // --- NOVO: useMemo para COMBINAR assentos distritais e proporcionais ---
+    const finalNationalSeatComposition = useMemo(() => {
+      const combinedSeats: Record<string, number> = {};
+      const allFronts = new Set<string>([
+        ...Object.keys(districtSeatsByCoalition),
+        ...Object.keys(nationalProportionalSeatsByCoalition)
+      ]);
+  
+      allFronts.forEach(front => {
+        combinedSeats[front] =
+          (districtSeatsByCoalition[front] || 0) +
+          (nationalProportionalSeatsByCoalition[front] || 0);
+      });
+      return combinedSeats;
+    }, [districtSeatsByCoalition, nationalProportionalSeatsByCoalition]);
+    // --------------------------------------------------------------------
+  
+    // --- NOVO: useMemo para o TOTAL GERAL de assentos na câmara ---
+    const grandTotalSeats = useMemo(() => {
+      const totalDistrict = districtsData.length; // Total de distritos = total de assentos distritais
+      const totalProportional = Object.values(totalProportionalSeatsByState)
+        .reduce((sum, seats) => sum + seats, 0);
+      return totalDistrict + totalProportional;
+    }, []); // Depende apenas de dados estáticos
+    // ----------------------------------------------------------------
+  
+
   // Calcular Dados para o Ticker
   const tickerData: TickerEntry[] = useMemo(() => {
     const dataForTicker: TickerEntry[] = [];
@@ -154,7 +242,7 @@ export default function Home() {
   return (
     <div>
       <Head>
-        <title>Painel Apuração Haagar - Visão Nacional</title>
+        <title>Smartv - Eleições 2022</title>
         <meta name="description" content="Visão geral da apuração eleitoral Haagar" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -187,8 +275,9 @@ export default function Home() {
             <RaceTicker data={tickerData} colorMap={coalitionColorMap} interval={8000} />
         )}
 
-        {/* 4. Seletores Geográficos (Mantidos) */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 my-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+          {/* Seletores Geográficos ATUALIZADOS */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 my-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+          {/* Dropdown de Estado (como antes) */}
           <div className="flex items-center gap-2">
             <label htmlFor="state-select" className="font-medium text-gray-700">Estado:</label>
             <select id="state-select" value={selectedState ?? ''} onChange={handleStateChange} className="rounded border-gray-300 shadow-sm">
@@ -196,18 +285,33 @@ export default function Home() {
               {states.map(state => ( <option key={state.id} value={state.id}>{state.name} ({state.id})</option> ))}
             </select>
           </div>
+
+          {/* Dropdown de Distrito (como antes) */}
           <div className="flex items-center gap-2">
             <label htmlFor="district-select" className="font-medium text-gray-700">Distrito:</label>
-            <select id="district-select" value={selectedDistrict ?? ''} onChange={handleDistrictChange} disabled={!selectedState || isLoadingVotes} className="rounded border-gray-300 shadow-sm disabled:opacity-50">
+            <select 
+              id="district-select" 
+              value={selectedDistrict ?? ''} 
+              onChange={handleDistrictChange} 
+              disabled={!selectedState || isLoadingVotes} 
+              className="rounded border-gray-300 shadow-sm disabled:opacity-50"
+            >
               <option value="">-- Selecione Distrito --</option>
               {districts.map(district => ( <option key={district.id} value={district.id}>{district.name} ({district.id})</option> ))}
             </select>
           </div>
-          {/* Nota: Selecionar distrito aqui agora não mostra mais detalhes nesta página */}
-        </div>
 
-        {/* 5. PAINEL DE DETALHES DO DISTRITO (REMOVIDO) */}
-        {/* O bloco {selectedDistrict && (<div...>...</div>)} foi completamente removido daqui */}
+          {/* --- NOVO BOTÃO NAVEGAR --- */}
+          <div className="ml-0 sm:ml-4 mt-2 sm:mt-0"> {/* Margem para espaçamento */}
+            <button
+              onClick={handleNavigate}
+              disabled={!selectedState || isLoadingVotes} // Desabilitado se nenhum estado selecionado ou se estiver carregando
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Navegar
+            </button>
+          </div>
+        </div>
 
       </main>
 
