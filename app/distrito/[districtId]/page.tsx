@@ -7,12 +7,11 @@ import Link from 'next/link';
 
 import CandidateCardInfo from '@/components/CandidateCardInfo';
 import DistrictBarChart from '@/components/DistrictBarChart';
-import ProportionalPieChart from '@/components/ProportionalPieChart';
 
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption, DistrictOption, TickerEntry } from '@/types/election';
 import { districtsData, partyData } from '@/lib/staticData';
 
-type DistrictViewMode = 'candidates' | 'bars' | 'proportional';
+type DistrictViewMode = 'candidates' | 'bars' ;
 
 interface ApiVotesData {
   time: number;
@@ -116,10 +115,6 @@ export default function DistrictDetailPage() {
     return apiVotesData.candidateVotes.filter(vote => parseInt(String(vote.district_id), 10) === districtId );
   }, [apiVotesData?.candidateVotes, districtId]);
 
-  const filteredProportionalVotes = useMemo(() => {
-      if (!apiVotesData?.proportionalVotes || !currentStateId) return [];
-      return apiVotesData.proportionalVotes.filter(vote => vote.uf === currentStateId);
-  }, [apiVotesData?.proportionalVotes, currentStateId]);
 
   const districtResults = useMemo(() => {
         if (!filteredCandidateVotes || filteredCandidateVotes.length === 0) { return { votes: [], totalVotes: 0, leadingCandidateId: null }; }
@@ -176,9 +171,11 @@ export default function DistrictDetailPage() {
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
         {/* Coluna Esquerda: Informações do Local */}
         <div className="space-y-1">
+          <Link href={`/estado/${currentDistrictInfo.uf.toLowerCase()}`} className="inline-block">
             <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-gray-300 transition-colors cursor-pointer">
-              {currentDistrictInfo.uf_name}
+              {currentDistrictInfo.uf_name} ({currentDistrictInfo.uf})
             </span>
+            </Link>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
             {currentDistrictInfo.district_name}
           </h1>
@@ -233,9 +230,6 @@ export default function DistrictDetailPage() {
                 <button onClick={() => setDistrictViewMode('bars')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'bars' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                     Gráfico Barras
                 </button>
-                <button onClick={() => setDistrictViewMode('proportional')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'proportional' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                    Prop. Estado ({currentStateId})
-                </button>
                 <button disabled title="Dados de eleição anterior não disponíveis" className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-400 cursor-not-allowed`}>
                     Swing
                 </button>
@@ -258,14 +252,7 @@ export default function DistrictDetailPage() {
                     colorMap={coalitionColorMap}
                 /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
             )}
-              {districtViewMode === 'proportional' && (
-                  filteredProportionalVotes.length > 0 ? (
-                    <ProportionalPieChart
-                        data={filteredProportionalVotes}
-                        colorMap={coalitionColorMap}
-                    />
-                  ) : ( <p className="text-center text-gray-500">Sem dados proporcionais para este estado neste momento.</p> )
-            )}
+            
         </>
       </div>
 
