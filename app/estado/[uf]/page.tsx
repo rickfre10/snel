@@ -1,26 +1,30 @@
 // app/estado/[uf]/page.tsx
-"use client"; // Componentes que usam hooks como useParams precisam ser Client Components
+"use client";
 
 import Link from 'next/link';
-import { notFound, useParams } from 'next/navigation';
-import React, { useMemo, useState, useEffect } from 'react'; // Adicionado useState, useEffect
+import { useParams, useSearchParams } from 'next/navigation'; // Corrigido para useSearchParams
+import React, { useMemo, useState, useEffect } from 'react';
 
-// Funções e dados estáticos (ajuste os caminhos se @/ não funcionar)
+// Funções e dados estáticos
 import { calculateProportionalSeats, ProportionalVotesInput } from '@/lib/electionCalculations';
 import { partyData, districtsData } from '@/lib/staticData';
 import type { ProportionalVote, CandidateVote, TickerEntry, DistrictInfoFromData, PartyInfo, DistrictResultInfo } from '@/types/election';
 
-// Componentes (ajuste os caminhos se @/ não funcionar)
+// Componentes
 import SeatCompositionPanel from '@/components/SeatCompositionPanel';
 import RaceTicker from '@/components/RaceTicker';
-import ProportionalSeatAllocation from '@/components/ProportionalSeatAllocationDetails';
+// Vamos usar ProportionalPieChart para a visualização de votos proporcionais por enquanto
+import ProportionalPieChart from '@/components/ProportionalPieChart';
+// Mantenha este se quiser usar o componente que a IA parceira sugeriu para detalhes da alocação
+import ProportionalSeatAllocationDetails from '@/components/ProportionalSeatAllocationDetails'; // Nome que a IA parceira usou
 
-// Dados de configuração dos assentos proporcionais (como você forneceu)
+
+// Dados de configuração dos assentos proporcionais
 const totalProportionalSeatsByState: Record<string, number> = {
   "TP": 39, "MA": 51, "MP": 29, "BA": 20, "PB": 10, "PN": 4
 };
 
-// Mapa de cores das coalizões (gerado a partir de partyData)
+// Mapa de cores das coalizões
 const coalitionColorMap: Record<string, string> = partyData.reduce((acc, party) => {
   if (party.parl_front_legend && party.parl_front_color) {
     acc[party.parl_front_legend] = party.parl_front_color;
@@ -28,7 +32,7 @@ const coalitionColorMap: Record<string, string> = partyData.reduce((acc, party) 
   return acc;
 }, {} as Record<string, string>);
 
-// Helper parseNumber (se não estiver global, defina ou importe de utils)
+// Helper parseNumber
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
@@ -39,77 +43,49 @@ const parseNumber = (value: any): number => {
     return 0;
 };
 
-// Interface para os dados de VOTOS (simulando o que viria da sua API /api/results)
-interface ApiVotesData {
+// Interface para os dados de VOTOS que vêm da nossa API /api/results
+interface ApiResultsData {
   time: number;
   candidateVotes: CandidateVote[];
   proportionalVotes: ProportionalVote[];
 }
 
-// Simulação da API de votos (AJUSTADA PARA SEUS TIPOS)
-// Em um projeto real, esta função seria substituída pela sua lógica de fetch da API real
-async function getVoteData(uf_param?: string, currentTimeParam?: number): Promise<ApiVotesData> {
-  console.warn("Usando dados mockados para getVoteData. Substitua pela sua lógica de fetch real!");
-  const exampleTime = currentTimeParam || Date.now(); // Usa o tempo passado ou o atual
+// REMOVIDA A FUNÇÃO MOCK getVoteData DAQUI
 
-  // Mock Proportional Votes ALINHADO com seus tipos
-  const mockProportionalVotes: ProportionalVote[] = [
-    { uf: 'MA', parlamentar_front: 'Frente de Todos', parl_front_legend: 'TDS', proportional_votes_qtn: 150000 },
-    { uf: 'MA', parlamentar_front: 'Unidos por Haagar', parl_front_legend: 'UNI', proportional_votes_qtn: 120000 },
-    { uf: 'MA', parlamentar_front: 'Frente Conservadora', parl_front_legend: 'CON', proportional_votes_qtn: 70000 },
-    { uf: 'MA', parlamentar_front: 'Partido Social Democrata', parl_front_legend: 'PSD', proportional_votes_qtn: 65000 },
-    { uf: 'MA', parlamentar_front: 'Partido Socialista de Haagar', parl_front_legend: 'PSH', proportional_votes_qtn: 30000 },
-    { uf: 'MA', parlamentar_front: 'Nacionalistas', parl_front_legend: 'NAC', proportional_votes_qtn: 10000 },
-    { uf: 'TP', parlamentar_front: 'Frente de Todos', parl_front_legend: 'TDS', proportional_votes_qtn: 50000 },
-    { uf: 'TP', parlamentar_front: 'Unidos por Haagar', parl_front_legend: 'UNI', proportional_votes_qtn: 45000 },
-    { uf: 'TP', parlamentar_front: 'Frente Conservadora', parl_front_legend: 'CON', proportional_votes_qtn: 20000 },
-  ].map(v => ({...v, proportional_votes_qtn: parseNumber(v.proportional_votes_qtn)})); // Garante que votos são números
-
-  // Mock Candidate Votes ALINHADO com seus tipos
-  const mockCandidateVotes: CandidateVote[] = [
-    { district_id: 201, candidate_name: 'Beltrano de Tal (MA)', parl_front_legend: 'UNI', votes_qtn: 15000, party_legend: 'PDEA', candidate_status: "Eleito", candidate_photo:"photo.jpg" },
-    { district_id: 201, candidate_name: 'Ciclana Silva (MA)', parl_front_legend: 'TDS', votes_qtn: 12000, party_legend: 'PECO', candidate_status: "Não Eleito", candidate_photo:"photo.jpg" },
-    { district_id: 202, candidate_name: 'Fulano Oliveira (MA)', parl_front_legend: 'CON', votes_qtn: 18000, party_legend: 'PCON', candidate_status: "Eleito", candidate_photo:"photo.jpg" },
-    { district_id: 101, candidate_name: 'João Neves (TP)', parl_front_legend: 'TDS', votes_qtn: 9000, party_legend: 'AE', candidate_status: "Eleito", candidate_photo:"photo.jpg" },
-    { district_id: 101, candidate_name: 'Maria Souza (TP)', parl_front_legend: 'UNI', votes_qtn: 8500, party_legend: 'LIVRE', candidate_status: "Não Eleito", candidate_photo:"photo.jpg" },
-  ].map(v => ({...v, votes_qtn: parseNumber(v.votes_qtn), district_id: parseNumber(v.district_id)})); // Garante números
-
-  return {
-    time: exampleTime,
-    candidateVotes: mockCandidateVotes,
-    proportionalVotes: uf_param ? mockProportionalVotes.filter(v => v.uf === uf_param.toUpperCase()) : mockProportionalVotes,
-  };
-}
+// Tipo para a View desta página de estado
+type StateViewMode = 'composition' | 'pr_details' | 'district_ticker' | 'pr_pie_chart';
 
 
 interface StatePageProps {
   params: {
-    uf: string; // ex: "MA", "TP" (vem da URL)
+    uf: string;
   };
-   searchParams?: { // Para ler query params como ?time=100
-    time?: string;
-  };
+  // searchParams é opcional e será pego pelo hook useSearchParams
 }
 
-export default function StatePage({ params, searchParams }: StatePageProps) {
-  const stateId = params.uf.toUpperCase();
-  const timeFromQuery = searchParams?.time ? parseInt(searchParams.time, 10) : 100;
-  // Estado para o tempo, pode ser controlado por query param ou um seletor na página
+export default function StatePage({ params }: StatePageProps) {
+  const routerParams = useParams(); // Para pegar o UF se params não for passado diretamente
+  const searchParams = useSearchParams(); // Hook para ler query params
+
+  const stateId = useMemo(() => (params.uf || routerParams.uf as string)?.toUpperCase(), [params.uf, routerParams.uf]);
+  const timeFromQuery = useMemo(() => searchParams.get('time') ? parseInt(searchParams.get('time')!, 10) : 100, [searchParams]);
+
   const [currentTime, setCurrentTime] = useState<number>(timeFromQuery || 100);
-  const [pageData, setPageData] = useState<ApiVotesData | null>(null);
+  // pageData agora vai guardar os dados de /api/results
+  const [pageData, setPageData] = useState<ApiResultsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stateViewMode, setStateViewMode] = useState<StateViewMode>('composition');
+
 
   // Validar UF e buscar dados de configuração do estado
   const stateInfo = useMemo(() => districtsData.find(d => d.uf === stateId), [stateId]);
-  const totalPRSeatsForThisState = totalProportionalSeatsByState[stateId];
+  const totalPRSeatsForThisState = stateId ? totalProportionalSeatsByState[stateId] : undefined;
 
+  // --- Fetch dos Dados da API REAL ---
   useEffect(() => {
-    if (!stateInfo || totalPRSeatsForThisState === undefined) {
-      // Chamar notFound() aqui pode ser problemático em client components se chamado condicionalmente no topo.
-      // É melhor tratar no return ou antes de chamar o fetch.
-      // notFound(); // Se UF inválido ou não configurado
-      setError("Estado não encontrado ou mal configurado.");
+    if (!stateId || !stateInfo || totalPRSeatsForThisState === undefined) {
+      setError(`Estado (${stateId}) não encontrado ou mal configurado.`);
       setIsLoading(false);
       return;
     }
@@ -118,37 +94,45 @@ export default function StatePage({ params, searchParams }: StatePageProps) {
       setIsLoading(true);
       setError(null);
       try {
-        // Em um app real, você faria fetch da sua API real aqui, ex:
-        // const response = await fetch(`/api/results?time=${currentTime}`);
-        // const data = await response.json();
-        // setPageData(data);
-        const data = await getVoteData(stateId, currentTime); // Usando mock ajustado
-        setPageData(data);
+        // Substituindo a chamada ao mock pela API REAL
+        const response = await fetch(`/api/results?time=${currentTime}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Falha ao buscar dados da API: ${response.status}`);
+        }
+        const data: ApiResultsData = await response.json();
+        setPageData(data); // Guarda TODOS os dados nacionais
       } catch (e) {
-        console.error("Erro ao carregar dados do estado:", e);
-        setError(e instanceof Error ? e.message : "Erro desconhecido");
+        console.error("Erro ao carregar dados do estado via API:", e);
+        setError(e instanceof Error ? e.message : "Erro desconhecido ao buscar dados");
       } finally {
         setIsLoading(false);
       }
     };
     loadData();
-  }, [stateId, currentTime, stateInfo, totalPRSeatsForThisState]);
+  }, [stateId, currentTime, stateInfo, totalPRSeatsForThisState]); // Dependências do useEffect
 
+  // --- Cálculos baseados nos dados carregados (pageData) ---
 
-  // --- Cálculos baseados nos dados carregados ---
-  const proportionalVotesInput = useMemo((): ProportionalVotesInput[] => {
-    if (!pageData?.proportionalVotes) return [];
-    // Filtra novamente para o estado (se getVoteData não filtrou) e mapeia
-    return pageData.proportionalVotes
-      .filter(vote => vote.uf === stateId && vote.parl_front_legend) // Garante que parl_front_legend existe
-      .map(vote => ({
-        legend: vote.parl_front_legend!, // '!' porque filtramos acima
-        votes: parseNumber(vote.proportional_votes_qtn),
-      }));
+  // Filtra Votos Proporcionais para o Estado Atual
+  const proportionalVotesRawForState = useMemo(() => {
+    if (!pageData?.proportionalVotes || !stateId) return [];
+    return pageData.proportionalVotes.filter(vote => vote.uf === stateId);
   }, [pageData?.proportionalVotes, stateId]);
 
+  // Transforma para o formato esperado pela função de cálculo D'Hondt
+  const proportionalVotesInput: ProportionalVotesInput[] = useMemo(() => {
+    return proportionalVotesRawForState
+      .filter(vote => vote.parl_front_legend)
+      .map(vote => ({
+        legend: vote.parl_front_legend!,
+        votes: parseNumber(vote.proportional_votes_qtn),
+      }));
+  }, [proportionalVotesRawForState]);
+
+  // Calcula Assentos Proporcionais (PR)
   const proportionalSeatsByFront = useMemo(() => {
-    if (!totalPRSeatsForThisState || proportionalVotesInput.length === 0) return {};
+    if (totalPRSeatsForThisState === undefined || proportionalVotesInput.length === 0) return {};
     return calculateProportionalSeats(
       proportionalVotesInput,
       totalPRSeatsForThisState,
@@ -156,8 +140,9 @@ export default function StatePage({ params, searchParams }: StatePageProps) {
     );
   }, [proportionalVotesInput, totalPRSeatsForThisState]);
 
+  // Filtra votos de candidatos apenas para os distritos deste estado
   const candidateVotesInState = useMemo(() => {
-    if (!pageData?.candidateVotes) return [];
+    if (!pageData?.candidateVotes || !stateId) return [];
     const districtIdsInThisState = districtsData
         .filter(d => d.uf === stateId)
         .map(d => d.district_id);
@@ -166,23 +151,22 @@ export default function StatePage({ params, searchParams }: StatePageProps) {
     );
   }, [pageData?.candidateVotes, stateId]);
 
-  const districtSeatsByFront: Record<string, number> = useMemo(() => {
+  // Calcula Assentos Distritais Ganhos por Frente neste Estado
+  const districtSeatsByFrontInState: Record<string, number> = useMemo(() => {
     const counts: Record<string, number> = {};
     if (!candidateVotesInState) return counts;
-
     const votesByDistrict: Record<string, CandidateVote[]> = {};
     candidateVotesInState.forEach(vote => {
       const districtIdStr = String(vote.district_id);
       if (!votesByDistrict[districtIdStr]) votesByDistrict[districtIdStr] = [];
       votesByDistrict[districtIdStr].push(vote);
     });
-
     Object.values(votesByDistrict).forEach(districtVotes => {
       if (districtVotes.length > 0) {
         const winner = districtVotes.reduce((prev, current) =>
           parseNumber(prev.votes_qtn) > parseNumber(current.votes_qtn) ? prev : current
         );
-        if (winner.parl_front_legend) { // Checa se a legenda do vencedor existe
+        if (winner.parl_front_legend) {
           counts[winner.parl_front_legend] = (counts[winner.parl_front_legend] || 0) + 1;
         }
       }
@@ -190,8 +174,11 @@ export default function StatePage({ params, searchParams }: StatePageProps) {
     return counts;
   }, [candidateVotesInState]);
 
+  // Prepara dados para o Ticker/Lista de Distritos deste estado
   const districtResultsForTicker: TickerEntry[] = useMemo(() => {
-    if (!candidateVotesInState || !districtsData) return [];
+    // ... (lógica para tickerData como na sua página nacional, mas filtrando por stateId) ...
+    // Esta lógica precisa ser adaptada para pegar apenas distritos do stateId
+    if (!candidateVotesInState || !districtsData || !stateId) return [];
     const tickerEntries: TickerEntry[] = [];
     const districtsInThisState = districtsData.filter(d => d.uf === stateId);
 
@@ -200,78 +187,68 @@ export default function StatePage({ params, searchParams }: StatePageProps) {
         vote => parseNumber(vote.district_id) === district.district_id
       );
 
-      if (votesInDistrict.length > 0) {
-        const votesWithCalc = votesInDistrict.map(v => ({ ...v, numericVotes: parseNumber(v.votes_qtn) }));
-        const totalVotes = votesWithCalc.reduce((sum, current) => sum + current.numericVotes, 0);
-        const votesProcessed = votesWithCalc.map(v => ({
-            ...v,
-            percentage: totalVotes > 0 ? ((v.numericVotes / totalVotes) * 100) : 0,
-        })).sort((a, b) => b.numericVotes - a.numericVotes);
+      let winner: CandidateVote | null = null;
+      let runnerUp: CandidateVote | null = null;
+      let totalVotesInDistrict = 0;
 
-        tickerEntries.push({
-          districtId: district.district_id,
-          districtName: district.district_name,
-          stateId: district.uf,
-          stateName: district.uf_name,
-          winnerName: votesProcessed[0]?.candidate_name || null,
-          winnerLegend: votesProcessed[0]?.parl_front_legend || null,
-          winnerPercentage: votesProcessed[0]?.percentage ?? null,
-          runnerUpName: votesProcessed[1]?.candidate_name || null,
-          runnerUpLegend: votesProcessed[1]?.parl_front_legend || null,
-          runnerUpPercentage: votesProcessed[1]?.percentage ?? null,
-        });
-      } else {
-        // Adiciona entrada mesmo sem votos para o ticker mostrar o distrito
-         tickerEntries.push({
-          districtId: district.district_id,
-          districtName: district.district_name,
-          stateId: district.uf,
-          stateName: district.uf_name,
-          winnerName: null, winnerLegend: null, winnerPercentage: null,
-          runnerUpName: null, runnerUpLegend: null, runnerUpPercentage: null,
-        });
+      if (votesInDistrict.length > 0) {
+        const votesWithNumeric = votesInDistrict.map(v => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
+        totalVotesInDistrict = votesWithNumeric.reduce((sum, cv) => sum + cv.numericVotes, 0);
+        const sortedVotes = votesWithNumeric.sort((a,b) => b.numericVotes - a.numericVotes);
+        winner = sortedVotes[0] || null;
+        runnerUp = sortedVotes[1] || null;
       }
+
+      tickerEntries.push({
+        districtId: district.district_id,
+        districtName: district.district_name,
+        stateId: district.uf,
+        stateName: district.uf_name,
+        winnerName: winner?.candidate_name || null,
+        winnerLegend: winner?.parl_front_legend || null,
+        winnerPercentage: winner && totalVotesInDistrict > 0 ? (parseNumber(winner.votes_qtn) / totalVotesInDistrict * 100) : null,
+        runnerUpName: runnerUp?.candidate_name || null,
+        runnerUpLegend: runnerUp?.parl_front_legend || null,
+        runnerUpPercentage: runnerUp && totalVotesInDistrict > 0 ? (parseNumber(runnerUp.votes_qtn) / totalVotesInDistrict * 100) : null,
+      });
     });
     return tickerEntries.sort((a,b) => a.districtId - b.districtId);
   }, [candidateVotesInState, stateId]);
 
 
-  const totalSeatsByFront: Record<string, number> = useMemo(() => {
+  // Composição Total da Câmara Estadual (Distritais + Proporcionais)
+  const totalSeatsByFrontForState: Record<string, number> = useMemo(() => {
     const combined: Record<string, number> = {};
-    const allFronts = new Set([
-      ...Object.keys(districtSeatsByFront).filter(f => f && f !== "null" && f !== "undefined"), // Filtra null/undefined strings
-      ...Object.keys(proportionalSeatsByFront).filter(f => f && f !== "null" && f !== "undefined"),
-    ]);
+    const allFronts = new Set<string>();
+    Object.keys(districtSeatsByFrontInState).forEach(f => f && allFronts.add(f));
+    Object.keys(proportionalSeatsByFront).forEach(f => f && allFronts.add(f));
 
     allFronts.forEach((front) => {
-      if(front) { // Checagem extra
-         combined[front] = (districtSeatsByFront[front] || 0) + (proportionalSeatsByFront[front] || 0);
-      }
+      combined[front] = (districtSeatsByFrontInState[front] || 0) + (proportionalSeatsByFront[front] || 0);
     });
     return combined;
-  }, [districtSeatsByFront, proportionalSeatsByFront]);
+  }, [districtSeatsByFrontInState, proportionalSeatsByFront]);
 
   // Validações e Loading
-  if (!stateInfo || totalPRSeatsForThisState === undefined) {
-    // Em vez de notFound(), que só funciona em Server Components puros ou build time,
-    // retornamos uma mensagem de erro ou redirecionamos.
-    return <div className="container mx-auto p-6 text-center text-red-500">Estado ({stateId}) não encontrado ou mal configurado. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
+  if (!stateId || !stateInfo || totalPRSeatsForThisState === undefined) {
+    return <div className="container mx-auto p-6 text-center text-red-500">Estado ({params.uf}) não encontrado ou não configurado para proporcional. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
   if (isLoading) {
-    return <div className="container mx-auto p-6 text-center text-gray-500">Carregando dados para {stateInfo.uf_name}...</div>;
+    return <div className="container mx-auto p-6 text-center text-gray-500 animate-pulse">Carregando dados para {stateInfo.uf_name}...</div>;
   }
   if (error) {
     return <div className="container mx-auto p-6 text-center text-red-500">Erro ao carregar dados: {error}. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
-  if (!pageData) {
-    return <div className="container mx-auto p-6 text-center text-gray-500">Dados não disponíveis para {stateInfo.uf_name}. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
+  if (!pageData) { // Se não há dados da API após o loading
+    return <div className="container mx-auto p-6 text-center text-gray-500">Dados de votos não disponíveis para {stateInfo.uf_name} no momento {currentTime}%. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
 
+  // Constantes para o JSX
   const stateName = stateInfo.uf_name;
   const totalDistrictSeatsInState = districtsData.filter(d => d.uf === stateId).length;
-  const totalSeatsInStateChamber = totalDistrictSeatsInState + totalPRSeatsForThisState;
+  const totalSeatsInStateChamber = totalDistrictSeatsInState + totalPRSeatsForThisState; // totalPRSeatsForThisState já é número
   const majorityThresholdStateChamber = Math.floor(totalSeatsInStateChamber / 2) + 1;
-  const majorityThresholdPR = Math.floor(totalPRSeatsForThisState / 2) + 1;
+  const majorityThresholdPR = totalPRSeatsForThisState > 0 ? Math.floor(totalPRSeatsForThisState / 2) + 1 : 0;
 
 
   return (
@@ -281,47 +258,99 @@ export default function StatePage({ params, searchParams }: StatePageProps) {
         <h1 className="text-4xl font-bold text-gray-800">
           {stateName} ({stateId})
         </h1>
+        {/* Exibe o tempo dos dados da API, não o da URL, pois o mock não usa o tempo da URL */}
         <p className="text-xl text-gray-600">Resultados Eleitorais Estaduais - {pageData.time}%</p>
+         {/* Controle de tempo para ESTA PÁGINA */}
+         <div className="mt-4">
+            <label htmlFor="time-select-state" className="text-sm font-medium mr-2">Ver Apuração em:</label>
+            <select
+                id="time-select-state"
+                value={currentTime}
+                onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))}
+                disabled={isLoading}
+                className="rounded border-gray-300 shadow-sm"
+            >
+                <option value={50}>50%</option>
+                <option value={100}>100%</option>
+            </select>
+        </div>
       </header>
 
-      {/* Seção de Composição Total da Câmara Estadual */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-1 text-gray-700">Composição da Câmara Estadual</h2>
-        <p className="text-sm text-gray-500 mb-3">
-          Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState})
-          {' | '}Maioria: {majorityThresholdStateChamber}
-        </p>
-        <SeatCompositionPanel
-          seatData={totalSeatsByFront}
-          colorMap={coalitionColorMap}
-          totalSeats={totalSeatsInStateChamber}
-        />
-      </section>
+      {/* Botões de Navegação da Visão */}
+      <div className="my-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-6 overflow-x-auto justify-center" aria-label="State Views">
+            <button onClick={() => setStateViewMode('composition')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-sm ${stateViewMode === 'composition' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Composição Estadual</button>
+            <button onClick={() => setStateViewMode('pr_details')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-sm ${stateViewMode === 'pr_details' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Detalhes PR</button>
+            <button onClick={() => setStateViewMode('district_ticker')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${stateViewMode === 'district_ticker' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Ticker Distritos</button>
+            <button onClick={() => setStateViewMode('pr_pie_chart')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${stateViewMode === 'pr_pie_chart' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Gráfico PR (Votos)</button>
+        </nav>
+      </div>
 
-      {/* Seção de Alocação de Assentos Proporcionais */}
-      {totalPRSeatsForThisState > 0 && (
-        <section>
-          <h2 className="text-2xl font-semibold mb-3 text-gray-700">Detalhes da Alocação Proporcional</h2>
-          <ProportionalSeatAllocation
-            allocatedSeats={proportionalSeatsByFront}
-            colorMap={coalitionColorMap}
-            stateName={stateName}
-            totalSeatsInState={totalPRSeatsForThisState}
-            majorityThreshold={majorityThresholdPR}
-            rawVotes={proportionalVotesInput}
-          />
-        </section>
+      {/* Renderização Condicional da Visão */}
+      {isLoading && <p className="text-center text-gray-500 animate-pulse">Carregando visualização...</p>}
+      {!isLoading && error && <p className="text-red-600 text-center">Erro: {error}</p>}
+      {!isLoading && !error && pageData && (
+        <>
+          {stateViewMode === 'composition' && (
+            <section>
+              <h2 className="text-2xl font-semibold mb-1 text-gray-700">Composição da Câmara Estadual</h2>
+              <p className="text-sm text-gray-500 mb-3">
+                Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState})
+                {' | '}Maioria: {majorityThresholdStateChamber}
+              </p>
+              <SeatCompositionPanel
+                seatData={totalSeatsByFrontForState}
+                colorMap={coalitionColorMap}
+                totalSeats={totalSeatsInStateChamber}
+              />
+            </section>
+          )}
+
+          {stateViewMode === 'pr_details' && totalPRSeatsForThisState > 0 && (
+            <section>
+              <h2 className="text-2xl font-semibold mb-3 text-gray-700">Detalhes da Alocação Proporcional</h2>
+              <ProportionalSeatAllocationDetails
+                allocatedSeats={proportionalSeatsByFront}
+                colorMap={coalitionColorMap}
+                stateName={stateName}
+                totalSeatsInState={totalPRSeatsForThisState}
+                majorityThreshold={majorityThresholdPR}
+                rawVotes={proportionalVotesInput}
+              />
+            </section>
+          )}
+
+          {stateViewMode === 'district_ticker' && (
+            <section>
+              <h2 className="text-2xl font-semibold mb-3 text-gray-700">Resultados Distritais em {stateName}</h2>
+              {districtResultsForTicker.length > 0 ? (
+                <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} />
+              ) : (
+                <p className="text-gray-600">Não há distritos com resultados para este estado.</p>
+              )}
+            </section>
+          )}
+
+          {stateViewMode === 'pr_pie_chart' && (
+            <section>
+                <h2 className="text-2xl font-semibold mb-3 text-gray-700">Votos Proporcionais no Estado (Gráfico)</h2>
+                {proportionalVotesInput.length > 0 ? (
+                    <ProportionalPieChart
+                    data={
+                      proportionalVotesInput.map(pv => ({
+                          name: pv.legend,
+                          value: pv.votes
+                      }))
+                  }
+                        colorMap={coalitionColorMap}
+                    />
+                ) : (
+                    <p className="text-center text-gray-500">Sem dados de votos proporcionais para este estado.</p>
+                )}
+            </section>
+          )}
+        </>
       )}
-
-      {/* Seção de Resultados dos Distritos no Estado */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-3 text-gray-700">Resultados Distritais em {stateName}</h2>
-        {districtResultsForTicker.length > 0 ? (
-          <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} />
-        ) : (
-          <p className="text-gray-600">Não há distritos com resultados para este estado ou não há distritos configurados.</p>
-        )}
-      </section>
     </div>
   );
 }

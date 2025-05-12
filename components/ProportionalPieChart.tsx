@@ -2,16 +2,17 @@
 import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// Interface para os dados esperados (deve corresponder à estrutura em page.tsx)
-interface ProportionalVoteData {
-  parl_front_legend: string; // Usaremos como nome da fatia
-  proportional_votes_qtn: number | string; // Valor da fatia
-  // Adicione outras propriedades se precisar delas no tooltip, etc.
-  [key: string]: any;
+interface PieSegmentData {
+  name: string; // Corresponde ao parl_front_legend que você passa
+  value: number; // Corresponde aos votos ou assentos
+  // Adicione 'color' se você for passar a cor pré-calculada
+  // color?: string;
+  [key: string]: any; // Para outras props que o Recharts possa adicionar
 }
 
 interface ProportionalPieChartProps {
-  data: ProportionalVoteData[];
+  // data: ProportionalVoteData[]; // Tipo antigo
+  data: PieSegmentData[]; // <-- USA O NOVO TIPO
   colorMap: Record<string, string>;
 }
 

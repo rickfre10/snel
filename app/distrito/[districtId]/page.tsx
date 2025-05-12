@@ -173,7 +173,7 @@ export default function DistrictDetailPage() {
         <div className="space-y-1">
           <Link href={`/estado/${currentDistrictInfo.uf.toLowerCase()}`} className="inline-block">
             <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-gray-300 transition-colors cursor-pointer">
-              {currentDistrictInfo.uf_name} ({currentDistrictInfo.uf})
+              {currentDistrictInfo.uf_name}
             </span>
             </Link>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
