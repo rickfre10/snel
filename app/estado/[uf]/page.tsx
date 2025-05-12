@@ -173,11 +173,15 @@ export default function StatePage() {
 
   const filteredMapLayout = useMemo(() => {
     if (!stateId || !districtsData || !haagarMapLayout) return [];
+    // Cria um conjunto (Set) com os IDs dos distritos que pertencem ao estado atual
     const districtIdsInStateSet = new Set(
-      districtsData.filter(d => d.uf === stateId).map(d => String(d.district_id))
+      districtsData
+        .filter(d => d.uf === stateId) // Filtra districtsData pelo UF atual
+        .map(d => String(d.district_id)) // Pega os IDs desses distritos (como string)
     );
+    // Filtra o haagarMapLayout completo, mantendo apenas os itens cujo ID está no conjunto acima
     return haagarMapLayout.filter(layoutItem => districtIdsInStateSet.has(layoutItem.id));
-  }, [stateId]);
+}, [stateId, districtsData, haagarMapLayout]); // Dependências corretas
 
   const districtResultsSummaryForStateMap: Record<string, DistrictResultInfo> = useMemo(() => {
     const summary: Record<string, DistrictResultInfo> = {};
