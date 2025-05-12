@@ -21,7 +21,7 @@ import ProportionalSeatAllocationDetails from '@/components/ProportionalSeatAllo
 
 // Dados de configuração dos assentos proporcionais
 const totalProportionalSeatsByState: Record<string, number> = {
-  "TP": 39, "MA": 51, "MP": 29, "BA": 20, "PB": 10, "PN": 4
+  "TP":1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4
 };
 
 // Mapa de cores das coalizões
