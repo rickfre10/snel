@@ -17,7 +17,8 @@ import RaceTicker from '../components/RaceTicker';
 // Tipos e Dados Estáticos (Ajuste caminho)
 // Importa todos os tipos necessários, incluindo os que são calculados aqui mas usados em outros lugares
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption, DistrictResultInfo, TickerEntry } from '../types/election';
-import { districtsData, partyData } from '../lib/staticData';
+import { districtsData, partyData} from '../lib/staticData';
+import { haagarMapLayout, mapDimensions } from '../lib/mapLayout'; //
 
 // --- IMPORTAR LÓGICA DE CÁLCULO E DADOS DE CONFIGURAÇÃO PR ---
 import { calculateProportionalSeats, ProportionalVotesInput } from '../lib/electionCalculations';
@@ -274,7 +275,8 @@ const grandTotalSeats = useMemo(() => {
              results={districtResultsSummary}
              colorMap={coalitionColorMap}
              onDistrictHover={handleDistrictHover}
-             onDistrictClick={handleDistrictClick} // Click navega
+             onDistrictClick={handleDistrictClick}
+             layoutData={haagarMapLayout} 
          />
          {hoveredDistrictInfo && ( <div className="absolute bottom-1 left-1 bg-black bg-opacity-75 text-white p-2 rounded text-xs shadow-lg pointer-events-none z-10">{hoveredDistrictInfo}</div> )}
         </div>
