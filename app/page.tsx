@@ -144,70 +144,88 @@ export default function Home() {
     return seatCounts;
   }, [districtResultsSummary]);
 
-    // --- NOVO: useMemo para calcular ASSENTOS PROPORCIONAIS NACIONAIS por frente ---
-    const nationalProportionalSeatsByCoalition = useMemo(() => {
-      const nationalPRCounts: Record<string, number> = {};
-      if (!apiVotesData?.proportionalVotes) return nationalPRCounts;
-  
-      // Itera sobre cada estado que tem assentos proporcionais definidos
-      Object.keys(totalProportionalSeatsByState).forEach(uf => {
-        const seatsForThisState = totalProportionalSeatsByState[uf];
-        if (seatsForThisState === 0) return; // Pula se o estado não tem assentos PR
-  
-        // Filtra os votos proporcionais apenas para o estado atual
-        const votesInThisState = apiVotesData.proportionalVotes.filter(vote => vote.uf === uf);
-  
-        // Prepara os dados de entrada para a função de cálculo
-        const proportionalVotesInputForState: ProportionalVotesInput[] = votesInThisState
-          .filter(vote => vote.parl_front_legend) // Garante que a legenda existe
-          .map(vote => ({
-            legend: vote.parl_front_legend!, // Sabemos que existe por causa do filtro
-            votes: parseNumber(vote.proportional_votes_qtn)
-          }));
-  
-        // Calcula os assentos proporcionais para este estado
-        const prSeatsThisState = calculateProportionalSeats(
-          proportionalVotesInputForState,
-          seatsForThisState,
-          5 // Cláusula de barreira de 5%
-        );
-  
-        // Soma os assentos ao total nacional de cada frente
-        Object.entries(prSeatsThisState).forEach(([legend, seats]) => {
-          nationalPRCounts[legend] = (nationalPRCounts[legend] || 0) + seats;
-        });
-      });
-      return nationalPRCounts;
-    }, [apiVotesData?.proportionalVotes]);
-    // --------------------------------------------------------------------------
-  
-    // --- NOVO: useMemo para COMBINAR assentos distritais e proporcionais ---
-    const finalNationalSeatComposition = useMemo(() => {
-      const combinedSeats: Record<string, number> = {};
-      const allFronts = new Set<string>([
-        ...Object.keys(districtSeatsByCoalition),
-        ...Object.keys(nationalProportionalSeatsByCoalition)
-      ]);
-  
-      allFronts.forEach(front => {
-        combinedSeats[front] =
-          (districtSeatsByCoalition[front] || 0) +
-          (nationalProportionalSeatsByCoalition[front] || 0);
-      });
-      return combinedSeats;
-    }, [districtSeatsByCoalition, nationalProportionalSeatsByCoalition]);
-    // --------------------------------------------------------------------
-  
-    // --- NOVO: useMemo para o TOTAL GERAL de assentos na câmara ---
-    const grandTotalSeats = useMemo(() => {
-      const totalDistrict = districtsData.length; // Total de distritos = total de assentos distritais
-      const totalProportional = Object.values(totalProportionalSeatsByState)
-        .reduce((sum, seats) => sum + seats, 0);
-      return totalDistrict + totalProportional;
-    }, []); // Depende apenas de dados estáticos
-    // ----------------------------------------------------------------
-  
+// --- NOVO: useMemo para calcular ASSENTOS PROPORCIONAIS NACIONAIS por frente ---
+const nationalProportionalSeatsByCoalition = useMemo(() => {
+  const nationalPRCounts: Record<string, number> = {};
+  if (!apiVotesData?.proportionalVotes) {
+    // Adiciona log se os dados de votos proporcionais não estiverem disponíveis
+    // console.log("Cálculo PR: apiVotesData.proportionalVotes não disponível.");
+    return nationalPRCounts;
+  }
 
+  // Itera sobre cada estado que tem assentos proporcionais definidos
+  Object.keys(totalProportionalSeatsByState).forEach(uf => {
+    const seatsForThisState = totalProportionalSeatsByState[uf];
+    if (seatsForThisState === 0) return; // Pula se o estado não tem assentos PR
+
+    // Filtra os votos proporcionais apenas para o estado atual
+    const votesInThisState = apiVotesData.proportionalVotes.filter(vote => vote.uf === uf);
+    if (votesInThisState.length === 0 && seatsForThisState > 0) {
+        // console.log(`Cálculo PR: Sem votos proporcionais para ${uf}, mas ${seatsForThisState} assentos definidos.`);
+    }
+
+    // Prepara os dados de entrada para a função de cálculo
+    const proportionalVotesInputForState: ProportionalVotesInput[] = votesInThisState
+      .filter(vote => vote.parl_front_legend) // Garante que a legenda existe
+      .map(vote => ({
+        legend: vote.parl_front_legend!, // Sabemos que existe por causa do filtro
+        votes: parseNumber(vote.proportional_votes_qtn)
+      }));
+
+    if (proportionalVotesInputForState.length === 0 && seatsForThisState > 0) {
+        // console.log(`Cálculo PR: Input para cálculo proporcional vazio para ${uf} após filtro/map.`);
+        // return; // Considerar se deve pular ou calcular com array vazio (D'Hondt deve retornar {})
+    }
+
+    // Calcula os assentos proporcionais para este estado
+    const prSeatsThisState = calculateProportionalSeats(
+      proportionalVotesInputForState,
+      seatsForThisState,
+      5 // Cláusula de barreira de 5%
+    );
+
+    // Soma os assentos ao total nacional de cada frente
+    Object.entries(prSeatsThisState).forEach(([legend, seats]) => {
+      nationalPRCounts[legend] = (nationalPRCounts[legend] || 0) + seats;
+    });
+  });
+  // console.log("Assentos Proporcionais Nacionais Calculados:", nationalPRCounts);
+  return nationalPRCounts;
+}, [apiVotesData?.proportionalVotes]); // Depende apenas dos votos proporcionais
+// --------------------------------------------------------------------------
+
+// --- NOVO: useMemo para COMBINAR assentos distritais e proporcionais ---
+const finalNationalSeatComposition = useMemo(() => {
+  const combinedSeats: Record<string, number> = {};
+  // Garante que os dois objetos de contagem existam antes de tentar combiná-los
+  if (!districtSeatsByCoalition || !nationalProportionalSeatsByCoalition) return combinedSeats;
+
+  const allFronts = new Set<string>([
+    ...Object.keys(districtSeatsByCoalition),
+    ...Object.keys(nationalProportionalSeatsByCoalition)
+  ]);
+
+  allFronts.forEach(front => {
+    // Checa se 'front' é uma string válida antes de usar como chave
+    if (typeof front === 'string' && front.trim() !== "" && front !== "null" && front !== "undefined") {
+      combinedSeats[front] =
+        (districtSeatsByCoalition[front] || 0) +
+        (nationalProportionalSeatsByCoalition[front] || 0);
+    }
+  });
+  // console.log("Composição Final Nacional:", combinedSeats);
+  return combinedSeats;
+}, [districtSeatsByCoalition, nationalProportionalSeatsByCoalition]);
+// --------------------------------------------------------------------
+
+// --- NOVO: useMemo para o TOTAL GERAL de assentos na câmara ---
+const grandTotalSeats = useMemo(() => {
+  const totalDistrict = districtsData.length; 
+  const totalProportional = Object.values(totalProportionalSeatsByState)
+    .reduce((sum: number, seats: number) => sum + seats, 0); // Tipos explícitos
+  return totalDistrict + totalProportional;
+}, []); // Depende apenas de dados estáticos
+// ----------------------------------------------------------------
   // Calcular Dados para o Ticker
   const tickerData: TickerEntry[] = useMemo(() => {
     const dataForTicker: TickerEntry[] = [];
@@ -264,9 +282,9 @@ export default function Home() {
         {/* 2. Painel de Composição */}
         <div> {/* Mantido wrapper simples */}
              <SeatCompositionPanel
-                 seatData={districtSeatsByCoalition}
+                 seatData={finalNationalSeatComposition}
                  colorMap={coalitionColorMap}
-                 totalSeats={districtsData.length}
+                 totalSeats={grandTotalSeats}
              />
         </div>
 
