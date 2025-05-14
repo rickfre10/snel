@@ -1,15 +1,16 @@
 // components/InteractiveMap.tsx
 "use client";
 import React from 'react';
-// Importa as dimensões e a interface (agora com 'paths')
-import { mapDimensions, DistrictLayoutInfo } from '../lib/mapLayout'; // Ajuste o caminho conforme necessário
+// Importa as dimensões e a interface GeoLayoutInfo
+import { mapDimensions, GeoLayoutInfo, haagarDistrictLayout, haagarStateLayout } from '../lib/mapLayout'; // Ajuste o caminho conforme necessário
 // Importa tipos necessários (mantenha seus imports originais)
 import type { DistrictResultInfo } from '../types/election'; // Exemplo: Ajuste o caminho
 
 interface InteractiveMapProps {
   results: Record<string, DistrictResultInfo>;
   colorMap: Record<string, string>;
-  layoutData: DistrictLayoutInfo[]; // <--- Recebe o array com a estrutura aninhada { id, paths: [...] }
+  // Não precisamos mais passar o layoutData como prop, vamos importar direto do mapLayout.ts
+  // layoutData: GeoLayoutInfo[];
   onDistrictHover?: (districtInfo: DistrictResultInfo | null, districtId: string | null) => void;
   onDistrictClick?: (districtInfo: DistrictResultInfo | null, districtId: string) => void;
 }
@@ -17,11 +18,16 @@ interface InteractiveMapProps {
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
     results,
     colorMap,
-    layoutData, // <--- Usa os dados recebidos via prop
+    // Remova layoutData das props
     onDistrictHover = () => {},
     onDistrictClick = () => {}
 }) => {
     const fallbackColor = '#D9D9D9';
+    const defaultStrokeColor = 'black';
+    const defaultStrokeWidth = '15'; // Borda padrão para os distritos
+    const stateStrokeColor = '#000000'; // Cor da borda grossa dos estados
+    const stateStrokeWidth = '40'; // Espessura da borda grossa dos estados (ajuste conforme necessário)
+
 
     return (
         <div className="w-full bg-gray-50 border border-gray-300" style={{ aspectRatio: `${mapDimensions.width} / ${mapDimensions.height}` }}>
@@ -33,38 +39,52 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 xmlns="http://www.w3.org/2000/svg"
                 preserveAspectRatio="xMidYMid meet"
             >
-                {/* Mapeia o 'layoutData' recebido via props (cada item é um distrito {id, paths:[]}) */}
-                {layoutData.map((district) => { // <-- Cada 'district' é um objeto {id, paths:[]}
-                    const districtId = district.id; // O ID do distrito (único nesta lista principal)
-                    // Busca as informações de resultado usando o ID do distrito principal
+                {/* Camada de Bordas dos Estados - Renderizada PRIMEIRO */}
+                {haagarStateLayout.map((state) => ( // Itera sobre os dados de layout dos estados
+                     // Usar <g> para agrupar logicamente os paths de um estado, chaveada pelo ID do estado
+                    <g key={`state-${state.id}`} id={`state-${state.id}`}>
+                        {state.paths.map((subPath, index) => ( // Itera sobre os paths DENTRO deste estado
+                            <path
+                                key={`state-${state.id}-${index}`} // Chave única
+                                // O ID do elemento no DOM pode ser apenas o ID do estado se não precisar de unicidade para cada sub-path no DOM
+                                // Mas para garantir, podemos manter uma combinação
+                                id={`map-state-${state.id}-${index}`}
+                                d={subPath.d} // Usa o 'd' do sub-path do estado
+                                fill="none" // Estados não têm preenchimento nesta camada
+                                stroke={stateStrokeColor} // Aplica a cor da borda do estado
+                                strokeWidth={stateStrokeWidth} // Aplica a espessura da borda do estado
+                                // Remova eventos de hover/click desta camada para evitar conflito com os distritos
+                                // className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
+                            />
+                        ))}
+                    </g>
+                ))}
+
+                {/* Camada de Distritos Coloridos - Renderizada SEGUNDO (por cima das bordas dos estados) */}
+                {haagarDistrictLayout.map((district) => { // Itera sobre os dados de layout dos distritos
+                    const districtId = district.id; // O ID do distrito
+                    // Busca as informações de resultado usando o ID do distrito
                     const resultInfo = results[districtId] || { winnerLegend: null, districtName: `Distrito ${districtId}` };
                     const winnerLegend = resultInfo.winnerLegend;
-                    // Calcula a cor de preenchimento com base no resultado para TODO o distrito
+                    // Calcula a cor de preenchimento com base no resultado para o distrito
                     const districtFillColor = winnerLegend ? (colorMap[winnerLegend] ?? fallbackColor) : fallbackColor;
 
                     return (
                          // Fragmento ou <g> para agrupar logicamente os paths de um distrito, chaveada pelo ID do distrito
-                         // Usar <g> pode ser semanticamente melhor aqui, mas Fragment funciona para agrupar no React
                          <React.Fragment key={district.id}>
                             {/* Mapeia os paths DENTRO deste distrito */}
-                            {district.paths.map((subPath, index) => ( // <-- Itera sobre o array de paths do distrito
-                                <path // <--- Elemento path para cada sub-path
-                                    key={`${district.id}-${index}`} // <-- CHAVE ÚNICA combinando ID do distrito e índice do sub-path
-                                    // O ID do elemento no DOM pode ser apenas o ID do distrito se não precisar de unicidade para cada sub-path no DOM
-                                    // Mas para garantir, podemos manter uma combinação
+                            {district.paths.map((subPath, index) => ( // Itera sobre o array de paths do distrito
+                                <path // Elemento path para cada sub-path do distrito
+                                    key={`district-${district.id}-${index}`} // Chave única
                                     id={`map-district-${district.id}-${index}`}
-                                    d={subPath.d} // <--- Usa o 'd' do sub-path
-                                    // === LÓGICA CORRIGIDA PARA O FILL ===
-                                    // Prioriza a cor do distrito baseada nos resultados (districtFillColor),
-                                    // caso não haja (winnerLegend nulo/ID não encontrado), usa a cor original do subPath (se houver),
-                                    // e por último, usa a cor de fallback.
-                                    fill={districtFillColor || subPath.fill || fallbackColor}
-                                    // ==================================
-                                     // Aplica stroke/strokeWidth do sub-path se definidos, senão usa defaults
-                                    stroke={subPath.stroke || 'black'}
-                                    strokeWidth={subPath.strokeWidth || '15'}
+                                    d={subPath.d} // Usa o 'd' do sub-path do distrito
+                                    // Aplica a cor do resultado do distrito
+                                    fill={districtFillColor}
+                                     // Define uma borda fina ou nenhuma borda para os distritos
+                                    stroke={subPath.stroke || defaultStrokeColor} // Mantém stroke original ou padrão fino
+                                    strokeWidth="1" // Reduz a espessura da borda do distrito para não cobrir a borda do estado
                                     className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
-                                    // Eventos no nível de CADA path, mas passando o ID do distrito principal e as info do resultado do distrito
+                                    // Eventos no nível de CADA path do distrito
                                     onClick={() => onDistrictClick(resultInfo, districtId)}
                                     onMouseEnter={() => onDistrictHover(resultInfo, districtId)}
                                     onMouseLeave={() => onDistrictHover(null, null)}

@@ -8,15 +8,17 @@ import React, { useMemo, useState, useEffect } from 'react';
 // Funções e dados estáticos
 import { calculateProportionalSeats, ProportionalVotesInput } from '@/lib/electionCalculations';
 import { partyData, districtsData } from '@/lib/staticData';
-import { haagarMapLayout, DistrictLayoutInfo } from '@/lib/mapLayout';
-import type { ProportionalVote, CandidateVote, TickerEntry, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption } from '@/types/election'; // Removido DistrictOption se não usado aqui
+
+// Importa os tipos necessários. GeoLayoutInfo e os arrays de layout
+// agora são usados apenas dentro do InteractiveMap, então não precisam ser importados aqui.
+import type { ProportionalVote, CandidateVote, TickerEntry, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption } from '@/types/election';
 
 // Componentes
 import SeatCompositionPanel from '@/components/SeatCompositionPanel';
 import RaceTicker from '@/components/RaceTicker';
 import ProportionalSeatAllocationDetails from '@/components/ProportionalSeatAllocationDetails';
 import ProportionalPieChart from '@/components/ProportionalPieChart';
-import InteractiveMap from '@/components/InteractiveMap';
+import InteractiveMap from '@/components/InteractiveMap'; // InteractiveMap já importa os layouts necessários
 
 // Configuração de assentos e cores
 const totalProportionalSeatsByState: Record<string, number> = { "TP": 39, "MA": 51, "MP": 29, "BA": 20, "PB": 10, "PN": 4 };
@@ -76,7 +78,8 @@ export default function StatePage() {
       }
     });
     return map;
-  }, []); // Dados estáticos, calcula só uma vez
+  }, []);
+
 
   const allPossibleStates = useMemo(() => {
     const uniqueStates = new Map<string, string>();
@@ -84,19 +87,21 @@ export default function StatePage() {
         if (district.uf && district.uf_name) uniqueStates.set(district.uf, district.uf_name);
     });
     return Array.from(uniqueStates, ([id, name]) => ({ id, name })).sort((a,b) => a.name.localeCompare(b.name));
-  }, []); // Dados estáticos, calcula só uma vez
+  }, []);
 
 
   // --- Fetch de Dados ---
   useEffect(() => {
     if (!stateId || !stateInfo || totalPRSeatsForThisState === undefined) {
-      setError(`Estado (${stateId || params.uf}) não encontrado ou mal configurado.`);
-      setIsLoading(false);
+      // Tratar estado não encontrado ou mal configurado - já está ok abaixo
+      // setError(`Estado (${stateId || params.uf}) não encontrado ou mal configurado.`);
+      // setIsLoading(false); // Isto será tratado pela renderização condicional
       return;
     }
     const loadData = async () => {
       setIsLoading(true); setError(null);
       try {
+        // Buscar dados de resultados para TODOS os distritos, InteractiveMap filtrará a coloração
         const response = await fetch(`/api/results?time=${currentTime}`);
         if (!response.ok) throw new Error((await response.json()).error || 'Falha ao buscar dados de votos');
         const allVoteData: ApiVotesData = await response.json();
@@ -105,7 +110,7 @@ export default function StatePage() {
       } finally { setIsLoading(false); }
     };
     loadData();
-  }, [stateId, currentTime, stateInfo, totalPRSeatsForThisState, params.uf]); // Adicionado params.uf
+  }, [stateId, currentTime, stateInfo, totalPRSeatsForThisState]);
 
   // --- Cálculos Derivados (useMemo) ---
   const proportionalVotesInput: ProportionalVotesInput[] = useMemo(() => {
@@ -129,11 +134,13 @@ export default function StatePage() {
 
   const candidateVotesInState = useMemo(() => {
     if (!pageData?.candidateVotes || !stateId) return [];
+     // Filtra os votos para incluir apenas os do estado atual
     const districtIdsInThisStateSet = new Set(districtsData.filter(d => d.uf === stateId).map(d => d.district_id));
     return pageData.candidateVotes.filter(vote =>
         districtIdsInThisStateSet.has(parseNumber(vote.district_id))
     );
   }, [pageData?.candidateVotes, stateId]);
+
 
   const districtSeatsByFrontInState: Record<string, number> = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -168,6 +175,7 @@ export default function StatePage() {
     return combined;
   }, [districtSeatsByFrontInState, proportionalSeatsByFront]);
 
+
   const districtResultsForTicker: TickerEntry[] = useMemo(() => {
     if (!candidateVotesInState || !districtsData || !stateId) return [];
     const tickerEntries: TickerEntry[] = [];
@@ -192,31 +200,33 @@ export default function StatePage() {
     return tickerEntries.sort((a,b) => a.districtId - b.districtId);
   }, [candidateVotesInState, stateId]);
 
-  // Ajustado para usar apenas stateId como dependência, pois os outros são constantes
-  const filteredMapLayout = useMemo(() => {
-    if (!stateId) return []; // Não precisa de districtsData e haagarMapLayout como deps se são imports fixos
-    const districtIdsInStateSet = new Set(
-      districtsData.filter(d => d.uf === stateId).map(d => String(d.district_id))
-    );
-    return haagarMapLayout.filter(layoutItem => districtIdsInStateSet.has(layoutItem.id));
-  }, [stateId]); // Removido districtsData e haagarMapLayout das dependências
 
+  // Este useMemo agora apenas prepara os resultados dos distritos do estado atual para o mapa
   const districtResultsSummaryForStateMap: Record<string, DistrictResultInfo> = useMemo(() => {
     const summary: Record<string, DistrictResultInfo> = {};
-    if (!candidateVotesInState || !districtsData || !stateId) return summary;
-    const votesByDistrict: Record<string, CandidateVote[]> = {};
-    candidateVotesInState.forEach((vote: CandidateVote) => {
+    if (!pageData?.candidateVotes || !districtsData || !stateId) return summary; // Use pageData?.candidateVotes para checar se os dados chegaram
+
+     // Crie um mapa rápido de votos por distrito para o estado atual
+    const votesByDistrictInState: Record<string, CandidateVote[]> = {};
+    const districtIdsInThisStateSet = new Set(districtsData.filter(d => d.uf === stateId).map(d => String(d.district_id)));
+
+    pageData.candidateVotes.forEach((vote: CandidateVote) => {
         const districtIdStr = String(vote.district_id);
-        if (!votesByDistrict[districtIdStr]) { votesByDistrict[districtIdStr] = []; }
-        if (vote.candidate_name && vote.votes_qtn !== undefined && vote.votes_qtn !== null) {
-            votesByDistrict[districtIdStr].push(vote);
+         // Processa apenas votos para distritos dentro do estado atual
+        if (districtIdsInThisStateSet.has(districtIdStr)) {
+            if (!votesByDistrictInState[districtIdStr]) { votesByDistrictInState[districtIdStr] = []; }
+            if (vote.candidate_name && vote.votes_qtn !== undefined && vote.votes_qtn !== null) {
+                votesByDistrictInState[districtIdStr].push(vote);
+            }
         }
     });
-    Object.keys(votesByDistrict).forEach(districtIdStr => {
-        const votes = votesByDistrict[districtIdStr];
+
+    // Determine o vencedor para cada distrito no estado atual
+    Object.keys(votesByDistrictInState).forEach(districtIdStr => {
+        const votes = votesByDistrictInState[districtIdStr];
         if (!votes || votes.length === 0) return;
         const winner = votes.reduce((cw, cv) => (parseNumber(cw.votes_qtn) > parseNumber(cv.votes_qtn) ? cw : cv), votes[0]);
-        const districtInfoForMap = districtsData.find(d => String(d.district_id) === districtIdStr); // Nome diferente para evitar conflito
+        const districtInfoForMap = districtsData.find(d => String(d.district_id) === districtIdStr); // Encontra info estática do distrito
         if (winner) {
             summary[districtIdStr] = {
                 winnerLegend: winner.parl_front_legend ?? null,
@@ -226,20 +236,31 @@ export default function StatePage() {
             };
         }
     });
-    districtsData.filter(d=>d.uf === stateId).forEach(d => {
+
+    // Garante que todos os distritos do estado estejam no summary, mesmo sem votos ainda
+    districtsData.filter(d => d.uf === stateId).forEach(d => {
         const districtIdStr = String(d.district_id);
         if (!summary[districtIdStr]) {
             summary[districtIdStr] = { winnerLegend: null, districtName: d.district_name, maxVotes: 0 };
         }
     });
-    return summary;
-  }, [candidateVotesInState, stateId]);
 
-   // Colar os handlers aqui (iguais aos da resposta #120)
+    return summary;
+  }, [pageData?.candidateVotes, stateId]); // Adicionado pageData?.candidateVotes como dependência
+
+
+  // Colar os handlers aqui (iguais aos da resposta #120)
     const handleStateMapDistrictHover = (districtInfo: DistrictResultInfo | null, districtId: string | null) => {
     if (districtInfo && districtId) {
+       // Para a exibição de hover, talvez você queira mostrar o ID do distrito e nome,
+       // independente se há um vencedor exibido.
+       // Vamos buscar a informação estática do distrito pelo ID.
+       const staticDistrictInfo = districtsData.find(d => String(d.district_id) === districtId);
+       const districtName = districtInfo.districtName || staticDistrictInfo?.district_name || `Distrito ${districtId}`;
+
+
       setHoveredDistrictInfo(
-        `Distrito: ${districtInfo.districtName || districtId} | Vencedor: ${districtInfo.winnerName || 'N/A'} (${districtInfo.winnerLegend || 'N/D'})`
+        `Distrito: ${districtName} | Vencedor: ${districtInfo.winnerName || 'N/A'} (${districtInfo.winnerLegend || 'N/D'})`
       );
     } else {
       setHoveredDistrictInfo(null);
@@ -247,6 +268,7 @@ export default function StatePage() {
   };
   const handleStateMapDistrictClick = (districtInfo: DistrictResultInfo | null, districtId: string) => {
     if (districtId) {
+      // Navegar para a página do distrito com o tempo atual
       router.push(`/distrito/${districtId}?time=${currentTime}`);
     }
   };
@@ -261,7 +283,7 @@ export default function StatePage() {
   // Constantes para JSX (APÓS A VERIFICAÇÃO DE stateInfo)
   const stateName = stateInfo.uf_name;
   const totalDistrictSeatsInState = districtsData.filter(d => d.uf === stateId).length;
-  const totalSeatsInStateChamber = totalDistrictSeatsInState + (totalPRSeatsForThisState || 0); // Garante que totalPRSeatsForThisState é número
+  const totalSeatsInStateChamber = totalDistrictSeatsInState + (totalPRSeatsForThisState || 0); // Garante que totalPRSeatsForState é número
   const majorityThresholdStateChamber = Math.floor(totalSeatsInStateChamber / 2) + 1;
   const majorityThresholdPR = totalPRSeatsForThisState > 0 ? Math.floor(totalPRSeatsForThisState / 2) + 1 : 0;
 
@@ -294,7 +316,7 @@ export default function StatePage() {
         <nav className="-mb-px flex space-x-4 sm:space-x-6 overflow-x-auto justify-center" aria-label="State Views">
             <button onClick={() => setCurrentView('placarEstadual')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'placarEstadual' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Placar Estadual</button>
             <button onClick={() => setCurrentView('votacaoProporcional')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'votacaoProporcional' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Votação Proporcional</button>
-            <button onClick={() => setCurrentView('verDistritos')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'verDistritos' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Ver Distritos</button>
+            <button onClick={() => setCurrentView('verDistritos')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'verDistritos' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-300'}`}>Ver Distritos</button>
             <button disabled title="Dados de eleição anterior não disponíveis" className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-xs sm:text-sm border-transparent text-gray-400 cursor-not-allowed`}>Swing</button>
         </nav>
       </div>
@@ -306,7 +328,21 @@ export default function StatePage() {
         <div className="mt-4">
           {currentView === 'placarEstadual' && ( <section> <p className="text-sm text-gray-500 mb-3 text-center"> Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState}) {' | '}Maioria: {majorityThresholdStateChamber} </p> <SeatCompositionPanel seatData={totalSeatsByFrontForState} colorMap={coalitionColorMap} totalSeats={totalSeatsInStateChamber} /> </section> )}
           {currentView === 'votacaoProporcional' && totalPRSeatsForThisState > 0 && ( <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Detalhes da Alocação Proporcional</h3> <ProportionalSeatAllocationDetails allocatedSeats={proportionalSeatsByFront} colorMap={coalitionColorMap} stateName={stateName} totalSeatsInState={totalPRSeatsForThisState} majorityThreshold={majorityThresholdPR} rawVotes={proportionalVotesInput} /> </div> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Gráfico de Votos Proporcionais</h3> {proportionalVotesInput.length > 0 ? ( <ProportionalPieChart data={proportionalVotesInput.map(pv => ({ name: pv.legend, value: pv.votes }))} colorMap={coalitionColorMap} /> ) : ( <p className="text-center text-gray-500 py-10">Sem dados de votos proporcionais para este estado.</p> )} </div> </section> )}
-          {currentView === 'verDistritos' && ( <section className="space-y-6"> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Mapa dos Distritos de {stateName}</h3> {filteredMapLayout.length > 0 && Object.keys(districtResultsSummaryForStateMap).length > 0 ? ( <InteractiveMap results={districtResultsSummaryForStateMap} colorMap={coalitionColorMap} onDistrictHover={handleStateMapDistrictHover} onDistrictClick={handleStateMapDistrictClick} layoutData={filteredMapLayout} /> ) : ( <p className="text-gray-600 py-10 text-center">Não foi possível renderizar o mapa.</p> )} {hoveredDistrictInfo && ( <div className="mt-2 text-center text-sm text-gray-700 p-2 bg-gray-100 rounded">{hoveredDistrictInfo}</div> )} </div> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Ticker dos Distritos de {stateName}</h3> {districtResultsForTicker.length > 0 ? ( <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> ) : ( <p className="text-gray-600 py-10 text-center">Sem resultados distritais.</p> )} </div> </section> )}
+          {currentView === 'verDistritos' && ( <section className="space-y-6"> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Mapa dos Distritos de {stateName}</h3> {/* InteractiveMap agora renderiza TODOS os distritos e estados, e usa os resultados para colorir */} {Object.keys(districtResultsSummaryForStateMap).length > 0 || !pageData ? ( // Renderiza o mapa se houver resultados para o estado ou se os dados ainda estiverem carregando (pageData é null)
+ <InteractiveMap
+                results={districtResultsSummaryForStateMap} // Passa SOMENTE os resultados do estado atual
+                colorMap={coalitionColorMap}
+                onDistrictHover={handleStateMapDistrictHover}
+                onDistrictClick={handleStateMapDistrictClick}
+                // layoutData prop REMOVIDA - InteractiveMap importa layouts diretamente
+              />
+            ) : (
+              // Mensagem de fallback se não houver resultados para o estado após o carregamento dos dados
+             <p className="text-gray-600 py-10 text-center">Não foi possível carregar resultados para os distritos deste estado.</p>
+            )}
+            {hoveredDistrictInfo && ( <div className="mt-2 text-center text-sm text-gray-700 p-2 bg-gray-100 rounded">{hoveredDistrictInfo}</div> )}
+          </div>
+          <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Ticker dos Distritos de {stateName}</h3> {districtResultsForTicker.length > 0 ? ( <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> ) : ( <p className="text-gray-600 py-10 text-center">Sem resultados distritais.</p> )} </div> </section> )}
           {currentView === 'swing' && <p className="text-center text-gray-500 py-10">Visualização de Swing (ainda não implementada).</p>}
         </div>
       )}
