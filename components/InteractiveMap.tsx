@@ -54,8 +54,12 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                                     // Mas para garantir, podemos manter uma combinação
                                     id={`map-district-${district.id}-${index}`}
                                     d={subPath.d} // <--- Usa o 'd' do sub-path
-                                    // Aplica a cor do resultado, mas permite que o fill original do sub-path sobrescreva
-                                    fill={subPath.fill ? subPath.fill : districtFillColor}
+                                    // === LÓGICA CORRIGIDA PARA O FILL ===
+                                    // Prioriza a cor do distrito baseada nos resultados (districtFillColor),
+                                    // caso não haja (winnerLegend nulo/ID não encontrado), usa a cor original do subPath (se houver),
+                                    // e por último, usa a cor de fallback.
+                                    fill={districtFillColor || subPath.fill || fallbackColor}
+                                    // ==================================
                                      // Aplica stroke/strokeWidth do sub-path se definidos, senão usa defaults
                                     stroke={subPath.stroke || 'black'}
                                     strokeWidth={subPath.strokeWidth || '15'}
