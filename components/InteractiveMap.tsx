@@ -30,7 +30,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
 
     return (
-        <div className="w-full bg-gray-50 border border-gray-300" style={{ aspectRatio: `${mapDimensions.width} / ${mapDimensions.height}` }}>
+        <div style={{ width: '100%', aspectRatio: `${mapDimensions.width} / ${mapDimensions.height}` }}>
             <svg
                 width="100%"
                 height="100%"
