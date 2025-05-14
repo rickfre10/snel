@@ -32,7 +32,7 @@ export const haagarMapLayout: DistrictLayoutInfo[] = [
   { id: "328", paths: [{ d: "M18099.7 5592.5L18557.3 6385L18099.7 7177.5H17184.3L16726.7 6385L17184.3 5592.5H18099.7Z", fill: "#D9D9D9", stroke: "black", strokeWidth: "15" }] },
   { id: "327", paths: [{ d: "M18099.7 3992.5L18557.3 4785L18099.7 5577.5H17184.3L16726.7 4785L17184.3 3992.5H18099.7Z", fill: "#D9D9D9", stroke: "black", strokeWidth: "15" }] },
   { id: "325", paths: [{ d: "M20847.7 8792.5L21305.3 9585L20847.7 10377.5H19932.3L19474.7 9585L19932.3 8792.5H20847.7Z", fill: "#D9D9D9", stroke: "black", strokeWidth: "15" }] },
-  { id: "336", paths: [{ d: "M22189.7 7992.5L22647.3 8785L22189.7 9577.5H21274.3L20816.7 8785L21274.3 7992.5H22189.7Z", fill: "#D9D9D9", stroke: "black", strokeWidth: "15" }] },
+  { id: "326", paths: [{ d: "M22189.7 7992.5L22647.3 8785L22189.7 9577.5H21274.3L20816.7 8785L21274.3 7992.5H22189.7Z", fill: "#D9D9D9", stroke: "black", strokeWidth: "15" }] },
   { id: "324", paths: [{ d: "M19441.7 7992.5L19899.3 8785L19441.7 9577.5H18526.3L18068.7 8785L18526.3 7992.5H19441.7Z", fill: "#D9D9D9", stroke: "black", strokeWidth: "15" }] },
   { id: "323", paths: [{ d: "M22189.7 1592.5L22647.3 2385L22189.7 3177.5H21274.3L20816.7 2385L21274.3 1592.5H22189.7Z", fill: "#D9D9D9", stroke: "black", strokeWidth: "15" }] },
   { id: "322", paths: [{ d: "M20847.7 2392.5L21305.3 3185L20847.7 3977.5H19932.3L19474.7 3185L19932.3 2392.5H20847.7Z", fill: "#D9D9D9", stroke: "black", strokeWidth: "15" }] },
