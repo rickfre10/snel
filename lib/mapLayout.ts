@@ -2,143 +2,170 @@
 
 // Interface para descrever a informação de layout de cada distrito no SVG
 export interface DistrictLayoutInfo {
-    id: string; // O ID do distrito (ex: "101", "201", "605")
-    x: string;
-    y: string;
-    width: string;
-    height: string;
-    stroke?: string; // Opcional: Cor da borda padrão
-    strokeWidth?: string; // Opcional: Espessura da borda padrão (camelCase para JSX)
-  }
-  
-  // Array contendo as informações de layout para cada retângulo/distrito do seu SVG
-  export const haagarMapLayout: DistrictLayoutInfo[] = [
-    // Copiado e formatado do SVG que você forneceu
-    { id: "605", x: "1706.61", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "604", x: "1706.61", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "603", x: "3148.82", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "602", x: "3148.82", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "601", x: "1706.61", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "330", x: "25294", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "329", x: "25294", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "328", x: "19525.2", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "327", x: "19525.2", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "325", x: "22409.6", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "326", x: "23851.8", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "324", x: "20967.4", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "323", x: "23851.8", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "322", x: "22409.6", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "321", x: "20967.4", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "320", x: "25294", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "319", x: "23851.8", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "318", x: "25294", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "317", x: "25294", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "316", x: "22409.6", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "315", x: "19525.2", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "314", x: "19525.2", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "313", x: "19525.2", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "312", x: "25294", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "311", x: "19525.2", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "310", x: "20967.4", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "309", x: "23851.8", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "308", x: "23851.8", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "307", x: "23851.8", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "306", x: "20967.4", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "305", x: "20967.4", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "304", x: "22409.6", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "303", x: "22409.6", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "302", x: "20967.4", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "301", x: "22409.6", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "421", x: "27006.6", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "420", x: "27006.6", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "419", x: "28448.9", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "418", x: "27006.6", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "417", x: "28448.9", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "416", x: "29891.1", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "415", x: "28448.9", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "414", x: "27006.6", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "413", x: "27006.6", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "412", x: "28448.9", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "411", x: "27006.6", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "410", x: "28448.9", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "409", x: "29891.1", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "408", x: "28448.9", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "407", x: "29891.1", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "406", x: "29891.1", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "405", x: "29891.1", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "404", x: "29891.1", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "403", x: "31333.3", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "402", x: "31333.3", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "401", x: "31333.3", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "101", x: "4604.56", y: "4604.56", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "252", x: "9174.57", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "251", x: "10616.8", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "250", x: "12059", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "249", x: "17827.9", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "248", x: "17827.9", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "247", x: "16385.6", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "246", x: "6290.14", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "245", x: "7732.36", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "244", x: "9174.57", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "243", x: "10616.8", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "242", x: "4847.93", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "241", x: "6290.14", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "240", x: "4847.93", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "239", x: "17827.9", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "238", x: "17827.9", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "237", x: "16385.6", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "236", x: "17827.9", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "235", x: "16385.6", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "234", x: "7732.36", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "233", x: "12059", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "232", x: "12059", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "231", x: "16385.6", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "230", x: "13501.2", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "229", x: "14943.4", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "228", x: "13501.2", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "227", x: "16385.6", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "226", x: "13501.2", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "225", x: "13501.2", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "224", x: "6290.14", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "223", x: "7732.36", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "222", x: "10616.8", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "221", x: "14943.4", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "220", x: "16385.6", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "219", x: "17827.9", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "218", x: "10616.8", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "217", x: "9174.57", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "216", x: "6290.14", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "215", x: "7732.36", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "214", x: "14943.4", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "213", x: "14943.4", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "212", x: "14943.4", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "211", x: "13501.2", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "210", x: "12059", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "209", x: "12059", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "208", x: "13501.2", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "207", x: "16385.6", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "206", x: "14943.4", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "205", x: "13501.2", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "204", x: "14943.4", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "203", x: "12059", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "202", x: "9174.57", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "201", x: "10616.8", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "511", x: "1449.71", y: "6046.77", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "510", x: "2891.93", y: "6046.77", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "509", x: "7.5", y: "4604.56", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "508", x: "7.5", y: "3162.34", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "507", x: "2891.93", y: "4604.56", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "506", x: "1449.71", y: "4604.56", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "505", x: "2891.93", y: "7488.98", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "504", x: "7.5", y: "6046.77", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "503", x: "1449.71", y: "8931.2", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "502", x: "7.5", y: "7488.98", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-    { id: "501", x: "1449.71", y: "7488.98", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
-  ];
-  
-  // Dimensões gerais do SVG original
-  export const mapDimensions = {
-      width: "32768",
-      height: "10366",
-      viewBox: "0 0 32768 10366"
+  id: string; // O ID do distrito (ex: "101", "201", "605")
+  points: string; // Coordenadas dos vértices do hexágono (no formato "x1,y1 x2,y2 ...")
+  stroke?: string; // Opcional: Cor da borda padrão
+  strokeWidth?: string; // Opcional: Espessura da borda padrão (camelCase para JSX ou kebab-case para SVG puro)
+  // Removidos: x, y, width, height pois a forma agora é definida pelos pontos
+}
+
+// Função para calcular os pontos de um hexágono regular centrado em uma área retangular
+function calculateHexagonPoints(x: string, y: string, width: string, height: string): string {
+  const cx = parseFloat(x) + parseFloat(width) / 2;
+  const cy = parseFloat(y) + parseFloat(height) / 2;
+  const radius = parseFloat(width) / 2; // Usando width como raio do círculo circunscrito
+
+  // Ângulos para um hexágono com ponta para cima (0, 60, 120, 180, 240, 300 graus em radianos)
+  const angles = [0, Math.PI / 3, 2 * Math.PI / 3, Math.PI, 4 * Math.PI / 3, 5 * Math.PI / 3];
+
+  const points = angles.map(angle => {
+      const pointX = cx + radius * Math.cos(angle);
+      const pointY = cy + radius * Math.sin(angle);
+      return `${pointX.toFixed(2)},${pointY.toFixed(2)}`; // Formata para 2 casas decimais
+  }).join(' '); // Junta os pontos em uma única string separada por espaço
+
+  return points;
+}
+
+// Dados originais do layout dos retângulos (usados apenas para o cálculo)
+const originalRectangleData = [
+  { id: "605", x: "1706.61", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "604", x: "1706.61", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "603", x: "3148.82", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "602", x: "3148.82", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "601", x: "1706.61", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "330", x: "25294", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "329", x: "25294", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "328", x: "19525.2", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "327", x: "19525.2", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "325", x: "22409.6", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "326", x: "23851.8", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "324", x: "20967.4", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "323", x: "23851.8", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "322", x: "22409.6", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "321", x: "20967.4", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "320", x: "25294", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "319", x: "23851.8", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "318", x: "25294", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "317", x: "25294", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "316", x: "22409.6", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "315", x: "19525.2", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "314", x: "19525.2", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "313", x: "19525.2", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "312", x: "25294", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "311", x: "19525.2", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "310", x: "20967.4", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "309", x: "23851.8", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "308", x: "23851.8", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "307", x: "23851.8", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "306", x: "20967.4", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "305", x: "20967.4", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "304", x: "22409.6", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "303", x: "22409.6", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "302", x: "20967.4", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "301", x: "22409.6", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "421", x: "27006.6", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "420", x: "27006.6", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "419", x: "28448.9", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "418", x: "27006.6", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "417", x: "28448.9", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "416", x: "29891.1", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "415", x: "28448.9", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "414", x: "27006.6", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "413", x: "27006.6", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "412", x: "28448.9", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "411", x: "27006.6", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "410", x: "28448.9", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "409", x: "29891.1", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "408", x: "28448.9", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "407", x: "29891.1", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "406", x: "29891.1", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "405", x: "29891.1", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "404", x: "29891.1", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "403", x: "31333.3", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "402", x: "31333.3", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "401", x: "31333.3", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "101", x: "4604.56", y: "4604.56", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "252", x: "9174.57", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "251", x: "10616.8", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "250", x: "12059", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "249", x: "17827.9", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "248", x: "17827.9", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "247", x: "16385.6", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "246", x: "6290.14", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "245", x: "7732.36", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "244", x: "9174.57", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "243", x: "10616.8", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "242", x: "4847.93", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "241", x: "6290.14", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "240", x: "4847.93", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "239", x: "17827.9", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "238", x: "17827.9", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "237", x: "16385.6", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "236", x: "17827.9", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "235", x: "16385.6", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "234", x: "7732.36", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "233", x: "12059", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "232", x: "12059", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "231", x: "16385.6", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "230", x: "13501.2", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "229", x: "14943.4", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "228", x: "13501.2", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "227", x: "16385.6", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "226", x: "13501.2", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "225", x: "13501.2", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "224", x: "6290.14", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "223", x: "7732.36", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "222", x: "10616.8", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "221", x: "14943.4", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "220", x: "16385.6", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "219", x: "17827.9", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "218", x: "10616.8", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "217", x: "9174.57", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "216", x: "6290.14", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "215", x: "7732.36", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "214", x: "14943.4", y: "2891.93", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "213", x: "14943.4", y: "7.5", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "212", x: "14943.4", y: "1449.71", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "211", x: "13501.2", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "210", x: "12059", y: "5776.36", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "209", x: "12059", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "208", x: "13501.2", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "207", x: "16385.6", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "206", x: "14943.4", y: "7218.57", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "205", x: "13501.2", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "204", x: "14943.4", y: "8660.78", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "203", x: "12059", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "202", x: "9174.57", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "201", x: "10616.8", y: "4334.14", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "511", x: "1449.71", y: "6046.77", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "510", x: "2891.93", y: "6046.77", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "509", x: "7.5", y: "4604.56", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "508", x: "7.5", y: "3162.34", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "507", x: "2891.93", y: "4604.56", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "506", x: "1449.71", y: "4604.56", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "505", x: "2891.93", y: "7488.98", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "504", x: "7.5", y: "6046.77", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "503", x: "1449.71", y: "8931.2", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "502", x: "7.5", y: "7488.98", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+  { id: "501", x: "1449.71", y: "7488.98", width: "1427.21", height: "1427.21", stroke: "black", strokeWidth: "15" },
+];
+
+
+// Array contendo as informações de layout para cada hexágono/distrito do seu SVG
+export const haagarMapLayout: DistrictLayoutInfo[] = originalRectangleData.map(rect => {
+  const points = calculateHexagonPoints(rect.x, rect.y, rect.width, rect.height);
+  return {
+      id: rect.id,
+      points: points,
+      stroke: rect.stroke,
+      strokeWidth: rect.strokeWidth,
   };
+});
+
+// Dimensões gerais do SVG original (mantidas, pois definem o viewBox)
+export const mapDimensions = {
+  width: "32768",
+  height: "10366",
+  viewBox: "0 0 32768 10366"
+};
