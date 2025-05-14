@@ -1,7 +1,7 @@
 // components/InteractiveMap.tsx
 "use client";
 import React from 'react';
-// Importa apenas as dimensões e o tipo do novo arquivo mapLayout.ts
+// Importa as dimensões e a interface (agora com 'paths')
 import { mapDimensions, DistrictLayoutInfo } from '../lib/mapLayout'; // Ajuste o caminho conforme necessário
 // Importa tipos necessários (mantenha seus imports originais)
 import type { DistrictResultInfo } from '../types/election'; // Exemplo: Ajuste o caminho
@@ -9,7 +9,7 @@ import type { DistrictResultInfo } from '../types/election'; // Exemplo: Ajuste 
 interface InteractiveMapProps {
   results: Record<string, DistrictResultInfo>;
   colorMap: Record<string, string>;
-  layoutData: DistrictLayoutInfo[]; // <--- Recebe o array com as infos de hexágono (agora com 'points')
+  layoutData: DistrictLayoutInfo[]; // <--- Recebe o array com a estrutura aninhada { id, paths: [...] }
   onDistrictHover?: (districtInfo: DistrictResultInfo | null, districtId: string | null) => void;
   onDistrictClick?: (districtInfo: DistrictResultInfo | null, districtId: string) => void;
 }
@@ -29,31 +29,44 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 width="100%"
                 height="100%"
                 viewBox={mapDimensions.viewBox}
-                fill="none" // O fill geral é 'none', o preenchimento será definido em cada polígono
+                // fill="none" // O fill geral pode continuar none
                 xmlns="http://www.w3.org/2000/svg"
                 preserveAspectRatio="xMidYMid meet"
             >
-                {/* Agora mapeia o 'layoutData' recebido via props e renderiza <polygon> */}
-                {layoutData.map((districtLayout) => {
-                    const districtId = districtLayout.id;
-                    // Busca as informações de resultado usando o ID do layout
+                {/* Mapeia o 'layoutData' recebido via props (cada item é um distrito {id, paths:[]}) */}
+                {layoutData.map((district) => { // <-- Cada 'district' é um objeto {id, paths:[]}
+                    const districtId = district.id; // O ID do distrito (único nesta lista principal)
+                    // Busca as informações de resultado usando o ID do distrito principal
                     const resultInfo = results[districtId] || { winnerLegend: null, districtName: `Distrito ${districtId}` };
                     const winnerLegend = resultInfo.winnerLegend;
-                    const fillColor = winnerLegend ? (colorMap[winnerLegend] ?? fallbackColor) : fallbackColor;
+                    // Calcula a cor de preenchimento com base no resultado para TODO o distrito
+                    const districtFillColor = winnerLegend ? (colorMap[winnerLegend] ?? fallbackColor) : fallbackColor;
 
                     return (
-                        <polygon // <--- Alterado de <rect> para <polygon>
-                            key={districtId}
-                            id={`map-district-${districtId}`}
-                            points={districtLayout.points} // <--- Usa a propriedade 'points' com as coordenadas do hexágono
-                            fill={fillColor} // Define a cor de preenchimento individualmente
-                            stroke={districtLayout.stroke || 'black'}
-                            strokeWidth={districtLayout.strokeWidth || '15'}
-                            className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
-                            onClick={() => onDistrictClick(resultInfo, districtId)}
-                            onMouseEnter={() => onDistrictHover(resultInfo, districtId)}
-                            onMouseLeave={() => onDistrictHover(null, null)}
-                        />
+                         // Fragmento ou <g> para agrupar logicamente os paths de um distrito, chaveada pelo ID do distrito
+                         // Usar <g> pode ser semanticamente melhor aqui, mas Fragment funciona para agrupar no React
+                         <React.Fragment key={district.id}>
+                            {/* Mapeia os paths DENTRO deste distrito */}
+                            {district.paths.map((subPath, index) => ( // <-- Itera sobre o array de paths do distrito
+                                <path // <--- Elemento path para cada sub-path
+                                    key={`${district.id}-${index}`} // <-- CHAVE ÚNICA combinando ID do distrito e índice do sub-path
+                                    // O ID do elemento no DOM pode ser apenas o ID do distrito se não precisar de unicidade para cada sub-path no DOM
+                                    // Mas para garantir, podemos manter uma combinação
+                                    id={`map-district-${district.id}-${index}`}
+                                    d={subPath.d} // <--- Usa o 'd' do sub-path
+                                    // Aplica a cor do resultado, mas permite que o fill original do sub-path sobrescreva
+                                    fill={subPath.fill ? subPath.fill : districtFillColor}
+                                     // Aplica stroke/strokeWidth do sub-path se definidos, senão usa defaults
+                                    stroke={subPath.stroke || 'black'}
+                                    strokeWidth={subPath.strokeWidth || '15'}
+                                    className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
+                                    // Eventos no nível de CADA path, mas passando o ID do distrito principal e as info do resultado do distrito
+                                    onClick={() => onDistrictClick(resultInfo, districtId)}
+                                    onMouseEnter={() => onDistrictHover(resultInfo, districtId)}
+                                    onMouseLeave={() => onDistrictHover(null, null)}
+                                />
+                            ))}
+                        </React.Fragment>
                     );
                 })}
             </svg>
