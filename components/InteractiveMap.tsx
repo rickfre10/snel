@@ -35,32 +35,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 width="100%"
                 height="100%"
                 viewBox={mapDimensions.viewBox}
-                // fill="none" // O fill geral pode continuar none
+                // fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 preserveAspectRatio="xMidYMid meet"
             >
-                {/* Camada de Bordas dos Estados - Renderizada PRIMEIRO */}
-                {haagarStateLayout.map((state) => ( // Itera sobre os dados de layout dos estados
-                     // Usar <g> para agrupar logicamente os paths de um estado, chaveada pelo ID do estado
-                    <g key={`state-${state.id}`} id={`state-${state.id}`}>
-                        {state.paths.map((subPath, index) => ( // Itera sobre os paths DENTRO deste estado
-                            <path
-                                key={`state-${state.id}-${index}`} // Chave única
-                                // O ID do elemento no DOM pode ser apenas o ID do estado se não precisar de unicidade para cada sub-path no DOM
-                                // Mas para garantir, podemos manter uma combinação
-                                id={`map-state-${state.id}-${index}`}
-                                d={subPath.d} // Usa o 'd' do sub-path do estado
-                                fill="none" // Estados não têm preenchimento nesta camada
-                                stroke={stateStrokeColor} // Aplica a cor da borda do estado
-                                strokeWidth={stateStrokeWidth} // Aplica a espessura da borda do estado
-                                // Remova eventos de hover/click desta camada para evitar conflito com os distritos
-                                // className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
-                            />
-                        ))}
-                    </g>
-                ))}
-
-                {/* Camada de Distritos Coloridos - Renderizada SEGUNDO (por cima das bordas dos estados) */}
+                {/* Camada de Distritos Coloridos - Renderizada PRIMEIRO */}
                 {haagarDistrictLayout.map((district) => { // Itera sobre os dados de layout dos distritos
                     const districtId = district.id; // O ID do distrito
                     // Busca as informações de resultado usando o ID do distrito
@@ -81,6 +60,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                                     // Aplica a cor do resultado do distrito
                                     fill={districtFillColor}
                                      // Define uma borda fina ou nenhuma borda para os distritos
+                                    // Podemos até remover o stroke dos distritos aqui se a borda do estado for suficiente
                                     stroke={subPath.stroke || defaultStrokeColor} // Mantém stroke original ou padrão fino
                                     strokeWidth="1" // Reduz a espessura da borda do distrito para não cobrir a borda do estado
                                     className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
@@ -93,6 +73,28 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                         </React.Fragment>
                     );
                 })}
+
+                {/* Camada de Bordas dos Estados - Renderizada SEGUNDO (agora por cima dos distritos) */}
+                {haagarStateLayout.map((state) => ( // Itera sobre os dados de layout dos estados
+                     // Usar <g> para agrupar logicamente os paths de um estado, chaveada pelo ID do estado
+                    <g key={`state-${state.id}`} id={`state-${state.id}`}>
+                        {state.paths.map((subPath, index) => ( // Itera sobre os paths DENTRO deste estado
+                            <path
+                                key={`state-${state.id}-${index}`} // Chave única
+                                // O ID do elemento no DOM pode ser apenas o ID do estado se não precisar de unicidade para cada sub-path no DOM
+                                // Mas para garantir, podemos manter uma combinação
+                                id={`map-state-${state.id}-${index}`}
+                                d={subPath.d} // Usa o 'd' do sub-path do estado
+                                fill="none" // Estados não têm preenchimento nesta camada de borda
+                                stroke={stateStrokeColor} // Aplica a cor da borda do estado (preto)
+                                strokeWidth={stateStrokeWidth} // Aplica a espessura da borda do estado (40)
+                                // Remova eventos de hover/click desta camada para evitar conflito com os distritos
+                                // className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
+                            />
+                        ))}
+                    </g>
+                ))}
+
             </svg>
         </div>
     );
