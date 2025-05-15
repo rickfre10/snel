@@ -63,16 +63,6 @@ const ProportionalSeatAllocation: React.FC<ProportionalSeatAllocationProps> = ({
 
   return (
     <div className="p-4 border rounded-lg shadow bg-white">
-      <h3 className="text-lg font-semibold mb-1">
-        Assentos Proporcionais {stateName ? `em ${stateName}` : ''}
-      </h3>
-      <p className="text-sm text-gray-600 mb-3">
-        Total em disputa: {totalSeatsInState} | Alocados: {totalAllocated}
-        {majorityThreshold && ` | Maioria: ${majorityThreshold}`}
-      </p>
-      {quocienteEleitoral !== null && (
-        <p className="text-xs text-gray-500 mb-1">Quociente Eleitoral (QE Estimado): {quocienteEleitoral.toFixed(2)}</p>
-      )}
 
       <div className="space-y-2">
         {sortedFronts.map(([legend, seats]) => (
@@ -97,6 +87,13 @@ const ProportionalSeatAllocation: React.FC<ProportionalSeatAllocationProps> = ({
         <p className="text-xs text-amber-700 mt-3">
           Nota: {totalSeatsInState - totalAllocated} assento(s) proporcional(is) não foi(ram) alocado(s), possivelmente devido à cláusula de barreira ou regras de arredondamento do método DHondt quando poucas legendas são elegíveis.
         </p>
+      )}
+      <p className="text-sm text-gray-600 mb-3">
+        Total em disputa: {totalSeatsInState} | Alocados: {totalAllocated}
+        {majorityThreshold && ` | Maioria: ${majorityThreshold}`}
+      </p>
+      {quocienteEleitoral !== null && (
+        <p className="text-xs text-gray-500 mb-1">Quociente Eleitoral (QE Estimado): {quocienteEleitoral.toFixed(2)}</p>
       )}
     </div>
   );

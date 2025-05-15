@@ -21,7 +21,7 @@ import ProportionalBarChart from '@/components/ProportionalBarChart';
 import InteractiveMap from '@/components/InteractiveMap'; // InteractiveMap já importa os layouts necessários
 
 // Configuração de assentos e cores
-const totalProportionalSeatsByState: Record<string, number> = { "TP": 39, "MA": 51, "MP": 29, "BA": 20, "PB": 10, "PN": 4 };
+const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 51, "MP": 29, "BA": 20, "PB": 10, "PN": 4 };
 
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
@@ -306,9 +306,7 @@ export default function StatePage() {
       </div>
 
       <header className="text-center">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">{stateName} ({stateId})</h1>
-        {/* Mostra o tempo dos dados se pageData estiver carregado */}
-        <p className="text-lg sm:text-xl text-gray-600">Resultados Eleitorais Estaduais - {pageData ? `${pageData.time}%` : `${currentTime}% (Carregando)`}</p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">{stateName}</h1>
       </header>
 
       {/* Botões de Navegação da Visão */}
@@ -328,7 +326,7 @@ export default function StatePage() {
         <div className="mt-4">
           {currentView === 'placarEstadual' && ( <section> <p className="text-sm text-gray-500 mb-3 text-center"> Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState}) {' | '}Maioria: {majorityThresholdStateChamber} </p> <SeatCompositionPanel seatData={totalSeatsByFrontForState} colorMap={coalitionColorMap} totalSeats={totalSeatsInStateChamber} /> </section> )}
           {currentView === 'votacaoProporcional' && totalPRSeatsForThisState > 0 && ( <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Detalhes da Alocação Proporcional</h3> <ProportionalSeatAllocationDetails allocatedSeats={proportionalSeatsByFront} colorMap={coalitionColorMap} stateName={stateName} totalSeatsInState={totalPRSeatsForThisState} majorityThreshold={majorityThresholdPR} rawVotes={proportionalVotesInput} /> </div> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Gráfico de Votos Proporcionais</h3> {proportionalVotesInput.length > 0 ? ( <ProportionalBarChart data={proportionalVotesInput.map(pv => ({ name: pv.legend, value: pv.votes }))} colorMap={coalitionColorMap} /> ) : ( <p className="text-center text-gray-500 py-10">Sem dados de votos proporcionais para este estado.</p> )} </div> </section> )}
-          {currentView === 'verDistritos' && ( <section className="space-y-6"> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Mapa dos Distritos de {stateName}</h3> {/* InteractiveMap agora renderiza TODOS os distritos e estados, e usa os resultados para colorir */} {Object.keys(districtResultsSummaryForStateMap).length > 0 || !pageData ? ( // Renderiza o mapa se houver resultados para o estado ou se os dados ainda estiverem carregando (pageData é null)
+          {currentView === 'verDistritos' && ( <section className="space-y-6"> <div>  {/* InteractiveMap agora renderiza TODOS os distritos e estados, e usa os resultados para colorir */} {Object.keys(districtResultsSummaryForStateMap).length > 0 || !pageData ? ( // Renderiza o mapa se houver resultados para o estado ou se os dados ainda estiverem carregando (pageData é null)
  <InteractiveMap
                 results={districtResultsSummaryForStateMap} // Passa SOMENTE os resultados do estado atual
                 colorMap={coalitionColorMap}
@@ -342,7 +340,7 @@ export default function StatePage() {
             )}
             {hoveredDistrictInfo && ( <div className="mt-2 text-center text-sm text-gray-700 p-2 bg-gray-100 rounded">{hoveredDistrictInfo}</div> )}
           </div>
-          <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Ticker dos Distritos de {stateName}</h3> {districtResultsForTicker.length > 0 ? ( <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> ) : ( <p className="text-gray-600 py-10 text-center">Sem resultados distritais.</p> )} </div> </section> )}
+          <div> {districtResultsForTicker.length > 0 ? ( <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> ) : ( <p className="text-gray-600 py-10 text-center">Sem resultados distritais.</p> )} </div> </section> )}
           {currentView === 'swing' && <p className="text-center text-gray-500 py-10">Visualização de Swing (ainda não implementada).</p>}
         </div>
       )}
