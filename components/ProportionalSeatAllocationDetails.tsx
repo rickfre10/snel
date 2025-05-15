@@ -88,12 +88,13 @@ const ProportionalSeatAllocation: React.FC<ProportionalSeatAllocationProps> = ({
           Nota: {totalSeatsInState - totalAllocated} assento(s) proporcional(is) não foi(ram) alocado(s), possivelmente devido à cláusula de barreira ou regras de arredondamento do método DHondt quando poucas legendas são elegíveis.
         </p>
       )}
+      <br></br>
       <p className="text-sm text-gray-600 mb-3">
         Total em disputa: {totalSeatsInState} | Alocados: {totalAllocated}
         {majorityThreshold && ` | Maioria: ${majorityThreshold}`}
       </p>
       {quocienteEleitoral !== null && (
-        <p className="text-xs text-gray-500 mb-1">Quociente Eleitoral (QE Estimado): {quocienteEleitoral.toFixed(2)}</p>
+        <p className="text-xs text-gray-500 mb-1">Quociente Eleitoral (Estimado): {quocienteEleitoral.toFixed(2)}</p>
       )}
     </div>
   );
