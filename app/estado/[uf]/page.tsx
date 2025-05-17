@@ -21,7 +21,7 @@ import ProportionalBarChart from '@/components/ProportionalBarChart';
 import InteractiveMap from '@/components/InteractiveMap'; // InteractiveMap já importa os layouts necessários
 
 // Configuração de assentos e cores
-const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 51, "MP": 29, "BA": 20, "PB": 10, "PN": 4 };
+const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4 };
 
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
