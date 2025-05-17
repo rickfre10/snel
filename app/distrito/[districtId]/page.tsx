@@ -11,6 +11,7 @@ import DistrictBarChart from '@/components/DistrictBarChart';
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption, DistrictOption, TickerEntry } from '@/types/election';
 import { districtsData, partyData } from '@/lib/staticData';
 import SwingAnalysis from '@/components/SwingAnalysis';
+import { previousDistrictResultsData } from '@/lib/previousElectionData';
 
 type DistrictViewMode = 'candidates' | 'bars' | 'swing' ;
 
