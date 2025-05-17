@@ -10,8 +10,9 @@ import DistrictBarChart from '@/components/DistrictBarChart';
 
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption, DistrictOption, TickerEntry } from '@/types/election';
 import { districtsData, partyData } from '@/lib/staticData';
+import SwingAnalysis from '@/components/SwingAnalysis';
 
-type DistrictViewMode = 'candidates' | 'bars' ;
+type DistrictViewMode = 'candidates' | 'bars' | 'swing' ;
 
 interface ApiVotesData {
   time: number;
@@ -115,6 +116,12 @@ export default function DistrictDetailPage() {
     return apiVotesData.candidateVotes.filter(vote => parseInt(String(vote.district_id), 10) === districtId );
   }, [apiVotesData?.candidateVotes, districtId]);
 
+  // --- NOVO: useMemo para pegar dados da eleição anterior ---
+const previousResultForThisDistrict = useMemo(() => {
+  if (!districtId) return undefined;
+  return previousDistrictResultsData.find(d => d.district_id === districtId);
+}, [districtId]);
+// --------------------------------------------------------
 
   const districtResults = useMemo(() => {
         if (!filteredCandidateVotes || filteredCandidateVotes.length === 0) { return { votes: [], totalVotes: 0, leadingCandidateId: null }; }
@@ -230,8 +237,8 @@ export default function DistrictDetailPage() {
                 <button onClick={() => setDistrictViewMode('bars')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'bars' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                     Gráfico Barras
                 </button>
-                <button disabled title="Dados de eleição anterior não disponíveis" className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-400 cursor-not-allowed`}>
-                    Swing
+                <button onClick={() => setDistrictViewMode('swing')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'swing' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                  Swing
                 </button>
             </nav>
         </div>
@@ -252,7 +259,20 @@ export default function DistrictDetailPage() {
                     colorMap={coalitionColorMap}
                 /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
             )}
-            
+           {/* --- NOVO: Renderização da Visão de Swing --- */}
+        {districtViewMode === 'swing' && (
+            currentDistrictInfo && districtResults.votes.length > 0 ? (
+                <SwingAnalysis
+                    currentResults={districtResults.votes} // Passa todos os candidatos atuais ordenados
+                    previousResult={previousResultForThisDistrict}
+                    colorMap={coalitionColorMap}
+                    districtName={currentDistrictInfo.district_name}
+                />
+            ) : (
+                <p className="text-center text-gray-500">Dados insuficientes para análise de swing.</p>
+            )
+        )}
+        {/* ----------------------------------------- */} 
         </>
       </div>
 
