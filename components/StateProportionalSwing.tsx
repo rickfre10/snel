@@ -1,7 +1,6 @@
 // components/StateProportionalSwing.tsx
 "use client";
 import React from 'react';
-// Nenhum import de 'recharts' é mais necessário aqui, a menos que usado em outro lugar no projeto.
 import type { ProportionalSwingEntry } from '@/types/election';
 import type { PreviousStateProportionalSeats } from '@/lib/previousElectionData';
 
@@ -23,10 +22,10 @@ interface SeatTableEntry {
 
 // Constantes Globais
 const FALLBACK_COLOR = '#B0B0B0';
-const SWING_BAR_FALLBACK_COLOR = '#A9A9A9'; // Pode ser unificado com FALLBACK_COLOR se desejado
-const TEXT_COLOR_DARK = '#1F2937'; // Tailwind gray-800
-const TEXT_COLOR_MEDIUM = '#4A5568'; // Tailwind gray-600
-const PREVIOUS_BAR_COLOR = '#A0AEC0'; // Cor para barras de "percentual anterior"
+const SWING_BAR_FALLBACK_COLOR = '#A9A9A9';
+const TEXT_COLOR_DARK = '#1F2937';
+const TEXT_COLOR_MEDIUM = '#4A5568';
+const PREVIOUS_BAR_COLOR = '#A0AEC0';
 
 // --- Componente Customizado para o Gráfico de Variação Percentual (Substitui Gráfico 1) ---
 interface CustomVariationChartProps {
@@ -39,19 +38,19 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
     return <p className="text-xs text-gray-400 text-center py-4">Dados de variação indisponíveis.</p>;
   }
 
-  const CATEGORY_LABEL_WIDTH = 110; // px, Largura para o label da legenda/frente
-  const BAR_HEIGHT = 20; // px, Altura de cada barra individual (anterior/atual)
-  const BAR_VERTICAL_GAP_IN_CATEGORY = 4; // px, Espaço vertical entre as duas barras (anterior/atual) de uma mesma legenda
-  const CATEGORY_VERTICAL_SPACING = 16; // px, Espaço vertical entre diferentes legendas
-  const CHART_HORIZONTAL_PADDING = 0; // px, Padding lateral geral se necessário (0 para usar toda a largura)
-  const VALUE_LABEL_WIDTH = 45; // px, Espaço reservado para o label de % à direita da barra
+  const CATEGORY_LABEL_WIDTH = 110;
+  const BAR_HEIGHT = 24; // Aumentado
+  const BAR_VERTICAL_GAP_IN_CATEGORY = 4;
+  const CATEGORY_VERTICAL_SPACING = 20; // Aumentado
+  const CHART_HORIZONTAL_PADDING = 0;
+  const VALUE_LABEL_WIDTH = 50; // Aumentado
 
   let maxPercentInData = 0;
   data.forEach(entry => {
     if (entry.currentPercent > maxPercentInData) maxPercentInData = entry.currentPercent;
     if (entry.previousPercent > maxPercentInData) maxPercentInData = entry.previousPercent;
   });
-  const MAX_PERCENT_FOR_SCALE = maxPercentInData > 0 ? Math.ceil(maxPercentInData / 10) * 10 : 100; // Arredonda para próxima dezena ou 100
+  const MAX_PERCENT_FOR_SCALE = maxPercentInData > 0 ? Math.ceil(maxPercentInData / 10) * 10 : 100;
 
   return (
     <div className="mb-4">
@@ -62,7 +61,7 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
             key={entry.legend}
             style={{
               display: 'flex',
-              alignItems: 'center', // Alinha verticalmente o label da legenda com o bloco das duas barras
+              alignItems: 'center',
               marginBottom: index < data.length - 1 ? `${CATEGORY_VERTICAL_SPACING}px` : '0px',
             }}
           >
@@ -71,7 +70,7 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
                 width: `${CATEGORY_LABEL_WIDTH}px`,
                 minWidth: `${CATEGORY_LABEL_WIDTH}px`,
                 paddingRight: '10px',
-                fontSize: '10px',
+                fontSize: '12px', // Aumentado
                 color: TEXT_COLOR_MEDIUM,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -83,7 +82,6 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
             </div>
 
             <div style={{ flexGrow: 1 }}>
-              {/* Barra PreviousPercent */}
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: `${BAR_VERTICAL_GAP_IN_CATEGORY}px` }}>
                 <div
                   style={{
@@ -93,12 +91,10 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
                     borderRadius: '3px',
                   }}
                 />
-                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '9px', color: TEXT_COLOR_MEDIUM }}>
+                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '11px', color: TEXT_COLOR_MEDIUM }}> {/* Aumentado */}
                   {entry.previousPercent != null ? `${entry.previousPercent.toFixed(1)}%` : ""}
                 </div>
               </div>
-
-              {/* Barra CurrentPercent */}
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <div
                   style={{
@@ -108,7 +104,7 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
                     borderRadius: '3px',
                   }}
                 />
-                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '9px', color: TEXT_COLOR_DARK, fontWeight: 'bold' }}>
+                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '11px', color: TEXT_COLOR_DARK, fontWeight: 'bold' }}> {/* Aumentado */}
                   {entry.currentPercent != null ? `${entry.currentPercent.toFixed(1)}%` : ""}
                 </div>
               </div>
@@ -133,12 +129,12 @@ const CustomSwingChart: React.FC<CustomSwingChartProps> = ({ data, colorMap }) =
     return <p className="text-xs text-gray-400 text-center py-4">Dados de swing indisponíveis.</p>;
   }
 
-  const BAR_WIDTH = 50; // Aumentado
-  const BAR_SPACING = 25; // Aumentado
+  const BAR_WIDTH = 50;
+  const BAR_SPACING = 25;
   const CHART_AREA_HORIZONTAL_PADDING = 10;
-  const CHART_VERTICAL_PADDING = 35; // Aumentado um pouco para mais respiro do label
+  const CHART_VERTICAL_PADDING = 38; // Aumentado
   const BAR_AREA_HEIGHT = 160;
-  const LABEL_TEXT_HEIGHT_APPROX = 20;
+  const LABEL_TEXT_HEIGHT_APPROX = 24; // Aumentado
   const LABEL_OFFSET_FROM_BAR = 5;
 
   const maxAbsSwing = Math.max(...data.map(d => Math.abs(d.swing)), 1);
@@ -172,7 +168,6 @@ const CustomSwingChart: React.FC<CustomSwingChartProps> = ({ data, colorMap }) =
           const value = entry.swing;
           const barColor = colorMap[entry.legend] || SWING_BAR_FALLBACK_COLOR;
           const barPixelHeight = (Math.abs(value) / maxAbsSwing) * (BAR_AREA_HEIGHT / 2);
-          // Label sem parênteses
           const labelText = `${value > 0 ? '+' : ''}${value.toFixed(1)}% - ${entry.legend}`;
 
           return (
@@ -188,13 +183,13 @@ const CustomSwingChart: React.FC<CustomSwingChartProps> = ({ data, colorMap }) =
             >
               <div
                 style={{
-                  fontSize: '10px',
+                  fontSize: '12px', // Aumentado
                   fontWeight: 'bold',
                   color: TEXT_COLOR_DARK,
                   textAlign: 'center',
                   position: 'absolute',
-                  width: '250%', // Aumentado para permitir labels mais longos ainda
-                  left: '-75%', // Ajustado para centralizar com width: 250%
+                  width: '250%',
+                  left: '-75%',
                   whiteSpace: 'nowrap',
                   top: value >= 0
                     ? `${CHART_VERTICAL_PADDING + (BAR_AREA_HEIGHT / 2) - barPixelHeight - LABEL_TEXT_HEIGHT_APPROX}px`
@@ -237,7 +232,6 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
     return <p className="text-gray-500 text-center py-4">Dados de swing proporcional de votos não disponíveis para {stateName}.</p>;
   }
 
-  // Ordenação dos dados permanece útil para a ordem de exibição
   const barChartDataForColumn1 = [...swingDataPercent].sort((a,b) => b.currentPercent - a.currentPercent);
   const dataForSwingColumnChart = [...swingDataPercent].sort((a, b) => b.swing - a.swing);
   
@@ -256,12 +250,9 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-      {/* Coluna 1: Gráfico Customizado de Variação Percentual */}
       <div className="lg:col-span-3 p-4 bg-gray-50 rounded-lg shadow-sm h-full">
         <CustomVariationChart data={barChartDataForColumn1} colorMap={colorMap} />
       </div>
-
-      {/* Coluna 2: Gráfico Customizado de Swing e Tabela de Assentos */}
       <div className="lg:col-span-2 p-4 bg-gray-50 rounded-lg shadow-sm h-full space-y-6">
         <CustomSwingChart data={dataForSwingColumnChart} colorMap={colorMap} />
         <div>
