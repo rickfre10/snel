@@ -38,12 +38,13 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
     return <p className="text-xs text-gray-400 text-center py-4">Dados de variação indisponíveis.</p>;
   }
 
-  const CATEGORY_LABEL_WIDTH = 110;
-  const BAR_HEIGHT = 24; // Aumentado
-  const BAR_VERTICAL_GAP_IN_CATEGORY = 4;
-  const CATEGORY_VERTICAL_SPACING = 20; // Aumentado
+  // Valores ajustados conforme solicitação
+  const CATEGORY_LABEL_WIDTH = 140; // Aumentado
+  const BAR_HEIGHT = 43; // Aumentado (24 * 1.8 = 43.2 -> 43)
+  const BAR_VERTICAL_GAP_IN_CATEGORY = 8; // Aumentado
+  const CATEGORY_VERTICAL_SPACING = 30; // Aumentado
   const CHART_HORIZONTAL_PADDING = 0;
-  const VALUE_LABEL_WIDTH = 50; // Aumentado
+  const VALUE_LABEL_WIDTH = 65; // Aumentado
 
   let maxPercentInData = 0;
   data.forEach(entry => {
@@ -70,7 +71,7 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
                 width: `${CATEGORY_LABEL_WIDTH}px`,
                 minWidth: `${CATEGORY_LABEL_WIDTH}px`,
                 paddingRight: '10px',
-                fontSize: '12px', // Aumentado
+                fontSize: '16px', // Aumentado (12 * 1.3 = 15.6 -> 16)
                 color: TEXT_COLOR_MEDIUM,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -91,7 +92,7 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
                     borderRadius: '3px',
                   }}
                 />
-                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '11px', color: TEXT_COLOR_MEDIUM }}> {/* Aumentado */}
+                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '14px', color: TEXT_COLOR_MEDIUM }}> {/* Aumentado (11 * 1.3 = 14.3 -> 14) */}
                   {entry.previousPercent != null ? `${entry.previousPercent.toFixed(1)}%` : ""}
                 </div>
               </div>
@@ -104,7 +105,7 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
                     borderRadius: '3px',
                   }}
                 />
-                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '11px', color: TEXT_COLOR_DARK, fontWeight: 'bold' }}> {/* Aumentado */}
+                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '14px', color: TEXT_COLOR_DARK, fontWeight: 'bold' }}> {/* Aumentado (11 * 1.3 = 14.3 -> 14) */}
                   {entry.currentPercent != null ? `${entry.currentPercent.toFixed(1)}%` : ""}
                 </div>
               </div>
@@ -119,6 +120,7 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
 
 
 // --- Componente Customizado para o Gráfico de Swing Proporcional (Gráfico 2) ---
+// Nenhuma alteração neste componente nesta rodada
 interface CustomSwingChartProps {
   data: ProportionalSwingEntry[];
   colorMap: Record<string, string>;
@@ -132,9 +134,9 @@ const CustomSwingChart: React.FC<CustomSwingChartProps> = ({ data, colorMap }) =
   const BAR_WIDTH = 50;
   const BAR_SPACING = 25;
   const CHART_AREA_HORIZONTAL_PADDING = 10;
-  const CHART_VERTICAL_PADDING = 38; // Aumentado
+  const CHART_VERTICAL_PADDING = 38;
   const BAR_AREA_HEIGHT = 160;
-  const LABEL_TEXT_HEIGHT_APPROX = 24; // Aumentado
+  const LABEL_TEXT_HEIGHT_APPROX = 24;
   const LABEL_OFFSET_FROM_BAR = 5;
 
   const maxAbsSwing = Math.max(...data.map(d => Math.abs(d.swing)), 1);
@@ -183,7 +185,7 @@ const CustomSwingChart: React.FC<CustomSwingChartProps> = ({ data, colorMap }) =
             >
               <div
                 style={{
-                  fontSize: '12px', // Aumentado
+                  fontSize: '12px',
                   fontWeight: 'bold',
                   color: TEXT_COLOR_DARK,
                   textAlign: 'center',
