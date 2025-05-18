@@ -27,7 +27,7 @@ const TEXT_COLOR_DARK = '#1F2937';
 const TEXT_COLOR_MEDIUM = '#4A5568';
 const PREVIOUS_BAR_COLOR = '#A0AEC0';
 
-// --- Componente Customizado para o Gráfico de Variação Percentual (Substitui Gráfico 1) ---
+// --- Componente Customizado para o Gráfico de Variação Percentual (Coluna 1) ---
 interface CustomVariationChartProps {
   data: ProportionalSwingEntry[];
   colorMap: Record<string, string>;
@@ -38,13 +38,13 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
     return <p className="text-xs text-gray-400 text-center py-4">Dados de variação indisponíveis.</p>;
   }
 
-  // Valores ajustados conforme solicitação
-  const CATEGORY_LABEL_WIDTH = 140; // Aumentado
-  const BAR_HEIGHT = 43; // Aumentado (24 * 1.8 = 43.2 -> 43)
-  const BAR_VERTICAL_GAP_IN_CATEGORY = 8; // Aumentado
-  const CATEGORY_VERTICAL_SPACING = 30; // Aumentado
+  const CATEGORY_LABEL_WIDTH = 140;
+  const BAR_HEIGHT = 43;
+  const BAR_VERTICAL_GAP_IN_CATEGORY = 8;
+  const CATEGORY_VERTICAL_SPACING = 30;
   const CHART_HORIZONTAL_PADDING = 0;
-  const VALUE_LABEL_WIDTH = 65; // Aumentado
+  const VALUE_LABEL_WIDTH = 65; // Largura reservada para o texto da porcentagem
+  const MIN_VISIBLE_BAR_WIDTH = 2; // Largura mínima em pixels para uma barra com valor > 0
 
   let maxPercentInData = 0;
   data.forEach(entry => {
@@ -57,61 +57,113 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
     <div className="mb-4">
       <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Variação Percentual de Votos</h4>
       <div style={{ paddingLeft: `${CHART_HORIZONTAL_PADDING}px`, paddingRight: `${CHART_HORIZONTAL_PADDING}px` }}>
-        {data.map((entry, index) => (
-          <div
-            key={entry.legend}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: index < data.length - 1 ? `${CATEGORY_VERTICAL_SPACING}px` : '0px',
-            }}
-          >
-            <div
-              style={{
-                width: `${CATEGORY_LABEL_WIDTH}px`,
-                minWidth: `${CATEGORY_LABEL_WIDTH}px`,
-                paddingRight: '10px',
-                fontSize: '16px', // Aumentado (12 * 1.3 = 15.6 -> 16)
-                color: TEXT_COLOR_MEDIUM,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-              title={entry.legend}
-            >
-              {entry.legend}
-            </div>
+        {data.map((entry, index) => {
+          const percentPrevious = entry.previousPercent;
+          const percentCurrent = entry.currentPercent;
 
-            <div style={{ flexGrow: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: `${BAR_VERTICAL_GAP_IN_CATEGORY}px` }}>
-                <div
-                  style={{
-                    height: `${BAR_HEIGHT}px`,
-                    width: `calc(${Math.max(0, (entry.previousPercent / MAX_PERCENT_FOR_SCALE)) * 100}% - ${VALUE_LABEL_WIDTH}px)`,
-                    backgroundColor: PREVIOUS_BAR_COLOR,
-                    borderRadius: '3px',
-                  }}
-                />
-                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '14px', color: TEXT_COLOR_MEDIUM }}> {/* Aumentado (11 * 1.3 = 14.3 -> 14) */}
-                  {entry.previousPercent != null ? `${entry.previousPercent.toFixed(1)}%` : ""}
-                </div>
+          const totalWidthStylePrevious = `${Math.max(0, (percentPrevious / MAX_PERCENT_FOR_SCALE)) * 100}%`;
+          const totalWidthStyleCurrent = `${Math.max(0, (percentCurrent / MAX_PERCENT_FOR_SCALE)) * 100}%`;
+
+          // Determina a largura da barra visual. Se o espaço total for menor que o rótulo,
+          // a barra terá a largura mínima visível (se o valor > 0).
+          const barVisualWidthPrevious = `max(${MIN_VISIBLE_BAR_WIDTH}px, calc(100% - ${VALUE_LABEL_WIDTH}px))`;
+          const barVisualWidthCurrent = `max(${MIN_VISIBLE_BAR_WIDTH}px, calc(100% - ${VALUE_LABEL_WIDTH}px))`;
+          
+          // Se o percentual for 0, a barra não deve ter nem o minWidth.
+          const finalBarWidthPrev = percentPrevious > 0 ? barVisualWidthPrevious : '0px';
+          const finalBarWidthCurr = percentCurrent > 0 ? barVisualWidthCurrent : '0px';
+
+          return (
+            <div
+              key={entry.legend}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: index < data.length - 1 ? `${CATEGORY_VERTICAL_SPACING}px` : '0px',
+              }}
+            >
+              <div
+                style={{
+                  width: `${CATEGORY_LABEL_WIDTH}px`,
+                  minWidth: `${CATEGORY_LABEL_WIDTH}px`,
+                  paddingRight: '10px',
+                  fontSize: '16px',
+                  color: TEXT_COLOR_MEDIUM,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+                title={entry.legend}
+              >
+                {entry.legend}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div
-                  style={{
-                    height: `${BAR_HEIGHT}px`,
-                    width: `calc(${Math.max(0, (entry.currentPercent / MAX_PERCENT_FOR_SCALE)) * 100}% - ${VALUE_LABEL_WIDTH}px)`,
-                    backgroundColor: colorMap[entry.legend] || FALLBACK_COLOR,
-                    borderRadius: '3px',
-                  }}
-                />
-                <div style={{ width: `${VALUE_LABEL_WIDTH}px`, paddingLeft: '5px', fontSize: '14px', color: TEXT_COLOR_DARK, fontWeight: 'bold' }}> {/* Aumentado (11 * 1.3 = 14.3 -> 14) */}
-                  {entry.currentPercent != null ? `${entry.currentPercent.toFixed(1)}%` : ""}
+
+              <div style={{ flexGrow: 1 }}> {/* Container que preenche o espaço restante */}
+                {/* Linha PreviousPercent */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  height: `${BAR_HEIGHT}px`,
+                  marginBottom: `${BAR_VERTICAL_GAP_IN_CATEGORY}px`,
+                  width: totalWidthStylePrevious, // Largura total para este conjunto barra+rótulo
+                }}>
+                  <div // BARRA VISUAL
+                    style={{
+                      height: '100%',
+                      width: finalBarWidthPrev,
+                      backgroundColor: PREVIOUS_BAR_COLOR,
+                      borderRadius: '3px',
+                    }}
+                  />
+                  <div // RÓTULO DE VALOR
+                    style={{
+                      width: `${VALUE_LABEL_WIDTH}px`,
+                      minWidth: `${VALUE_LABEL_WIDTH}px`,
+                      paddingLeft: '5px', // Pequeno espaço entre barra e texto do rótulo
+                      fontSize: '14px',
+                      color: TEXT_COLOR_MEDIUM,
+                      textAlign: 'right', // Alinha o texto do rótulo à direita
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {percentPrevious != null ? `${percentPrevious.toFixed(1)}%` : ""}
+                  </div>
+                </div>
+
+                {/* Linha CurrentPercent */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  height: `${BAR_HEIGHT}px`,
+                  width: totalWidthStyleCurrent,
+                }}>
+                  <div // BARRA VISUAL
+                    style={{
+                      height: '100%',
+                      width: finalBarWidthCurr,
+                      backgroundColor: colorMap[entry.legend] || FALLBACK_COLOR,
+                      borderRadius: '3px',
+                    }}
+                  />
+                  <div // RÓTULO DE VALOR
+                    style={{
+                      width: `${VALUE_LABEL_WIDTH}px`,
+                      minWidth: `${VALUE_LABEL_WIDTH}px`,
+                      paddingLeft: '5px',
+                      fontSize: '14px',
+                      color: TEXT_COLOR_DARK,
+                      fontWeight: 'bold',
+                      textAlign: 'right',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {percentCurrent != null ? `${percentCurrent.toFixed(1)}%` : ""}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -120,7 +172,7 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
 
 
 // --- Componente Customizado para o Gráfico de Swing Proporcional (Gráfico 2) ---
-// Nenhuma alteração neste componente nesta rodada
+// (Sem alterações neste componente nesta rodada)
 interface CustomSwingChartProps {
   data: ProportionalSwingEntry[];
   colorMap: Record<string, string>;
