@@ -92,7 +92,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiVotesDa
     const candidateVotes = candidateRows
         .map(row => row.toObject() as Partial<CandidateVote>) // Mapeia para objeto parcial
         .filter((vote): vote is CandidateVote => // Filtra usando Type Guard para garantir campos essenciais
-            vote.district_id !== undefined && vote.district_id !== null && vote.district_id !== '' &&
+            vote.district_id !== undefined && vote.district_id !== null &&
             vote.candidate_name !== undefined && vote.candidate_name !== null && vote.candidate_name !== '' &&
             vote.votes_qtn !== undefined && vote.votes_qtn !== null
             // Adicione validação para party_legend se for essencial para o frontend
