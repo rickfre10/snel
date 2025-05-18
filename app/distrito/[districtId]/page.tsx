@@ -240,18 +240,6 @@ export default function DistrictDetailPage() {
         contextualSwingColor: finalContextualSwingColor,
     };
 
-    // --- LOG FINAL ANTES DO RETURN ---
-    console.log("--- Objeto swingAnalysisData FINAL ---");
-    console.log("   graphTargetLegend:", dataToReturn.graphTargetLegend);
-    console.log("   graphOpponentLegend:", dataToReturn.graphOpponentLegend);
-    console.log("   Cor para Target:", dataToReturn.graphTargetLegend ? coalitionColorMap[dataToReturn.graphTargetLegend] : "N/A");
-    console.log("   Cor para Opponent:", dataToReturn.graphOpponentLegend ? coalitionColorMap[dataToReturn.graphOpponentLegend] : "N/A");
-    console.log("   Swing Real (actualSwingValue):", dataToReturn.actualSwingValue);
-    console.log("   Swing p/ Gráfico (swingValueForGraph):", dataToReturn.swingValueForGraph);
-    console.log("   Texto Contextual:", dataToReturn.contextualSwingText);
-    console.log("   Cor da Tag Contextual:", dataToReturn.contextualSwingColor);
-    console.log("------------------------------------");
-
     return dataToReturn;
 
 }, [districtId, currentDistrictInfo, districtResults, previousResultForThisDistrict, coalitionColorMap]); // Adicionado previousResultForThisDistrict e coalitionColorMap às dependências

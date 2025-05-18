@@ -79,4 +79,11 @@ export interface CandidateVote {
     runnerUpPercentage: number | null;
     runnerUpName: string | null; // Nome do segundo colocado
   }
+
+  export interface ProportionalSwingEntry {
+    legend: string; // parl_front_legend
+    currentPercent: number;
+    previousPercent: number;
+    swing: number; // currentPercent - previousPercent
+  }
   
