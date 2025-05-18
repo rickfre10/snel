@@ -5,28 +5,34 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
+// Seus componentes existentes
 import CandidateCardInfo from '@/components/CandidateCardInfo';
 import DistrictBarChart from '@/components/DistrictBarChart';
+// ProportionalPieChart não é usado neste arquivo, baseado no seu código da msg #130
+// import ProportionalPieChart from '@/components/ProportionalPieChart';
 
-import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption, DistrictOption, TickerEntry } from '@/types/election';
+// Tipos e Dados Estáticos
+import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, DistrictResultInfo, TickerEntry } from '@/types/election';
 import { districtsData, partyData } from '@/lib/staticData';
-import SwingAnalysis from '@/components/SwingAnalysis';
-import { previousDistrictResultsData, PreviousDistrictResult } from '@/lib/previousElectionData';
 
+// --- NOVO: Import para Swing ---
+import SwingAnalysis from '@/components/SwingAnalysis'; // Importa o novo componente
+import { previousDistrictResultsData, PreviousDistrictResult } from '@/lib/previousElectionData'; // Importa dados da eleição anterior
+// -----------------------------
+
+// Tipo DistrictViewMode atualizado para incluir 'swing'
 type DistrictViewMode = 'candidates' | 'bars' | 'swing' ;
 
 interface ApiVotesData {
   time: number;
   candidateVotes: CandidateVote[];
-  proportionalVotes: ProportionalVote[];
-  // processed_urns?: number; // Futuro
-  // total_urns?: number;   // Futuro
+  proportionalVotes: ProportionalVote[]; // Mantido, embora não usado diretamente para gráficos nesta página
 }
 
-const FALLBACK_COLOR = '#D1D5DB';
-const COALITION_FALLBACK_COLOR = '#6B7280';
+const FALLBACK_COLOR = '#D1D5DB'; // Já estava no seu código
+const COALITION_FALLBACK_COLOR = '#6B7280'; // Já estava no seu código
 
-const parseNumber = (value: any): number => {
+const parseNumber = (value: any): number => { // Sua função parseNumber
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
         const cleanedStr = value.replace(/\./g, '').replace(',', '.');
@@ -36,6 +42,7 @@ const parseNumber = (value: any): number => {
     return 0;
 };
 
+// Sua função getTextColorForBackground (pode ser movida para utils no futuro)
 function getTextColorForBackground(hexcolor: string): string {
     if (!hexcolor) return '#1F2937';
     hexcolor = hexcolor.replace("#", "");
@@ -69,7 +76,8 @@ export default function DistrictDetailPage() {
     return districtsData.find(d => d.district_id === districtId);
   }, [districtId]);
 
-  const currentStateId = currentDistrictInfo?.uf || null;
+  // currentStateId não é mais usado diretamente nesta página para visualização proporcional
+  // const currentStateId = currentDistrictInfo?.uf || null;
 
   const coalitionColorMap: Record<string, string> = useMemo(() => {
     const map: Record<string, string> = {};
@@ -77,7 +85,6 @@ export default function DistrictDetailPage() {
       if (party.parl_front_legend && party.parl_front_color && !map[party.parl_front_legend]) {
         map[party.parl_front_legend] = party.parl_front_color;
       }
-      // Adicionar também cores de partidos individuais se necessário para fallback
       if (party.party_legend && party.party_color && !map[party.party_legend]) {
           map[party.party_legend] = party.party_color;
       }
@@ -117,64 +124,47 @@ export default function DistrictDetailPage() {
     return apiVotesData.candidateVotes.filter(vote => parseInt(String(vote.district_id), 10) === districtId );
   }, [apiVotesData?.candidateVotes, districtId]);
 
+  // filteredProportionalVotes não é mais usado para gráfico aqui
+  // const filteredProportionalVotes = useMemo(() => { /* ... */ }, [/*...*/]);
+
   const districtResults = useMemo(() => {
     if (!filteredCandidateVotes || filteredCandidateVotes.length === 0) { return { votes: [], totalVotes: 0, leadingCandidateId: null }; }
     const votesWithNumeric = filteredCandidateVotes.map((v: CandidateVote) => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
     const totalVotes = votesWithNumeric.reduce((sum: number, current: { numericVotes: number }) => sum + current.numericVotes, 0);
-    
-    // Ordena para garantir que o primeiro é o líder (necessário para status)
     const sortedVotes = [...votesWithNumeric].sort((a,b) => b.numericVotes - a.numericVotes);
-
-    let leadingCandidateId: string | number | null = null; 
-    if (sortedVotes.length > 0) {
-        leadingCandidateId = sortedVotes[0].candidate_name; // Ou ID se preferir
-    }
-
-    const votesWithPercentage = sortedVotes.map(vote => ({ 
-        ...vote, 
-        percentage: totalVotes > 0 ? ((vote.numericVotes / totalVotes) * 100) : 0, 
-    }));
+    let leadingCandidateId: string | number | null = null;
+    if (sortedVotes.length > 0) { leadingCandidateId = sortedVotes[0].candidate_name; }
+    const votesWithPercentage = sortedVotes.map(vote => ({ ...vote, percentage: totalVotes > 0 ? ((vote.numericVotes / totalVotes) * 100) : 0, }));
     return { votes: votesWithPercentage as (CandidateVote & { numericVotes: number, percentage: number })[], totalVotes, leadingCandidateId };
 }, [filteredCandidateVotes]);
 
-if (!districtId) {
-return <div className="container mx-auto p-6 text-center text-red-600">ID do Distrito inválido na URL. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>
-}
-if (!currentDistrictInfo) {
-return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>
-}
 
-  // --- NOVO: useMemo para pegar dados da eleição anterior ---
+// --- DADOS PARA O SWING ---
 const previousResultForThisDistrict = useMemo(() => {
-  if (!districtId) return undefined;
-  return previousDistrictResultsData.find(d => d.district_id === districtId);
-}, [districtId]);
-// --------------------------------------------------------
+    if (!districtId) return undefined; // Retorna undefined se não houver districtId
+    return previousDistrictResultsData.find(d => d.district_id === districtId);
+  }, [districtId]); // previousDistrictResultsData é estático, não precisa ser dependência
 
-
-  const urnasApuradas = 1230;
-  const urnasTotais = 1500;
-  const percentualApurado = urnasTotais > 0 ? (urnasApuradas / urnasTotais) * 100 : 0;
-
-  const swingAnalysisData = useMemo(() => {
+const swingAnalysisData = useMemo(() => {
+    // Só calcula se tivermos os resultados atuais e o districtId
     if (!districtId || !currentDistrictInfo || !districtResults.votes || districtResults.votes.length === 0) {
         return null;
     }
 
-    const currentWinner = districtResults.votes[0]; // Já tem nome, parl_front_legend, percentage, numericVotes
-    const currentRunnerUp = districtResults.votes[1] || null; // Pode ser null
+    const currentWinner = districtResults.votes[0];
+    const currentRunnerUp = districtResults.votes[1] || null;
+    // previousResultForThisDistrict já foi calculado acima
+    const previousResult = previousResultForThisDistrict;
 
-    const previousResult = previousDistrictResultsData.find(d => d.district_id === districtId);
-
-    if (!previousResult) { // Não há dados anteriores para este distrito
+    if (!previousResult) {
         return {
             currentWinner,
             currentRunnerUp,
             previousWinnerLegend: null,
             previousWinnerPercentage: null,
-            swingText: "Dados da eleição anterior não disponíveis para este distrito.",
-            swingValueForGraph: 0, // Representa 50/50 no gráfico
-            graphTargetLegend: currentWinner.parl_front_legend, // Foco no vencedor atual
+            swingText: "Dados da eleição anterior (2018) não disponíveis para este distrito.",
+            swingValueForGraph: 0,
+            graphTargetLegend: currentWinner.parl_front_legend,
             graphOpponentLegend: currentRunnerUp?.parl_front_legend || "Outros",
         };
     }
@@ -189,27 +179,23 @@ const previousResultForThisDistrict = useMemo(() => {
 
     if (currentWinnerLegend === previousWinnerLegend) { // Manteve a frente
         swingValueForGraph = currentWinner.percentage - previousResult.winner_2018_percentage;
-        graphOpponentLegend = currentRunnerUp?.parl_front_legend || "Outros"; // Comparação visual com o 2º atual
+        graphOpponentLegend = currentRunnerUp?.parl_front_legend || "Outros";
 
         if (swingValueForGraph > 0) {
-            swingText = `Movimentação de +${swingValueForGraph.toFixed(1)} p.p. para ${currentWinnerLegend} (vs. ${previousResult.winner_2018_percentage.toFixed(1)}% em 2018)`;
+            swingText = `Movimentação de +${swingValueForGraph.toFixed(1)} p.p. para ${currentWinnerLegend || 'esta frente'} (comparado com ${previousResult.winner_2018_percentage.toFixed(1)}% em 2018).`;
         } else if (swingValueForGraph < 0) {
-             // Perdeu para si mesmo, mas a perda "beneficia" o segundo
-             swingText = `Movimentação de ${swingValueForGraph.toFixed(1)} p.p. para ${currentWinnerLegend} (vs. ${previousResult.winner_2018_percentage.toFixed(1)}% em 2018). Comparativamente, ${currentRunnerUp?.parl_front_legend || 'a oposição'} avançou.`;
+             swingText = `Movimentação de ${swingValueForGraph.toFixed(1)} p.p. para ${currentWinnerLegend || 'esta frente'} (comparado com ${previousResult.winner_2018_percentage.toFixed(1)}% em 2018). ${graphOpponentLegend || 'A oposição'} avançou.`;
         } else {
-            swingText = `${currentWinnerLegend} manteve a liderança com performance similar a 2018.`;
+            swingText = `${currentWinnerLegend || 'Esta frente'} manteve a liderança com performance similar a 2018.`;
         }
     } else { // Virada
-        // Encontrar a performance atual da frente que PERDEU
         const previousWinnerCurrentPerformance = districtResults.votes.find(
             v => v.parl_front_legend === previousWinnerLegend
         );
         const previousWinnerCurrentPercentage = previousWinnerCurrentPerformance?.percentage ?? 0;
 
-        // Swing é a "perda" da frente anterior, atribuída como ganho para a nova frente
         swingValueForGraph = previousResult.winner_2018_percentage - previousWinnerCurrentPercentage;
-        swingText = `VIRADA! Movimentação de ${swingValueForGraph.toFixed(1)} p.p. de ${previousWinnerLegend} para ${currentWinnerLegend}.`;
-        // No gráfico, o foco é no novo vencedor (currentWinnerLegend) e o swing é o que ele "tirou" do antigo
+        swingText = `VIRADA! Movimentação de ${swingValueForGraph.toFixed(1)} p.p. de ${previousWinnerLegend || 'Frente Anterior'} para ${currentWinnerLegend || 'Frente Atual'}.`;
         graphOpponentLegend = previousWinnerLegend;
     }
 
@@ -219,21 +205,34 @@ const previousResultForThisDistrict = useMemo(() => {
         previousWinnerLegend,
         previousWinnerPercentage: previousResult.winner_2018_percentage,
         swingText,
-        swingValueForGraph: Math.max(-10, Math.min(10, swingValueForGraph)), // Cap em +/-10pp para o gráfico
+        swingValueForGraph: Math.max(-10, Math.min(10, swingValueForGraph)),
         graphTargetLegend,
         graphOpponentLegend,
     };
+  // Adicione currentDistrictInfo e districtResults às dependências
+  }, [districtId, currentDistrictInfo, districtResults, previousResultForThisDistrict]);
+// --------------------------------------------------------
 
-}, [districtId, currentDistrictInfo, districtResults, previousDistrictResultsData]);
+
+  // --- Validações de Loading/Erro (como no seu código) ---
+  if (!districtId) { /* ... seu código ... */ }
+  if (!currentDistrictInfo) { /* ... seu código ... */ }
+    // Cole as validações de loading e erro aqui
+    if (!districtId) { return <div className="container mx-auto p-6 text-center text-red-600">ID do Distrito inválido na URL. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div> }
+    if (!currentDistrictInfo) { return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div> }
 
 
-  // Lógica para o Status do Distrito
+  // --- Lógica de Status do Distrito (como no seu código) ---
+  const urnasApuradas = 1230; // MOCK
+  const urnasTotais = 1500;   // MOCK
+  const percentualApurado = urnasTotais > 0 ? (urnasApuradas / urnasTotais) * 100 : 0;
   const leaderCandidate = districtResults.votes.length > 0 ? districtResults.votes[0] : null;
   let districtWinnerLegend: string | null = null;
-  let districtWinnerColor: string = COALITION_FALLBACK_COLOR; // Cor de fallback inicial
+  let districtWinnerColor: string = COALITION_FALLBACK_COLOR;
   let districtWinnerTagTextColor: string = getTextColorForBackground(districtWinnerColor);
-
-  if (leaderCandidate) {
+  if (leaderCandidate) { /* ... seu código ... */ }
+    // Colar a lógica de status do distrito
+    if (leaderCandidate) {
     const legend = leaderCandidate.parl_front_legend || leaderCandidate.party_legend;
     if (legend) {
         districtWinnerLegend = legend;
@@ -242,66 +241,45 @@ const previousResultForThisDistrict = useMemo(() => {
     }
   }
 
+
+  // --- Renderização ---
   return (
     <div className="container mx-auto p-4 lg:p-6 space-y-6">
-      <div className="mb-4">
-        <Link href="/" className="text-blue-600 hover:underline inline-block">&larr; Voltar para Visão Nacional</Link>
-      </div>
+      {/* Link Voltar (como no seu código) */}
+      <div className="mb-4"> <Link href="/" className="text-blue-600 hover:underline inline-block">&larr; Voltar para Visão Nacional</Link> </div>
 
+      {/* Cabeçalho do Distrito (como no seu código) */}
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
-        {/* Coluna Esquerda: Informações do Local */}
+        {/* ... Coluna Esquerda (Nome Estado/Distrito) ... */}
         <div className="space-y-1">
-          <Link href={`/estado/${currentDistrictInfo.uf.toLowerCase()}`} className="inline-block">
+          <Link href={`/estado/${currentDistrictInfo.uf.toLowerCase()}?time=${currentTime}`} className="inline-block"> {/* Adicionado currentTime ao link do estado */}
             <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-gray-300 transition-colors cursor-pointer">
-              {currentDistrictInfo.uf_name}
+              {currentDistrictInfo.uf_name} ({currentDistrictInfo.uf}) {/* Adicionada sigla UF */}
             </span>
-            </Link>
+          </Link>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
             {currentDistrictInfo.district_name}
           </h1>
         </div>
-
-        {/* Coluna Direita: Status do Distrito e Informações de Apuração */}
+        {/* ... Coluna Direita (Status/Urnas) ... */}
         <div className="flex flex-col items-start md:flex-row md:items-end md:justify-end gap-2 md:gap-4">
-          {/* Status do Distrito (Tag) */}
-          <div className="flex-shrink-0 order-1 md:order-none"> {/* order-1 para mobile, se necessário, ou manter a ordem natural */}
-            {isLoadingVotes ? (
-              <span className="text-xs italic text-gray-500 whitespace-nowrap">Carregando status...</span>
-            ) : districtWinnerLegend && leaderCandidate ? (
-              <span
-                className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
-                style={{ backgroundColor: districtWinnerColor, color: districtWinnerTagTextColor }}
-              >
-                {districtWinnerLegend} liderando
-              </span>
-            ) : (
-              <span className="text-xs italic text-gray-500 whitespace-nowrap">
-                {districtResults.votes.length > 0 ? 'Disputa acirrada' : 'Aguardando dados'}
-              </span>
-            )}
-          </div>
-
-          {/* Bloco de Urnas */}
-          <div className="text-sm space-y-0.5 text-left md:text-right order-2 md:order-none">
-            <div className="text-gray-600">
-              {urnasApuradas.toLocaleString('pt-BR')} / {urnasTotais.toLocaleString('pt-BR')} urnas
+          {/* ... (código do status e urnas como no seu) ... */}
+            <div className="flex-shrink-0 order-1 md:order-none">
+                {isLoadingVotes ? ( <span className="text-xs italic text-gray-500 whitespace-nowrap">Carregando status...</span>
+                ) : districtWinnerLegend && leaderCandidate ? ( <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: districtWinnerColor, color: districtWinnerTagTextColor }}> {districtWinnerLegend} liderando </span>
+                ) : ( <span className="text-xs italic text-gray-500 whitespace-nowrap"> {districtResults.votes.length > 0 ? 'Disputa acirrada' : 'Aguardando dados'} </span> )}
             </div>
-            {/* Aumentei um pouco a largura da barra para melhor visualização em telas menores */}
-            <div className="w-32 sm:w-36 md:w-40 lg:w-48 bg-gray-200 rounded-full h-2.5">
-              <div 
-                className="bg-blue-600 h-2.5 rounded-full" 
-                style={{ width: `${percentualApurado.toFixed(2)}%` }}
-                title={`${percentualApurado.toFixed(2)}% apuradas`}
-              ></div>
+            <div className="text-sm space-y-0.5 text-left md:text-right order-2 md:order-none">
+                <div className="text-gray-600"> {urnasApuradas.toLocaleString('pt-BR')} / {urnasTotais.toLocaleString('pt-BR')} urnas </div>
+                <div className="w-32 sm:w-36 md:w-40 lg:w-48 bg-gray-200 rounded-full h-2.5"> <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${percentualApurado.toFixed(2)}%` }} title={`${percentualApurado.toFixed(2)}% apuradas`}></div> </div>
+                <div className="text-gray-800"> <span className="font-bold">{percentualApurado.toFixed(2)}%</span> apuradas </div>
             </div>
-            <div className="text-gray-800">
-              <span className="font-bold">{percentualApurado.toFixed(2)}%</span> apuradas
-            </div>
-          </div>
         </div>
       </div>
 
+      {/* Painel Principal de Detalhes */}
       <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+        {/* Navegação de Abas (ADICIONADO BOTÃO SWING) */}
         <div className="mb-4 border-b border-gray-200">
             <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
                 <button onClick={() => setDistrictViewMode('candidates')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'candidates' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
@@ -310,49 +288,62 @@ const previousResultForThisDistrict = useMemo(() => {
                 <button onClick={() => setDistrictViewMode('bars')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'bars' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                     Gráfico Barras
                 </button>
+                {/* Botão Proporcional removido conforme solicitado antes, mas se quiser de volta, descomente */}
+                {/* <button onClick={() => setDistrictViewMode('proportional')} className={`...`}> Prop. Estado ... </button> */}
                 <button onClick={() => setDistrictViewMode('swing')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'swing' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                   Movimentação
                 </button>
             </nav>
         </div>
 
-        <>
-            {districtViewMode === 'candidates' && (
-                districtResults.votes.length > 0 ?
-                <CandidateCardInfo
-                    data={districtResults.votes}
-                    leadingId={districtResults.leadingCandidateId}
-                    coalitionColorMap={coalitionColorMap}
-                /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
+        {/* Renderização Condicional da Visualização */}
+        <div className="mt-4 min-h-[300px]"> {/* Adicionado min-h aqui também */}
+            {isLoadingVotes && <p className="text-center text-gray-500">Carregando...</p>}
+            {!isLoadingVotes && errorVotes && <p className="text-red-600 text-center">Erro: {errorVotes}</p>}
+            {!isLoadingVotes && !errorVotes && apiVotesData && (
+                <>
+                    {districtViewMode === 'candidates' && (
+                        districtResults.votes.length > 0 ?
+                        <CandidateCardInfo
+                            data={districtResults.votes}
+                            leadingId={districtResults.leadingCandidateId}
+                            coalitionColorMap={coalitionColorMap}
+                        /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
+                    )}
+                    {districtViewMode === 'bars' && (
+                          districtResults.votes.length > 0 ?
+                        <DistrictBarChart
+                            data={districtResults.votes}
+                            colorMap={coalitionColorMap}
+                        /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
+                    )}
+                    {/* REMOVIDA A VISÃO PROPORCIONAL DESTA PÁGINA */}
+
+                    {/* --- NOVO: Renderização da Visão de Swing --- */}
+                    {districtViewMode === 'swing' && (
+                        swingAnalysisData ? ( // Verifica se swingAnalysisData não é null
+                        <SwingAnalysis
+                            // As props do SwingAnalysis precisam ser alinhadas com o que swingAnalysisData retorna
+                            // e o que o componente SwingAnalysis espera.
+                            // Veja a definição de SwingAnalysisProps na resposta #124
+                            analysisData={swingAnalysisData}
+                            colorMap={coalitionColorMap}
+                            districtName={currentDistrictInfo.district_name}
+                        />
+                        ) : (
+                        <p className="text-center text-gray-500">
+                            {isLoadingVotes ? 'Calculando dados de movimentação...' : 'Dados insuficientes para análise de movimentação.'}
+                        </p>
+                        )
+                    )}
+                    {/* ----------------------------------------- */}
+                </>
             )}
-            {districtViewMode === 'bars' && (
-                  districtResults.votes.length > 0 ?
-                <DistrictBarChart
-                    data={districtResults.votes}
-                    colorMap={coalitionColorMap}
-                /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
-            )}
-           {/* --- NOVO: Renderização da Visão de Swing --- */}
-           {districtViewMode === 'swing' && (
-            // Só renderiza se swingAnalysisData não for null
-            swingAnalysisData ? (
-            <SwingAnalysis
-            analysisData={swingAnalysisData} // Agora TS sabe que não é null aqui
-            colorMap={coalitionColorMap}
-            districtName={currentDistrictInfo.district_name} // Garanta que currentDistrictInfo não é null aqui também
-              />
-              ) : (
-              // Mensagem se swingAnalysisData for null mas a view é 'swing'
-              <p className="text-center text-gray-500">
-            {isLoadingVotes ? 'Calculando dados de movimentação...' : 'Dados insuficientes para análise de movimentação.'}
-               </p>
-              )
-        )}
-        {/* ----------------------------------------- */} 
-        </>
+        </div>
       </div>
 
-     <div className="text-left p-4 bg-white rounded-lg shadow-md border border-gray-200">
+      {/* Seletor de Tempo (como no seu código) */}
+     <div className="text-left p-4 bg-white rounded-lg shadow-md border border-gray-200 mt-8"> {/* Adicionado mt-8 */}
         <label htmlFor="time-select" className="text-sm font-medium mr-2">Ver Apuração em:</label>
         <select
            id="time-select"
