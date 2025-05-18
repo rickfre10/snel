@@ -1,7 +1,8 @@
 // components/SwingAnalysis.tsx
 "use client";
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+// Importa Text (corrigido), Pie, Cell, ResponsiveContainer
+import { PieChart, Pie, Cell, ResponsiveContainer, Text } from 'recharts';
 import type { CandidateVote } from '@/types/election'; // Ajuste se necessário
 import type { PreviousDistrictResult } from '@/lib/previousElectionData'; // Ajuste se necessário
 
@@ -21,21 +22,21 @@ export interface SwingAnalysisData {
   graphTargetLegend: string | null;
   graphOpponentLegend: string | null;
   contextualSwingText: string;
-  contextualSwingColor: string;
+  contextualSwingColor: string; // Cor para a tag do contextualSwingText
 }
 
 // Props do componente SwingAnalysis
 interface SwingAnalysisProps {
   analysisData: SwingAnalysisData | null;
   colorMap: Record<string, string>;
-  districtName: string; // Mantido para uso no título geral da seção (em page.tsx)
+  districtName: string; // Mantido
 }
 
 const FALLBACK_COLOR_BARS = '#E5E7EB';
-const FALLBACK_COLOR_SWING_GRAPH = '#D1D5DB';
+const FALLBACK_COLOR_SWING_GRAPH = '#D1D5DB'; // Cor para oponente no gráfico de swing
 const TEXT_COLOR_DARK = '#1F2937';
 const TEXT_COLOR_LIGHT = '#FFFFFF';
-const SWING_VALUE_TEXT_COLOR = '#374151';
+const SWING_VALUE_TEXT_COLOR = '#374151'; // Cor padrão para o texto numérico do swing
 
 function getTextColorForBackground(hexcolor: string): string {
     if (!hexcolor) return TEXT_COLOR_DARK;
@@ -70,8 +71,7 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
     contextualSwingColor,
   } = analysisData;
 
-
-  // --- Coluna 1: Lógica das Barras Simuladas (COMO ANTES) ---
+  // --- Coluna 1: Lógica das Barras Simuladas (COMO ANTES - RESPOSTA #132) ---
   const leaderPercent = currentWinner.percentage;
   const leaderLegend = currentWinner.parl_front_legend;
   const leaderColor = leaderLegend ? (colorMap[leaderLegend] ?? FALLBACK_COLOR_BARS) : FALLBACK_COLOR_BARS;
@@ -92,7 +92,7 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
     referenceLegend = currentRunnerUp.parl_front_legend;
     referencePercent = currentRunnerUp.percentage;
     referenceColor = referenceLegend ? (colorMap[referenceLegend] ?? FALLBACK_COLOR_BARS) : FALLBACK_COLOR_BARS;
-    if (!isFlipped && leaderPercent > referencePercent) {
+    if (!isFlipped && leaderPercent > referencePercent) { // Só mostra diferença se líder estiver à frente e não for virada
         const diffPp = leaderPercent - referencePercent;
         differenceBlock = ( <div className="w-full bg-gray-300 flex items-center justify-center text-gray-700 font-semibold text-xs p-1" style={{height: '25%'}}> +{diffPp.toFixed(1)} p.p. </div> );
     }
@@ -108,7 +108,7 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
   // --- FIM DA LÓGICA DA COLUNA 1 ---
 
 
-  // --- Coluna 2: Lógica do Semicírculo (SEM MUDANÇAS NA LÓGICA DE DADOS) ---
+  // --- Coluna 2: Lógica do Semicírculo ---
   const targetPieValue = 50 + (swingValueForGraph * 5);
   const opponentPieValue = 100 - targetPieValue;
 
@@ -116,6 +116,7 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
     { name: graphTargetLegend || "Foco", value: Math.max(0, targetPieValue), colorForPie: graphTargetLegend ? (colorMap[graphTargetLegend] ?? FALLBACK_COLOR_SWING_GRAPH) : '#3B82F6' },
     { name: graphOpponentLegend || "Referência", value: Math.max(0, opponentPieValue), colorForPie: graphOpponentLegend ? (colorMap[graphOpponentLegend] ?? FALLBACK_COLOR_SWING_GRAPH) : FALLBACK_COLOR_SWING_GRAPH },
   ];
+    // Normalização
     const sumPieValues = pieData.reduce((s, p) => s + p.value, 0);
     if (sumPieValues > 0 && Math.abs(sumPieValues - 100) > 0.01) {
         const scaleFactor = 100 / sumPieValues;
@@ -132,10 +133,12 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
 
   return (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-2 gap-6 items-start min-h-[380px]"> {/* Aumentada altura mínima geral */}
+      {/* Container Principal do SwingAnalysis com altura maior */}
+      <div className="grid md:grid-cols-2 gap-6 items-start min-h-[400px]"> {/* Aumentada altura geral */}
 
         {/* === Coluna 1: Comparativo de Votos (COMO ANTES) === */}
         <div className={`p-4 bg-gray-50 rounded-lg shadow-sm flex flex-col justify-between h-full`}>
+            {/* Conteúdo da Coluna 1 (barras simuladas, texto eleição anterior) */}
             <div className="flex items-end justify-around flex-grow" style={{ minHeight: '180px' }}>
                 {currentWinner && (
                     <div className="flex flex-col items-center w-2/5 h-full">
@@ -178,37 +181,58 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
             </div>
         </div>
 
-       {/* === Coluna 2: Gráfico Semicírculo e Contexto === */}
-       <div className="flex flex-col items-center p-4 h-full justify-center">
+        {/* === Coluna 2: Gráfico Semicírculo e Contexto (LAYOUT DO TEXTO AJUSTADO) === */}
+        <div className="flex flex-col items-center p-4 h-full justify-start"> {/* Alinhado ao topo */}
           {/* Semicírculo de Movimentação */}
-          <div className="w-full max-w-lg h-auto" style={{aspectRatio: '2 / 1.2'}}>
-            {/* ... (PieChart, Pie, Cell - como antes) ... */}
+          <div className="w-full max-w-md h-auto" style={{aspectRatio: '2 / 1.2'}}> {/* max-w-md e aspect ratio */}
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="100%" // Centro na base para formar o hemiciclo
+                  startAngle={180}
+                  endAngle={0}
+                  innerRadius="50%" // Ajuste a "grossura" da rosca
+                  outerRadius="100%"
+                  paddingAngle={1}
+                  dataKey="value"
+                  nameKey="name"
+                  isAnimationActive={true}
+                  animationDuration={1000}
+                  animationEasing="ease-out"
+                >
+                  {pieData.map((entry) => (
+                    <Cell key={`cell-swing-${entry.name}`} fill={entry.colorForPie} stroke="#fff" strokeWidth={2} />
+                  ))}
+                </Pie>
+                {/* Tooltip Removido */}
+              </PieChart>
+            </ResponsiveContainer>
           </div>
 
-          {/* Texto do Swing (REAL) e "p.p." - ABAIXO do gráfico */}
-          <div className="text-center mt-4">
-            {/* Cor do texto do swing AGORA É PADRÃO */}
-            <span className="text-4xl font-extrabold" style={{ color: SWING_VALUE_TEXT_COLOR }}>
+          {/* Texto do Swing (REAL) e "p.p." - Posicionado ABAIXO do gráfico */}
+          <div className="text-center mt-4"> {/* Margem para separar do gráfico */}
+            <span className="text-5xl font-bold" style={{ color: SWING_VALUE_TEXT_COLOR }}> {/* MAIOR e mais PESADO */}
                 {actualSwingValue >= 0 ? '+' : ''}{actualSwingValue.toFixed(1)}
             </span>
-            <span className="text-xl text-gray-500 ml-1">
+            <span className="text-xl text-gray-500 ml-1 align-baseline"> {/* "p.p." menor e alinhado */}
                 p.p.
             </span>
           </div>
 
-          {/* Frase de Contexto da Movimentação (Tag Colorida) */}
+          {/* Frase de Contexto da Movimentação (Tag Colorida) - ABAIXO do texto do swing */}
           <div className="mt-3 text-center">
             <span
                 className="inline-block px-3 py-1.5 rounded-full text-base font-semibold shadow-sm"
-                // Cor de fundo da tag vem de contextualSwingColor, cor do texto é calculada
                 style={{ backgroundColor: contextualSwingColor, color: tagTextColor }}
             >
               {contextualSwingText}
             </span>
           </div>
-        </div>
-      </div>
-    </div>
+        </div> {/* Fim da Coluna 2 */}
+      </div> {/* Fim do Grid Principal */}
+    </div> // Fim do container geral do SwingAnalysis
   );
 };
 
