@@ -26,10 +26,9 @@ interface SeatTableEntry {
 const FALLBACK_COLOR = '#B0B0B0';
 const SWING_BAR_FALLBACK_COLOR = '#A9A9A9';
 const TEXT_COLOR_DARK = '#1F2937';
+const TEXT_COLOR_LIGHT = '#FFFFFF';
 
-// getTextColorForBackground (mantida para a tabela)
 function getTextColorForBackground(hexcolor: string): string {
-    // ... (sua implementação)
     if (!hexcolor) return TEXT_COLOR_DARK;
     hexcolor = hexcolor.replace("#", "");
     if (hexcolor.length !== 6 && hexcolor.length !== 3) return TEXT_COLOR_DARK;
@@ -41,7 +40,7 @@ function getTextColorForBackground(hexcolor: string): string {
         const g = parseInt(hexcolor.substring(2, 4), 16);
         const b = parseInt(hexcolor.substring(4, 6), 16);
         const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        return (yiq >= 128 || hexcolor.toLowerCase() === 'ffffff' || hexcolor.toLowerCase() === '#ffffff') ? TEXT_COLOR_DARK : '#FFFFFF';
+        return (yiq >= 128 || hexcolor.toLowerCase() === 'ffffff' || hexcolor.toLowerCase() === '#ffffff') ? TEXT_COLOR_DARK : TEXT_COLOR_LIGHT;
     } catch (e) { return TEXT_COLOR_DARK; }
 }
 
@@ -75,25 +74,22 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
 
-      {/* Coluna 1: Gráfico de Barras Agrupadas (% Anterior vs % Atual) */}
-      <div className="lg:col-span-2 p-4 bg-gray-50 rounded-lg shadow-sm h-full">
+      {/* Coluna 1: Gráfico de Barras Agrupadas (% Anterior vs % Atual) - 60% */}
+      <div className="lg:col-span-3 p-4 bg-gray-50 rounded-lg shadow-sm h-full">
         <h4 className="text-lg font-semibold text-gray-700 mb-3 text-center">Variação Percentual de Votos</h4>
-        {/* Linha 80 do seu log deve ser este ResponsiveContainer */}
-        <ResponsiveContainer width="100%" height={300 + barChartDataForColumn1.length * 45}>
+        {/* Certifique-se de que não há espaços ou comentários entre ResponsiveContainer e BarChart */}
+        <ResponsiveContainer width="100%" height={300 + barChartDataForColumn1.length * 40}>
           <BarChart
             data={barChartDataForColumn1}
             layout="vertical"
-            margin={{ left: 10, right: 50, top: 5, bottom: 5 }} // Margem direita para os rótulos que estavam fora
-            barCategoryGap="10%"
+            margin={{ left: 10, right: 50, top: 5, bottom: 5 }}
+            barCategoryGap={5}
             barGap={2}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" hide={true} />
-            <YAxis dataKey="legend" type="category" width={120} interval={0} tick={{ fontSize: 10, fill: '#4A5568' }} axisLine={false} tickLine={false} />
-
-            <Bar dataKey="previousPercent" name="% Anterior (2018)" fill="#A0AEC0" barSize={16} radius={[3, 3, 0, 0]}>
-              {/* --- COMENTE TEMPORARIAMENTE ESTE LABEL LIST --- */}
-              {/*
+            <YAxis dataKey="legend" type="category" width={100} interval={0} tick={{ fontSize: 10, fill: '#4A5568' }} axisLine={false} tickLine={false} />
+            <Bar dataKey="previousPercent" name="% Anterior (2018)" fill="#A0AEC0" barSize={14} radius={[3, 3, 0, 0]}>
               <LabelList
                 dataKey="previousPercent"
                 position="right"
@@ -102,14 +98,11 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
                 fontSize={9}
                 formatter={(value: number) => value != null ? `${value.toFixed(1)}%` : ""}
               />
-              */}
             </Bar>
-            <Bar dataKey="currentPercent" name="% Atual (2022)" barSize={16} radius={[3, 3, 0, 0]}>
+            <Bar dataKey="currentPercent" name="% Atual (2022)" barSize={14} radius={[3, 3, 0, 0]}>
               {barChartDataForColumn1.map((entry: ProportionalSwingEntry, index: number) => (
-                <Cell key={`cell-current-<span class="math-inline">\{entry\.legend\}\-</span>{index}`} fill={colorMap[entry.legend] || FALLBACK_COLOR} />
+                <Cell key={`cell-current-${entry.legend}-${index}`} fill={colorMap[entry.legend] || FALLBACK_COLOR} />
               ))}
-              {/* --- E COMENTE TEMPORARIAMENTE ESTE LABEL LIST --- */}
-              {/*
               <LabelList
                 dataKey="currentPercent"
                 position="right"
@@ -119,48 +112,51 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
                 fontWeight="bold"
                 formatter={(value: number) => value != null ? `${value.toFixed(1)}%` : ""}
               />
-              */}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Coluna 2: Gráfico de COLUNAS de Swing e Tabela de Assentos */}
-      {/* (O código da Coluna 2 e da Tabela permanece como na resposta #142, que não estava dando erro) */}
-      <div className="lg:col-span-3 p-4 bg-gray-50 rounded-lg shadow-sm h-full space-y-6">
+      {/* Coluna 2: Gráfico de COLUNAS de Swing e Tabela de Assentos - 40% */}
+      <div className="lg:col-span-2 p-4 bg-gray-50 rounded-lg shadow-sm h-full space-y-6">
         <div>
-            <h4 className="text-lg font-semibold text-gray-700 mb-3 text-center">Swing Proporcional de Votos (%) - Colunas</h4>
-            <ResponsiveContainer width="100%" height={150 + dataForSwingColumnChart.length * 35}>
-            <BarChart data={dataForSwingColumnChart} layout="horizontal" margin={{ top: 20, right: 10, left: 10, bottom: 30 }} barCategoryGap="5%">
-                <XAxis dataKey="legend" type="category" hide={true} />
-                <YAxis type="number" domain={['auto', 'auto']} hide={true} />
-                <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" strokeOpacity={0.8}/>
-                <Bar dataKey="swing" name="Swing" barSize={40}>
-                {dataForSwingColumnChart.map((entry: ProportionalSwingEntry, index: number) => (
-                    <Cell key={`cell-swing-col-<span class="math-inline">\{entry\.legend\}\-</span>{index}`} fill={colorMap[entry.legend] || SWING_BAR_FALLBACK_COLOR} />
-                ))}
-                <LabelList
-                    dataKey="swing"
-                    content={(props: any) => {
-                        const { x, y, width, height, value, payload } = props;
-                        if (value === undefined || value === null || !payload || typeof payload.legend !== 'string') {
-                            return null;
-                        }
-                        const isNegative = value < 0;
-                        const labelX = x + width / 2;
-                        const valueY = isNegative ? y + height + 12 : y - 6;
-                        const legendName = payload.legend;
-                        const swingValueText = `<span class="math-inline">\{value \> 0 ? '\+' \: ''\}</span>{value.toFixed(1)}%`;
-                        return (
-                            <g>
-                                <text x={labelX} y={valueY} textAnchor="middle" fill="#333" fontSize={10} fontWeight="bold">{swingValueText}</text>
-                                <text x={labelX} y={isNegative ? y - 5 : y + height + 15} textAnchor="middle" fill={colorMap[legendName] || TEXT_COLOR_DARK} fontSize={10} fontWeight="bold">{legendName}</text>
-                            </g>
-                        );
-                    }}
-                />
-                </Bar>
-            </BarChart>
+            <h4 className="text-lg font-semibold text-gray-700 mb-3 text-center">Swing Proporcional de Votos (%)</h4>
+            {/* Certifique-se de que não há espaços ou comentários entre ResponsiveContainer e BarChart */}
+            <ResponsiveContainer width="100%" height={150 + dataForSwingColumnChart.length * 40}>
+              <BarChart data={dataForSwingColumnChart} layout="horizontal" margin={{ top: 30, right: 10, left: 10, bottom: 5 }} barCategoryGap="20%">
+                  <XAxis dataKey="legend" type="category" hide={true} />
+                  <YAxis type="number" domain={['auto', 'auto']} hide={true} />
+                  <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" strokeOpacity={0.8}/>
+                  <Bar dataKey="swing" name="Swing" barSize={35}>
+                  {dataForSwingColumnChart.map((entry: ProportionalSwingEntry, index: number) => (
+                      <Cell key={`cell-swing-col-${entry.legend}-${index}`} fill={colorMap[entry.legend] || SWING_BAR_FALLBACK_COLOR} />
+                  ))}
+                  <LabelList
+                      dataKey="swing"
+                      content={(props: any) => {
+                          const { x, y, width, height, value, payload } = props;
+                          if (value === undefined || value === null || !payload || typeof payload.legend !== 'string') {
+                              return null;
+                          }
+                          const isNegative = value < 0;
+                          const labelX = x + width / 2;
+                          const labelY = isNegative ? y + height + 12 : y - 8;
+
+                          const legendName = payload.legend;
+                          const swingValueText = `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
+                          const combinedLabel = `(${swingValueText} - ${legendName})`;
+
+                          return (
+                              <g>
+                                  <text x={labelX} y={labelY} textAnchor="middle" fill={TEXT_COLOR_DARK} fontSize={10} fontWeight="bold">
+                                      {combinedLabel}
+                                  </text>
+                              </g>
+                          );
+                      }}
+                  />
+                  </Bar>
+              </BarChart>
             </ResponsiveContainer>
         </div>
         <div>
