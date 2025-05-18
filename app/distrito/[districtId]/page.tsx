@@ -262,11 +262,6 @@ export default function DistrictDetailPage() {
           </h1>
         </div>
         <div className="flex flex-col items-start md:flex-row md:items-end md:justify-end gap-2 md:gap-4">
-            <div className="flex-shrink-0 order-1 md:order-none">
-                {isLoadingVotes ? ( <span className="text-xs italic text-gray-500 whitespace-nowrap">Carregando status...</span>
-                ) : districtWinnerLegend && leaderCandidate ? ( <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: districtWinnerColor, color: districtWinnerTagTextColor }}> {districtWinnerLegend} liderando </span>
-                ) : ( <span className="text-xs italic text-gray-500 whitespace-nowrap"> {districtResults.votes.length > 0 ? 'Disputa acirrada' : 'Aguardando dados'} </span> )}
-            </div>
             <ApuracaoVisao
                 isLoadingVotes={isLoadingVotes}
                 districtWinnerLegend={districtWinnerLegend ? `${districtWinnerLegend} liderando` : undefined}
