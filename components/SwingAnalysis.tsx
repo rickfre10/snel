@@ -113,9 +113,17 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
   const opponentPieValue = 100 - targetPieValue;
 
   const pieData = [
-    { name: graphTargetLegend || "Foco", value: Math.max(0, targetPieValue), colorForPie: graphTargetLegend ? (colorMap[graphTargetLegend] ?? FALLBACK_COLOR_SWING_GRAPH) : '#3B82F6' },
-    { name: graphOpponentLegend || "Referência", value: Math.max(0, opponentPieValue), colorForPie: graphOpponentLegend ? (colorMap[graphOpponentLegend] ?? FALLBACK_COLOR_SWING_GRAPH) : FALLBACK_COLOR_SWING_GRAPH },
-  ];
+    {
+        name: graphTargetLegend || "Foco",
+        value: Math.max(0, targetPieValue),
+        colorForPie: graphTargetLegend ? (colorMap[graphTargetLegend] ?? '#3B82F6') : '#3B82F6' // Cor A ou azul padrão
+      },
+      {
+        name: graphOpponentLegend || "Referência",
+        value: Math.max(0, opponentPieValue),
+        colorForPie: graphOpponentLegend ? (colorMap[graphOpponentLegend] ?? '#FF8C00') : '#FF8C00' // Cor B ou laranja padrão
+      },
+    ];
     // Normalização
     const sumPieValues = pieData.reduce((s, p) => s + p.value, 0);
     if (sumPieValues > 0 && Math.abs(sumPieValues - 100) > 0.01) {
