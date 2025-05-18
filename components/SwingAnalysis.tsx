@@ -1,19 +1,17 @@
 // components/SwingAnalysis.tsx
 "use client";
 import React from 'react';
-// Importa Text (corrigido), Pie, Cell, ResponsiveContainer
-import { PieChart, Pie, Cell, ResponsiveContainer, Text } from 'recharts';
-import type { CandidateVote } from '@/types/election'; // Ajuste o caminho se necessário
-import type { PreviousDistrictResult } from '@/lib/previousElectionData'; // Ajuste o caminho se necessário
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import type { CandidateVote } from '@/types/election'; // Ajuste se necessário
+import type { PreviousDistrictResult } from '@/lib/previousElectionData'; // Ajuste se necessário
 
-// Interface estendida que o componente CandidateVote espera (se você a tiver em types/election.ts, importe)
+// Interface estendida que o componente CandidateVote espera
 interface CandidateVoteProcessed extends CandidateVote {
   percentage: number;
   numericVotes: number;
 }
 
 // Interface para os dados que este componente espera (vinda de page.tsx)
-// Certifique-se que esta definição bate com o objeto que você monta em page.tsx
 export interface SwingAnalysisData {
   currentWinner: CandidateVoteProcessed | null;
   currentRunnerUp: CandidateVoteProcessed | null;
@@ -30,16 +28,14 @@ export interface SwingAnalysisData {
 interface SwingAnalysisProps {
   analysisData: SwingAnalysisData | null;
   colorMap: Record<string, string>;
-  districtName: string; // <-- districtName MANTIDO NAS PROPS!
+  districtName: string; // Mantido para uso no título geral da seção (em page.tsx)
 }
 
-// Constantes de cor
-const FALLBACK_COLOR_BARS = '#E5E7EB'; // Cinza para barras
-const FALLBACK_COLOR_SWING_GRAPH = '#D1D5DB'; // Cinza para oponente no gráfico
-const TEXT_COLOR_DARK = '#1F2937'; // Tailwind gray-800
-const TEXT_COLOR_LIGHT = '#FFFFFF'; // white
+const FALLBACK_COLOR_BARS = '#E5E7EB';
+const FALLBACK_COLOR_SWING_GRAPH = '#D1D5DB';
+const TEXT_COLOR_DARK = '#1F2937';
+const TEXT_COLOR_LIGHT = '#FFFFFF';
 
-// Função auxiliar para contraste de texto
 function getTextColorForBackground(hexcolor: string): string {
     if (!hexcolor) return TEXT_COLOR_DARK;
     hexcolor = hexcolor.replace("#", "");
@@ -56,7 +52,7 @@ function getTextColorForBackground(hexcolor: string): string {
     } catch (e) { return TEXT_COLOR_DARK; }
 }
 
-const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, districtName }) => {
+const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap }) => {
   if (!analysisData || !analysisData.currentWinner) {
     return <p className="text-center text-gray-500 py-10">{analysisData?.contextualSwingText || "Dados insuficientes para análise de movimentação."}</p>;
   }
@@ -73,7 +69,7 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, d
     contextualSwingColor,
   } = analysisData;
 
-  // --- Coluna 1: Lógica das Barras Simuladas (Mantida como na resposta #128) ---
+  // --- Coluna 1: Lógica das Barras Simuladas (COMO ANTES) ---
   const leaderPercent = currentWinner.percentage;
   const leaderLegend = currentWinner.parl_front_legend;
   const leaderColor = leaderLegend ? (colorMap[leaderLegend] ?? FALLBACK_COLOR_BARS) : FALLBACK_COLOR_BARS;
@@ -101,7 +97,7 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, d
   }
   const leaderBarHeightPercent = 100;
   let referenceBarHeightPercent = 0;
-  if (isFlipped && leaderPercent > 0 && referencePercent > 0) { // Evita divisão por zero e altura negativa
+  if (isFlipped && leaderPercent > 0 && referencePercent > 0) {
       referenceBarHeightPercent = (referencePercent / leaderPercent) * 100;
   } else if (!isFlipped && currentRunnerUp) {
       referenceBarHeightPercent = 75;
@@ -118,7 +114,6 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, d
     { name: graphTargetLegend || "Foco", value: Math.max(0, targetPieValue), colorForPie: graphTargetLegend ? (colorMap[graphTargetLegend] ?? FALLBACK_COLOR_SWING_GRAPH) : '#3B82F6' },
     { name: graphOpponentLegend || "Referência", value: Math.max(0, opponentPieValue), colorForPie: graphOpponentLegend ? (colorMap[graphOpponentLegend] ?? FALLBACK_COLOR_SWING_GRAPH) : FALLBACK_COLOR_SWING_GRAPH },
   ];
-    // Normalização para garantir que a soma seja 100
     const sumPieValues = pieData.reduce((s, p) => s + p.value, 0);
     if (sumPieValues > 0 && Math.abs(sumPieValues - 100) > 0.01) {
         const scaleFactor = 100 / sumPieValues;
@@ -134,20 +129,20 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, d
   const currentMarginPercent = currentRunnerUp ? currentWinner.percentage - currentRunnerUp.percentage : currentWinner.percentage;
 
   return (
-    <div className="space-y-6"> {/* Espaçamento entre as "colunas" do swing e outros elementos, se houver */}
-      <div className="grid md:grid-cols-2 gap-6 items-start min-h-[350px]"> {/* Aumenta altura mínima geral */}
+    <div className="space-y-6">
+      <div className="grid md:grid-cols-2 gap-6 items-start min-h-[380px]"> {/* Aumentada altura mínima geral */}
 
-        {/* === Coluna 1: Comparativo de Votos === */}
+        {/* === Coluna 1: Comparativo de Votos (COMO ANTES) === */}
         <div className={`p-4 bg-gray-50 rounded-lg shadow-sm flex flex-col justify-between h-full`}>
-            <div className="flex items-end justify-around flex-grow" style={{ minHeight: '180px' }}> {/* Aumenta minHeight das barras */}
+            <div className="flex items-end justify-around flex-grow" style={{ minHeight: '180px' }}>
                 {currentWinner && (
                     <div className="flex flex-col items-center w-2/5 h-full">
                         <div className="text-sm text-center text-gray-700 h-10 mb-1 break-words line-clamp-2 font-semibold">{leaderLegend || 'Líder Atual'}</div>
                         <div
-                            className="w-full rounded-t-lg flex items-center justify-center relative" // Adicionado relative
+                            className="w-full rounded-t-lg flex items-center justify-center relative"
                             style={{ backgroundColor: leaderColor, height: `${leaderBarHeightPercent}%` }}
                         >
-                            <span className="font-bold text-3xl z-10" style={{color: getTextColorForBackground(leaderColor)}}> {/* Aumentado para text-3xl */}
+                            <span className="font-bold text-3xl z-10" style={{color: getTextColorForBackground(leaderColor)}}>
                                 {leaderPercent.toFixed(1)}%
                             </span>
                         </div>
@@ -156,20 +151,16 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, d
                 {(isFlipped || currentRunnerUp) && referenceLegend && (
                      <div className="flex flex-col items-center w-2/5 h-full">
                         <div className="text-sm text-center text-gray-700 h-10 mb-1 break-words line-clamp-2 font-semibold">{referenceLegend}</div>
-                         <div className="w-full h-full flex flex-col-reverse rounded-t-lg"> {/* Mantém flex-col-reverse */}
+                         <div className="w-full h-full flex flex-col-reverse rounded-t-lg">
                             <div
-                                className="w-full rounded-t-lg flex items-center justify-center relative" // Adicionado relative
+                                className="w-full rounded-t-lg flex items-center justify-center relative"
                                 style={{ backgroundColor: referenceColor, height: `${referenceBarHeightPercent}%` }}
                             >
-                                <span className="font-bold text-2xl z-10" style={{color: getTextColorForBackground(referenceColor)}}> {/* Aumentado para text-2xl */}
+                                <span className="font-bold text-2xl z-10" style={{color: getTextColorForBackground(referenceColor)}}>
                                     {referencePercent.toFixed(1)}%
                                 </span>
                             </div>
-                            {differenceBlock && ( // Se o bloco de diferença existir (caso "manteve")
-                                <div className="w-full bg-gray-300 flex items-center justify-center text-gray-700 font-semibold text-sm p-1" style={{height: `${100 - referenceBarHeightPercent}%`}}>
-                                    +{ (leaderPercent - referencePercent).toFixed(1) } p.p.
-                                </div>
-                            )}
+                            {differenceBlock}
                         </div>
                     </div>
                 )}
@@ -185,10 +176,10 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, d
             </div>
         </div>
 
-        {/* === Coluna 2: Gráfico Semicírculo e Contexto === */}
-        <div className="flex flex-col items-center p-4 h-full justify-start"> {/* justify-start para alinhar ao topo */}
-          {/* Semicírculo de Movimentação - Aumentado e mais alto */}
-          <div className="w-full max-w-md h-auto" style={{aspectRatio: '2 / 1.3'}}> {/* Ajustado aspect ratio para mais altura */}
+        {/* === Coluna 2: Gráfico Semicírculo e Contexto (AJUSTES DE LAYOUT E ESTILO) === */}
+        <div className="flex flex-col items-center justify-start p-4 h-full"> {/* Mudado para justify-start */}
+          {/* Semicírculo de Movimentação */}
+          <div className="w-full max-w-md h-auto" style={{aspectRatio: '2 / 1.15'}}> {/* Aumentado max-w para sm ou md se quiser maior */}
             <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                 <Pie
@@ -210,25 +201,25 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, d
                     <Cell key={`cell-swing-${entry.name}`} fill={entry.colorForPie} stroke="#fff" strokeWidth={2} />
                   ))}
                 </Pie>
-                {/* Não usamos o Text do Recharts aqui para posicionar abaixo */}
+                {/* Tooltip removido */}
               </PieChart>
             </ResponsiveContainer>
           </div>
 
           {/* Texto do Swing (REAL) e "p.p." - ABAIXO do gráfico */}
-          <div className="text-center mt-3"> {/* Ajuste a margem superior conforme necessário */}
-            <span className="text-2xl font-semibold" style={{color: graphTargetLegend ? colorMap[graphTargetLegend] ?? TEXT_COLOR_DARK : TEXT_COLOR_DARK }}>
+          <div className="text-center mt-4"> {/* Margem aumentada para separar do gráfico */}
+            <span className="text-4xl font-extrabold" style={{color: graphTargetLegend ? colorMap[graphTargetLegend] ?? TEXT_COLOR_DARK : TEXT_COLOR_DARK }}> {/* AUMENTADO PESO E TAMANHO */}
                 {actualSwingValue >= 0 ? '+' : ''}{actualSwingValue.toFixed(1)}
             </span>
-            <span className="text-lg text-gray-500 ml-1">
+            <span className="text-xl text-gray-500 ml-1"> {/* Aumentado para text-xl */}
                 p.p.
             </span>
           </div>
 
           {/* Frase de Contexto da Movimentação (Tag Colorida) - ABAIXO do texto do swing */}
-          <div className="mt-3 text-center"> {/* Ajuste a margem superior */}
+          <div className="mt-3 text-center">
             <span
-                className="inline-block px-3 py-1.5 rounded-full text-sm font-semibold shadow" // Tamanho da tag ajustado
+                className="inline-block px-3 py-1.5 rounded-full text-base font-semibold shadow-sm" // Aumentado para text-base e shadow-sm
                 style={{ backgroundColor: contextualSwingColor, color: tagTextColor }}
             >
               {contextualSwingText}
