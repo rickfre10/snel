@@ -292,11 +292,11 @@ export default function StatePage() {
 
   // --- Filtrar layout do mapa para o estado atual ---
   const filteredMapLayout = useMemo(() => {
-    if (!stateId || !haagarStateLayout) return []; // districtsData não é necessário se já usado em districtIdsInStateSet
+    if (!stateId || !haagarDistrictLayout) return []; // districtsData não é necessário se já usado em districtIdsInStateSet
     const districtIdsInStateSet = new Set(
       districtsData.filter((d: DistrictInfoFromData) => d.uf === stateId).map((d: DistrictInfoFromData) => String(d.district_id))
     );
-    return haagarStateLayout.filter(layoutItem => districtIdsInStateSet.has(layoutItem.id));
+    return haagarDistrictLayout.filter(layoutItem => districtIdsInStateSet.has(layoutItem.id));
   }, [stateId]); // Removido districtsData e haagarMapLayout se forem estáticos globais importados
 
   // --- Lógica de Renderização ---
