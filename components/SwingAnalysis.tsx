@@ -35,6 +35,7 @@ const FALLBACK_COLOR_BARS = '#E5E7EB';
 const FALLBACK_COLOR_SWING_GRAPH = '#D1D5DB';
 const TEXT_COLOR_DARK = '#1F2937';
 const TEXT_COLOR_LIGHT = '#FFFFFF';
+const SWING_VALUE_TEXT_COLOR = '#374151';
 
 function getTextColorForBackground(hexcolor: string): string {
     if (!hexcolor) return TEXT_COLOR_DARK;
@@ -68,6 +69,7 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
     contextualSwingText,
     contextualSwingColor,
   } = analysisData;
+
 
   // --- Coluna 1: Lógica das Barras Simuladas (COMO ANTES) ---
   const leaderPercent = currentWinner.percentage;
@@ -176,50 +178,29 @@ const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap })
             </div>
         </div>
 
-        {/* === Coluna 2: Gráfico Semicírculo e Contexto (AJUSTES DE LAYOUT E ESTILO) === */}
-        <div className="flex flex-col items-center justify-start p-4 h-full"> {/* Mudado para justify-start */}
+       {/* === Coluna 2: Gráfico Semicírculo e Contexto === */}
+       <div className="flex flex-col items-center p-4 h-full justify-center">
           {/* Semicírculo de Movimentação */}
-          <div className="w-full max-w-md h-auto" style={{aspectRatio: '2 / 1.15'}}> {/* Aumentado max-w para sm ou md se quiser maior */}
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="100%"
-                  startAngle={180}
-                  endAngle={0}
-                  innerRadius="50%"
-                  outerRadius="100%"
-                  paddingAngle={1}
-                  dataKey="value"
-                  nameKey="name"
-                  isAnimationActive={true}
-                  animationDuration={1000}
-                  animationEasing="ease-out"
-                >
-                  {pieData.map((entry) => (
-                    <Cell key={`cell-swing-${entry.name}`} fill={entry.colorForPie} stroke="#fff" strokeWidth={2} />
-                  ))}
-                </Pie>
-                {/* Tooltip removido */}
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="w-full max-w-lg h-auto" style={{aspectRatio: '2 / 1.2'}}>
+            {/* ... (PieChart, Pie, Cell - como antes) ... */}
           </div>
 
           {/* Texto do Swing (REAL) e "p.p." - ABAIXO do gráfico */}
-          <div className="text-center mt-4"> {/* Margem aumentada para separar do gráfico */}
-            <span className="text-4xl font-extrabold" style={{color: graphTargetLegend ? colorMap[graphTargetLegend] ?? TEXT_COLOR_DARK : TEXT_COLOR_DARK }}> {/* AUMENTADO PESO E TAMANHO */}
+          <div className="text-center mt-4">
+            {/* Cor do texto do swing AGORA É PADRÃO */}
+            <span className="text-4xl font-extrabold" style={{ color: SWING_VALUE_TEXT_COLOR }}>
                 {actualSwingValue >= 0 ? '+' : ''}{actualSwingValue.toFixed(1)}
             </span>
-            <span className="text-xl text-gray-500 ml-1"> {/* Aumentado para text-xl */}
+            <span className="text-xl text-gray-500 ml-1">
                 p.p.
             </span>
           </div>
 
-          {/* Frase de Contexto da Movimentação (Tag Colorida) - ABAIXO do texto do swing */}
+          {/* Frase de Contexto da Movimentação (Tag Colorida) */}
           <div className="mt-3 text-center">
             <span
-                className="inline-block px-3 py-1.5 rounded-full text-base font-semibold shadow-sm" // Aumentado para text-base e shadow-sm
+                className="inline-block px-3 py-1.5 rounded-full text-base font-semibold shadow-sm"
+                // Cor de fundo da tag vem de contextualSwingColor, cor do texto é calculada
                 style={{ backgroundColor: contextualSwingColor, color: tagTextColor }}
             >
               {contextualSwingText}

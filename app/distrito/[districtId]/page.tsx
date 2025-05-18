@@ -150,70 +150,85 @@ const previousResultForThisDistrict = useMemo(() => {
         return null;
     }
 
-    const currentWinner = districtResults.votes[0]; // Presume que districtResults.votes está ordenado
+    const currentWinner = districtResults.votes[0];
     const currentRunnerUp = districtResults.votes[1] || null;
     const previousResult = previousDistrictResultsData.find(d => d.district_id === districtId);
 
-    // Default values for swing display
-    let analysis = {
-        currentWinner,
-        currentRunnerUp,
-        previousWinnerInfo: previousResult || null,
-        actualSwingValue: 0,
-        swingValueForGraph: 0,
-        graphTargetLegend: currentWinner.parl_front_legend,
-        graphOpponentLegend: currentRunnerUp?.parl_front_legend || "Outros",
-        contextualSwingText: "Análise de movimentação não disponível.",
-        contextualSwingColor: coalitionColorMap[currentWinner.parl_front_legend!] ?? FALLBACK_COLOR,
-    };
+    // --- CORREÇÃO AQUI: Usar 'let' e inicializar ---
+    let actualSwingValue: number = 0;
+    // ----------------------------------------------
+    let swingText = "";
+    let swingValueForGraph = 0;
+    let graphTargetLegend = currentWinner.parl_front_legend;
+    let graphOpponentLegend: string | null = null; // Inicializa como null
+    let finalContextualSwingColor = '#E5E7EB'; // Cor neutra padrão (Tailwind gray-200)
+
 
     if (!previousResult) {
-        analysis.contextualSwingText = "Dados de 2018 não disponíveis para este distrito.";
-        analysis.graphOpponentLegend = "Anterior"; // Genérico
-        return analysis;
-    }
+        actualSwingValue = 0; // Ou currentWinner.percentage se preferir mostrar algo
+        swingText = "Dados de 2018 não disponíveis para este distrito.";
+        graphTargetLegend = currentWinner.parl_front_legend;
+        graphOpponentLegend = currentRunnerUp?.parl_front_legend || "Outros";
+        finalContextualSwingColor = graphTargetLegend ? (coalitionColorMap[graphTargetLegend] ?? FALLBACK_COLOR) : FALLBACK_COLOR;
 
-    const currentWinnerLegend = currentWinner.parl_front_legend;
-    const previousWinnerLegend = previousResult.winner_2018_legend;
+    } else { // Só entra aqui se previousResult existir
+        graphOpponentLegend = previousResult.winner_2018_legend; // Definido aqui
+        const currentWinnerLegend = currentWinner.parl_front_legend;
+        const previousWinnerLegend = previousResult.winner_2018_legend;
 
-    if (currentWinnerLegend && currentWinnerLegend === previousWinnerLegend) { // Manteve a frente
-        const swing = currentWinner.percentage - previousResult.winner_2018_percentage;
-        analysis.actualSwingValue = swing;
-        analysis.swingValueForGraph = Math.max(-10, Math.min(10, swing));
-        analysis.graphTargetLegend = currentWinnerLegend; // Foco na frente que manteve
-        analysis.graphOpponentLegend = currentRunnerUp?.parl_front_legend || "Outros"; // Referência visual no gráfico
-        analysis.contextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
+        if (currentWinnerLegend && currentWinnerLegend === previousWinnerLegend) { // Manteve a frente
+            const swing = currentWinner.percentage - previousResult.winner_2018_percentage;
+            actualSwingValue = swing; // Atribui à variável 'let'
+            swingValueForGraph = Math.max(-10, Math.min(10, swing));
+            // graphOpponentLegend já é previousWinnerLegend, mas para o texto pode ser o runnerUp
+            const opponentForText = currentRunnerUp?.parl_front_legend || "Outros";
 
-        if (swing > 0.05) { // Usar um pequeno limiar para "mudança significativa"
-            analysis.contextualSwingText = `Movimentação de +${swing.toFixed(1)} p.p. para ${currentWinnerLegend}.`;
-        } else if (swing < -0.05) {
-            analysis.contextualSwingText = `Movimentação de ${swing.toFixed(1)} p.p. para ${currentWinnerLegend} (em favor de ${analysis.graphOpponentLegend}).`;
+            if (swing > 0.05) {
+                swingText = `De ${opponentForText} para ${currentWinnerLegend}.`;
+                finalContextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
+            } else if (swing < -0.05) {
+                swingText = `De ${currentWinnerLegend} para ${opponentForText}`;
+                finalContextualSwingColor = opponentForText !== "Outros" && opponentForText ? (coalitionColorMap[opponentForText] ?? FALLBACK_COLOR) : FALLBACK_COLOR;
+            } else {
+                swingText = `${currentWinnerLegend} mantém`;
+                // finalContextualSwingColor permanece o cinza padrão
+            }
+        } else if (currentWinnerLegend && previousWinnerLegend) { // Virada
+            const previousWinnerCurrentPerformance = districtResults.votes.find(
+                v => v.parl_front_legend === previousWinnerLegend
+            );
+            const previousWinnerCurrentPercentage = previousWinnerCurrentPerformance?.percentage ?? 0;
+            const swing = previousResult.winner_2018_percentage - previousWinnerCurrentPercentage;
+            actualSwingValue = swing; // Atribui à variável 'let'
+            swingValueForGraph = Math.max(-10, Math.min(10, swing));
+            // graphTargetLegend é currentWinnerLegend
+            // graphOpponentLegend é previousWinnerLegend (já definido)
+            swingText = `De ${previousWinnerLegend} para ${currentWinnerLegend}.`;
+            finalContextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
+        } else if (currentWinnerLegend) { // Ganhou, mas anterior não tinha vencedor claro ou frente diferente
+            actualSwingValue = currentWinner.percentage; // Atribui à variável 'let'
+            swingText = `${currentWinnerLegend} é o novo líder.`;
+            finalContextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
+            graphOpponentLegend = "Cenário Anterior";
         } else {
-            analysis.contextualSwingText = `${currentWinnerLegend} manteve a liderança com performance similar a 2018.`;
+            actualSwingValue = 0; // Atribui à variável 'let'
+            swingText = "Resultado indefinido.";
         }
-    } else if (currentWinnerLegend && previousWinnerLegend) { // Virada
-        const previousWinnerCurrentVoteObj = districtResults.votes.find(
-            v => v.parl_front_legend === previousWinnerLegend
-        );
-        const previousWinnerCurrentPercentage = previousWinnerCurrentVoteObj?.percentage ?? 0;
-
-        // Swing é a "perda" da frente anterior, que conta como "ganho" para a nova.
-        const swing = previousResult.winner_2018_percentage - previousWinnerCurrentPercentage;
-        analysis.actualSwingValue = swing; // Este é o swing positivo para o currentWinner
-        analysis.swingValueForGraph = Math.max(-10, Math.min(10, swing));
-        analysis.graphTargetLegend = currentWinnerLegend; // Foco na nova frente vencedora
-        analysis.graphOpponentLegend = previousWinnerLegend; // Referência é a antiga vencedora
-        analysis.contextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
-        analysis.contextualSwingText = `Movimentação de +${swing.toFixed(1)} p.p. de ${previousWinnerLegend} para ${currentWinnerLegend}.`;
-    } else if (currentWinnerLegend) { // Ganhou, mas anterior não tinha vencedor claro ou frente diferente não encontrada nos atuais
-        analysis.contextualSwingText = `${currentWinnerLegend} é o novo líder. Comparação direta com 2018 não aplicável.`;
-        analysis.graphTargetLegend = currentWinnerLegend;
-        analysis.graphOpponentLegend = "Cenário Anterior";
-        analysis.contextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
     }
-    return analysis;
 
-}, [districtId, currentDistrictInfo, districtResults, previousDistrictResultsData, coalitionColorMap]); // Adicionado coalitionColorMap
+    return {
+        currentWinner,
+        currentRunnerUp,
+        previousWinnerInfo: previousResult || null, // Garante que é o tipo certo
+        actualSwingValue, // Agora usa a variável 'let'
+        swingValueForGraph,
+        graphTargetLegend,
+        graphOpponentLegend,
+        contextualSwingText: swingText,
+        contextualSwingColor: finalContextualSwingColor,
+    };
+// Adicione previousDistrictResultsData e coalitionColorMap às dependências
+}, [districtId, currentDistrictInfo, districtResults, previousDistrictResultsData, coalitionColorMap]);
 
 
   // --- Validações de Loading/Erro (como no seu código) ---
