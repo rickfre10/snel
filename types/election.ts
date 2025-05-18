@@ -87,4 +87,12 @@ export interface CandidateVote {
     swing: number; // currentPercent - previousPercent
   }
 
+  export interface DistrictInfoFromData {
+    districtId: number;
+    district_name: string;
+    uf: string;
+    uf_name: string;
+    voters_qtn: number;
+    polls_qtn: number;
+  }
   

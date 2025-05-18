@@ -224,9 +224,6 @@ export default function DistrictDetailPage() {
   // currentDistrictInfo é verificado aqui, então seu uso posterior no cabeçalho é seguro.
   if (!currentDistrictInfo) { return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div> }
 
-  // --- Lógica de Status do Distrito ---
-  const urnasTotais = 1500;   // MOCK - MANTIDO POR AGORA, pois polls_qtn não está em DistrictInfoFromData.
-                                // Idealmente, este valor viria de currentDistrictInfo.polls_qtn ou da API.
 
   const leaderCandidate = districtResults.votes.length > 0 ? districtResults.votes[0] : null;
   let districtWinnerLegend: string | undefined = undefined; // Alterado para undefined para melhor correspondência com a prop
@@ -277,7 +274,7 @@ export default function DistrictDetailPage() {
                 districtWinnerTagTextColor={districtWinnerTagTextColor}
                 areVotesBeingCounted={areVotesBeingCountedForDisplay}
                 apuratedVotesCount={apuratedVotesCountForDisplay}
-                totalPollsCount={urnasTotais}
+                totalPollsCount={currentDistrictInfo?.polls_qtn || 0}
             />
         </div>
       </div>
