@@ -1,29 +1,22 @@
 // components/SwingAnalysis.tsx
 "use client";
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Text } from 'recharts';
-// Importe os tipos que ele vai receber (CandidateVote pode não ser necessário aqui se não for usado diretamente)
+import { PieChart, Pie, Cell, ResponsiveContainer, Text as RechartsText } from 'recharts'; // Renomeado Text para evitar conflito
 import type { CandidateVote } from '@/types/election';
-import type { PreviousDistrictResult } from '@/lib/previousElectionData';
+import type { PreviousDistrictResult } from '@/lib/previousElectionData'; // Supondo que você exportou isso
 
-// Tipagem para os dados processados que o componente CandidateVote espera
-interface CandidateVoteProcessed extends CandidateVote {
-  percentage: number;
-  numericVotes: number;
-}
-
-// Interface para os dados que este componente recebe
-// Garanta que esta interface bata com o que é produzido em page.tsx
+// Interface para os dados que este componente espera
+// Esta é a mesma SwingAnalysisData que definimos no page.tsx (useMemo)
 export interface SwingAnalysisData {
-  currentWinner: CandidateVoteProcessed | null;
-  currentRunnerUp: CandidateVoteProcessed | null;
+  currentWinner: (CandidateVote & { numericVotes: number; percentage: number; }) | null;
+  currentRunnerUp: (CandidateVote & { numericVotes: number; percentage: number; }) | null;
   previousWinnerInfo: PreviousDistrictResult | null;
   actualSwingValue: number;
   swingValueForGraph: number; // Valor de -10 a +10
   graphTargetLegend: string | null;
   graphOpponentLegend: string | null;
-  contextualSwingText: string; // <-- NOME CORRETO DA PROPRIEDADE
-  contextualSwingColor: string;
+  contextualSwingText: string;
+  contextualSwingColor: string; // Cor para a tag do contextualSwingText
 }
 
 interface SwingAnalysisProps {
@@ -32,155 +25,194 @@ interface SwingAnalysisProps {
   districtName: string;
 }
 
-const FALLBACK_COLOR_SWING = '#E0E0E0'; // Cor neutra para oponente no gráfico de swing ou fallback geral
+const FALLBACK_COLOR_BARS = '#D1D5DB'; // Cinza para barras sem cor específica
+const FALLBACK_COLOR_SWING_GRAPH = '#A9A9A9'; // Cinza mais escuro para oponente no gráfico de swing
 const TEXT_COLOR_DARK = '#1F2937';
 const TEXT_COLOR_LIGHT = '#FFFFFF';
 
 function getTextColorForBackground(hexcolor: string): string {
     if (!hexcolor) return TEXT_COLOR_DARK;
     hexcolor = hexcolor.replace("#", "");
-    if (hexcolor.length !== 6) return TEXT_COLOR_DARK;
+    if (hexcolor.length !== 6 && hexcolor.length !== 3) return TEXT_COLOR_DARK;
+    if (hexcolor.length === 3) {
+        hexcolor = hexcolor.split('').map(char => char + char).join('');
+    }
     try {
         const r = parseInt(hexcolor.substring(0, 2), 16);
         const g = parseInt(hexcolor.substring(2, 4), 16);
         const b = parseInt(hexcolor.substring(4, 6), 16);
         const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        return (yiq >= 128) ? TEXT_COLOR_DARK : TEXT_COLOR_LIGHT;
+        return (yiq >= 128 || hexcolor.toLowerCase() === 'ffffff') ? TEXT_COLOR_DARK : TEXT_COLOR_LIGHT;
     } catch (e) { return TEXT_COLOR_DARK; }
 }
 
-const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap, districtName }) => {
+const SwingAnalysis: React.FC<SwingAnalysisProps> = ({ analysisData, colorMap }) => {
   if (!analysisData || !analysisData.currentWinner) {
     return <p className="text-center text-gray-500 py-10">{analysisData?.contextualSwingText || "Dados insuficientes para análise de movimentação."}</p>;
   }
 
-  // Desestruturando as propriedades corretas
   const {
     currentWinner,
     currentRunnerUp,
-    previousWinnerInfo, // Renomeado de previousResult para corresponder ao useMemo
+    previousWinnerInfo,
     actualSwingValue,
-    swingValueForGraph,
+    swingValueForGraph, // Capado em +/-10
     graphTargetLegend,
     graphOpponentLegend,
-    contextualSwingText, // <-- USA O NOME CORRETO
+    contextualSwingText,
     contextualSwingColor,
   } = analysisData;
 
-  // Dados para o gráfico de semicírculo
-  const targetPieValue = 50 + (swingValueForGraph * 2.5); // Era 5 na resposta anterior, 2.5 para range -10 a 10 dar -25 a +25, resultando em 25% a 75% visual. Se quiser 0-100% visual para -10 a 10, então * 5
-  // Para 50 + (S_capado * 5) -> S de -10 a 10 -> 0 a 100 visual
-  // const targetPieValue = 50 + (swingValueForGraph * 5); // Mantendo a lógica de 1pp = 5% visual
+  // --- Coluna 1: Lógica das Barras Simuladas ---
+  const leaderPercent = currentWinner.percentage;
+  const leaderLegend = currentWinner.parl_front_legend;
+  const leaderColor = leaderLegend ? (colorMap[leaderLegend] ?? FALLBACK_COLOR_BARS) : FALLBACK_COLOR_BARS;
+
+  let referencePercent = 0;
+  let referenceLegend: string | null = null;
+  let referenceColor = FALLBACK_COLOR_BARS;
+  let differenceBlock: React.ReactNode = null;
+  const barContainerHeight = "h-40"; // Altura base para as "colunas"
+
+  if (previousWinnerInfo && leaderLegend !== previousWinnerInfo.winner_2018_legend) { // Virada
+    referenceLegend = previousWinnerInfo.winner_2018_legend;
+    referencePercent = previousWinnerInfo.winner_2018_percentage;
+    referenceColor = referenceLegend ? (colorMap[referenceLegend] ?? FALLBACK_COLOR_BARS) : FALLBACK_COLOR_BARS;
+  } else if (currentRunnerUp) { // Manteve (ou não há dados anteriores, compara com 2º atual)
+    referenceLegend = currentRunnerUp.parl_front_legend;
+    referencePercent = currentRunnerUp.percentage;
+    referenceColor = referenceLegend ? (colorMap[referenceLegend] ?? FALLBACK_COLOR_BARS) : FALLBACK_COLOR_BARS;
+
+    // Bloco de diferença só se manteve e há runnerUp
+    if (leaderLegend === previousWinnerInfo?.winner_2018_legend) {
+        const diffPp = leaderPercent - referencePercent;
+        differenceBlock = (
+            <div className="w-full h-1/4 bg-gray-300 flex items-center justify-center text-gray-700 font-semibold text-sm">
+                +{diffPp.toFixed(1)} p.p.
+            </div>
+        );
+    }
+  }
+  // Ajusta altura da barra de referência
+  // Se virou, altura proporcional. Se manteve, 75% (e tem o differenceBlock)
+  const referenceBarHeightPercentage = (previousWinnerInfo && leaderLegend !== previousWinnerInfo.winner_2018_legend)
+    ? (referencePercent / leaderPercent) * 100 // Proporcional se virada
+    : 75; // 75% se manteve (differenceBlock ocupa os outros 25%)
+  const cappedReferenceBarHeightPercentage = Math.min(100, Math.max(0, referenceBarHeightPercentage));
+
+
+  // --- Coluna 2: Lógica do Semicírculo ---
+  const targetPieValue = 50 + (swingValueForGraph * 5); // Swing visual de 0% a 100%
   const opponentPieValue = 100 - targetPieValue;
 
-
   const pieData = [
-    { name: graphTargetLegend || "Foco", value: Math.max(0, targetPieValue), color: graphTargetLegend ? (colorMap[graphTargetLegend] ?? FALLBACK_COLOR_SWING) : '#3B82F6' },
-    { name: graphOpponentLegend || "Referência", value: Math.max(0, opponentPieValue), color: graphOpponentLegend ? (colorMap[graphOpponentLegend] ?? FALLBACK_COLOR_SWING) : FALLBACK_COLOR_SWING },
+    { name: graphTargetLegend || "Foco", value: Math.max(0, targetPieValue), colorForPie: graphTargetLegend ? (colorMap[graphTargetLegend] ?? FALLBACK_COLOR_SWING_GRAPH) : '#3B82F6' },
+    { name: graphOpponentLegend || "Referência", value: Math.max(0, opponentPieValue), colorForPie: graphOpponentLegend ? (colorMap[graphOpponentLegend] ?? FALLBACK_COLOR_SWING_GRAPH) : FALLBACK_COLOR_SWING_GRAPH },
   ];
   const sumPieValues = pieData.reduce((s, p) => s + p.value, 0);
-  if (sumPieValues > 0 && sumPieValues !== 100) {
+  if (sumPieValues > 0 && Math.abs(sumPieValues - 100) > 0.1) { // Pequena tolerância para float
       const scaleFactor = 100 / sumPieValues;
       pieData.forEach(p => p.value *= scaleFactor);
   } else if (sumPieValues === 0) {
       pieData[0].value = 50; pieData[1].value = 50;
   }
 
-  const currentMarginVotes = currentRunnerUp ? currentWinner.numericVotes - currentRunnerUp.numericVotes : currentWinner.numericVotes;
-  const currentMarginPercent = currentRunnerUp ? currentWinner.percentage - currentRunnerUp.percentage : currentWinner.percentage;
-
-  // Usa COALITION_FALLBACK_COLOR ou FALLBACK_COLOR_SWING (defina uma e use consistentemente)
-  const defaultCoalitionColor = '#6b7280'; // Definindo aqui para substituir COALITION_FALLBACK_COLOR
+  const tagTextColor = getTextColorForBackground(contextualSwingColor);
 
   return (
     <div className="space-y-6">
-      {/* Remover o título h3 daqui, já que você pediu para tirar títulos */}
-      {/* <h3 className="text-xl font-semibold text-gray-800 mb-4">Análise de Movimentação: {districtName}</h3> */}
+      <div className="grid md:grid-cols-2 gap-6 items-stretch"> {/* items-stretch para colunas de mesma altura */}
 
-      <div className="grid md:grid-cols-2 gap-6 items-start">
-        {/* Coluna 1: Informações Textuais */}
-        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Resultado Atual (2022)</p>
-            {currentWinner && (
-              <div className="mt-1">
-                <span
-                  className="font-bold px-2 py-0.5 rounded text-xs"
-                  style={{
-                    backgroundColor: currentWinner.parl_front_legend ? colorMap[currentWinner.parl_front_legend] ?? defaultCoalitionColor : defaultCoalitionColor,
-                    color: getTextColorForBackground(currentWinner.parl_front_legend ? colorMap[currentWinner.parl_front_legend] ?? defaultCoalitionColor : defaultCoalitionColor)
-                  }}
-                >
-                  {currentWinner.parl_front_legend || 'N/D'}
-                </span>
-                <span className="ml-2 font-semibold text-gray-800">{currentWinner.candidate_name}</span>
-                <p className="text-xl font-bold text-gray-900">{currentWinner.percentage.toFixed(2)}%</p>
-                <p className="text-xs text-gray-500">({currentWinner.numericVotes.toLocaleString('pt-BR')} votos)</p>
-              </div>
-            )}
-            {currentRunnerUp && (
-               <p className="text-sm text-gray-600 mt-1">
-                 Vantagem sobre 2º ({currentRunnerUp.candidate_name || 'N/D'} - {currentRunnerUp.parl_front_legend || 'N/D'}):
-                 <span className="font-semibold"> {currentMarginVotes.toLocaleString('pt-BR')} votos ({currentMarginPercent.toFixed(2)} p.p.)</span>
-               </p>
-            )}
-          </div>
+        {/* === Coluna 1: Comparativo de Votos === */}
+        <div className={`p-4 bg-gray-50 rounded-lg shadow-sm flex flex-col justify-between ${barContainerHeight}`}>
+            <div className="flex items-end justify-around h-3/4"> {/* Barras ocupam 3/4 da altura */}
+                {/* Barra Líder Atual */}
+                <div className="flex flex-col items-center w-2/5">
+                    <div className="text-xs text-center text-gray-600 h-8 break-words">{leaderLegend || 'Líder'}</div>
+                    <div
+                        className="w-full rounded-t-md flex items-center justify-center"
+                        style={{ backgroundColor: leaderColor, height: '100%' }}
+                    >
+                        <span className="font-bold text-xl" style={{color: getTextColorForBackground(leaderColor)}}>
+                            {leaderPercent.toFixed(1)}%
+                        </span>
+                    </div>
+                </div>
 
-          <div className="border-t border-gray-200 pt-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Referência (Eleição Anterior 2018)</p>
-            {previousWinnerInfo ? ( // Mudado de previousResult para previousWinnerInfo
-              <div className="mt-1">
-                <span
-                  className="font-bold px-2 py-0.5 rounded text-xs"
-                  style={{
-                    backgroundColor: previousWinnerInfo.winner_2018_legend ? colorMap[previousWinnerInfo.winner_2018_legend] ?? FALLBACK_COLOR_SWING : FALLBACK_COLOR_SWING,
-                    color: getTextColorForBackground(previousWinnerInfo.winner_2018_legend ? colorMap[previousWinnerInfo.winner_2018_legend] ?? FALLBACK_COLOR_SWING : FALLBACK_COLOR_SWING)
-                  }}
-                >
-                  {previousWinnerInfo.winner_2018_legend}
-                </span>
-                <span className="ml-2 font-semibold text-gray-800">{previousWinnerInfo.winner_2018_percentage?.toFixed(2)}%</span>
-              </div>
-            ) : (
-              <p className="text-gray-500 italic mt-1">Sem dados de 2018 para este distrito.</p>
-            )}
-          </div>
+                {/* Barra Referência */}
+                <div className="flex flex-col items-center w-2/5">
+                    <div className="text-xs text-center text-gray-600 h-8 break-words">{referenceLegend || 'Referência'}</div>
+                     <div className="w-full h-full flex flex-col-reverse rounded-t-md"> {/* Flex col reverse para o differenceBlock ir para cima */}
+                        <div
+                            className="w-full rounded-t-md flex items-center justify-center"
+                            style={{
+                                backgroundColor: referenceColor,
+                                height: differenceBlock ? `${cappedReferenceBarHeightPercentage}%` : '100%' // Se não tem differenceBlock, ocupa 100% da altura proporcional
+                            }}
+                        >
+                            <span className="font-bold text-lg" style={{color: getTextColorForBackground(referenceColor)}}>
+                                {referencePercent.toFixed(1)}%
+                            </span>
+                        </div>
+                        {differenceBlock} {/* Bloco cinza da diferença, se aplicável */}
+                    </div>
+                </div>
+            </div>
+            {/* Informação da Eleição Anterior */}
+            <div className="mt-3 pt-3 border-t border-gray-200 text-center bg-gray-100 p-2 rounded-b-md">
+                <p className="text-xs text-gray-600">
+                    Eleição anterior (2018): {previousWinnerInfo ?
+                    `${previousWinnerInfo.winner_2018_legend} com ${previousWinnerInfo.winner_2018_percentage.toFixed(1)}%`
+                    : "Dados não disponíveis"}
+                </p>
+            </div>
         </div>
 
-        {/* Coluna 2: Gráfico Semicírculo */}
-        <div className="flex flex-col items-center p-4">
-           {/* Removido o título h4 daqui */}
-          <p className="text-xs text-gray-500 mb-2 text-center">
-            {graphTargetLegend || 'Frente A'} vs {graphOpponentLegend || 'Frente B'}
-          </p>
-          <div className="w-full max-w-xs h-auto" style={{aspectRatio: '2 / 1'}}>
+        {/* === Coluna 2: Gráfico Semicírculo e Contexto === */}
+        <div className="flex flex-col items-center p-4 bg-gray-50 rounded-lg shadow-sm">
+          {/* Semicírculo de Movimentação - Ajuste de tamanho */}
+          <div className="w-full max-w-md h-auto" style={{aspectRatio: '2 / 1'}}> {/* Aumentado max-w e aspect ratio */}
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}> {/* Removido margin se não necessário */}
                 <Pie
                   data={pieData}
-                  cx="50%" cy="100%" startAngle={180} endAngle={0}
-                  innerRadius="55%" outerRadius="100%"
-                  paddingAngle={1} dataKey="value" nameKey="name"
-                  isAnimationActive={true} animationDuration={800} animationEasing="ease-out"
+                  cx="50%"
+                  cy="100%" // Centro para baixo para formar o hemiciclo
+                  startAngle={180}
+                  endAngle={0}
+                  innerRadius="50%" // Ajuste para espessura da rosca
+                  outerRadius="100%"
+                  paddingAngle={1}
+                  dataKey="value"
+                  nameKey="name"
+                  isAnimationActive={true}
+                  animationDuration={1000}
+                  animationEasing="ease-out"
                 >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="#fff" strokeWidth={2}/>
+                  {pieData.map((entry) => ( // Removido index não utilizado
+                    <Cell key={`cell-${entry.name}`} fill={entry.colorForPie} stroke="#fff" strokeWidth={2} />
                   ))}
                 </Pie>
-                {/* Tooltip removido */}
+                {/* Tooltip Removido conforme solicitado */}
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="relative text-center mt-[-3.5rem] sm:mt-[-4.5rem] z-10 pointer-events-none">
-            <p className="text-3xl font-bold" style={{color: graphTargetLegend ? colorMap[graphTargetLegend] : TEXT_COLOR_DARK }}>
+          {/* Texto Central no Semicírculo (Swing Real) */}
+          <div className="relative text-center mt-[-4rem] sm:mt-[-5.5rem] z-10 pointer-events-none"> {/* Ajuste vertical negativo maior */}
+            <p className="text-4xl font-bold" style={{color: graphTargetLegend ? colorMap[graphTargetLegend] : TEXT_COLOR_DARK }}> {/* Fonte maior */}
                 {actualSwingValue >= 0 ? '+' : ''}{actualSwingValue.toFixed(1)}
             </p>
-            <p className="text-sm text-gray-500">p.p.</p>
+            <p className="text-md text-gray-500">p.p.</p> {/* Tamanho 'md' para 'p.p.' */}
           </div>
-          {/* Frase de Contexto da Movimentação */}
-          <p className="mt-3 text-sm font-semibold text-center" style={{color: contextualSwingColor}}>
-              {contextualSwingText} {/* Usa a propriedade correta */}
-          </p>
+          {/* Frase de Contexto da Movimentação (Tag Colorida) */}
+          <div className="mt-4 text-center">
+            <span
+                className="inline-block px-3 py-1.5 rounded-full text-sm font-semibold shadow"
+                style={{ backgroundColor: contextualSwingColor, color: tagTextColor }}
+            >
+              {contextualSwingText}
+            </span>
+          </div>
         </div>
       </div>
     </div>
