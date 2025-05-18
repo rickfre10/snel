@@ -163,7 +163,7 @@ export interface PreviousDistrictResult {
     { uf: "MP", percentages: { "CON": 1.16, "NAC": 5.38, "PSD": 16.91, "PSH": 4.57, "TDS": 55.09, "UNI": 16.89 } },
     { uf: "PB", percentages: { "CON": 12.58, "NAC": 3.42, "PSD": 31.13, "PSH": 9.47, "TDS": 18.36, "UNI": 25.04 } },
     { uf: "PN", percentages: { "CON": 7.44, "NAC": 5.37, "PSD": 22.61, "PSH": 2.15, "TDS": 16.48, "UNI": 45.95 } },
-    { uf: "TP", percentages: { "CON": 20.42, "NAC": 8.39, "PSD": 15.57, "PSH": 4.13, "TDS": 12.46, "UNI": 39.03 } },
+    { uf: "TP", percentages: { "CON": 5.42, "NAC": 8.39, "PSD": 15.57, "PSH": 4.13, "TDS": 27.46, "UNI": 39.03 } },
   ];
   
   // Dados dos assentos proporcionais por estado da eleição anterior
@@ -173,5 +173,5 @@ export interface PreviousDistrictResult {
     { uf: "MP", seats: { "CON": 0, "NAC": 1, "PSD": 4, "PSH": 1, "TDS": 13, "UNI": 4 }, total_previous_pr_seats: 23 }, 
     { uf: "PB", seats: { "CON": 1, "NAC": 0, "PSD": 3, "PSH": 1, "TDS": 2, "UNI": 2 }, total_previous_pr_seats: 9 },
     { uf: "PN", seats: { "CON": 0, "NAC": 0, "PSD": 1, "PSH": 0, "TDS": 1, "UNI": 2 }, total_previous_pr_seats: 4 },
-    { uf: "TP", seats: { "CON": 0, "NAC": 0, "PSD": 0, "PSH": 0, "TDS": 1, "UNI": 1 }, total_previous_pr_seats: 2 }
+    { uf: "TP", seats: { "CON": 0, "NAC": 0, "PSD": 0, "PSH": 0, "TDS": 0, "UNI": 1 }, total_previous_pr_seats: 1 }
   ];
