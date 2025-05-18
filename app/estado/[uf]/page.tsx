@@ -333,7 +333,6 @@ export default function StatePage() {
 
       <header className="text-center">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">{stateName} ({stateId})</h1> {/* Adicionado stateId */}
-        <p className="text-lg sm:text-xl text-gray-600">Resultados Eleitorais Estaduais - {pageData.time}%</p>
       </header>
 
       {/* Botões de Navegação da Visão */}
@@ -351,10 +350,9 @@ export default function StatePage() {
       {/* Renderização Condicional da Visão */}
       <div className="mt-4">
           {currentView === 'placarEstadual' && ( <section> <p className="text-sm text-gray-500 mb-3 text-center"> Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState ?? 0}) {' | '}Maioria: {majorityThresholdStateChamber} </p> <SeatCompositionPanel seatData={totalSeatsByFrontForState} colorMap={coalitionColorMap} totalSeats={totalSeatsInStateChamber} /> </section> )}
-          {currentView === 'votacaoProporcional' && (totalPRSeatsForThisState ?? 0) > 0 && ( <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Detalhes da Alocação Proporcional</h3> <ProportionalSeatAllocationDetails allocatedSeats={proportionalSeatsByFront} colorMap={coalitionColorMap} stateName={stateName} totalSeatsInState={totalPRSeatsForThisState!} majorityThreshold={majorityThresholdPR} rawVotes={proportionalVotesInput} /> </div> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Gráfico de Votos Proporcionais</h3> {proportionalVotesInput.length > 0 ? ( <ProportionalBarChart data={proportionalVotesInput.map(pv => ({ name: pv.legend, value: pv.votes }))} colorMap={coalitionColorMap} /> ) : ( <p className="text-center text-gray-500 py-10">Sem dados de votos proporcionais para este estado.</p> )} </div> </section> )}
+          {currentView === 'votacaoProporcional' && (totalPRSeatsForThisState ?? 0) > 0 && ( <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"> <div> <ProportionalSeatAllocationDetails allocatedSeats={proportionalSeatsByFront} colorMap={coalitionColorMap} stateName={stateName} totalSeatsInState={totalPRSeatsForThisState!} majorityThreshold={majorityThresholdPR} rawVotes={proportionalVotesInput} /> </div> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Votos Proporcionais</h3> {proportionalVotesInput.length > 0 ? ( <ProportionalBarChart data={proportionalVotesInput.map(pv => ({ name: pv.legend, value: pv.votes }))} colorMap={coalitionColorMap} /> ) : ( <p className="text-center text-gray-500 py-10">Sem dados de votos proporcionais para este estado.</p> )} </div> </section> )}
           {currentView === 'verDistritos' && (
              <section className="space-y-6"> <div> 
-              <h3 className="text-xl font-semibold mb-2 text-gray-700">Mapa dos Distritos de {stateName}</h3> 
               {(filteredMapLayout.length > 0 && Object.keys(districtResultsSummaryForStateMap).length > 0) ? 
               ( <InteractiveMap 
               results={districtResultsSummaryForStateMap} 
@@ -367,7 +365,6 @@ export default function StatePage() {
               )}
           {currentView === 'swingProporcional' && (
           <section>
-            <h2 className="text-2xl font-semibold mb-3 text-gray-700">Movimentação Proporcional no Estado</h2>
             {stateProportionalSwingData.length > 0 ? (
             <StateProportionalSwing
                 swingDataPercent={stateProportionalSwingData}

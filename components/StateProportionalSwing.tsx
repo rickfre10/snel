@@ -55,7 +55,6 @@ const CustomVariationChart: React.FC<CustomVariationChartProps> = ({ data, color
 
   return (
     <div className="mb-4">
-      <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Variação Percentual de Votos</h4>
       <div style={{ paddingLeft: `${CHART_HORIZONTAL_PADDING}px`, paddingRight: `${CHART_HORIZONTAL_PADDING}px` }}>
         {data.map((entry, index) => {
           const percentPrevious = entry.previousPercent;
@@ -195,7 +194,6 @@ const CustomSwingChart: React.FC<CustomSwingChartProps> = ({ data, colorMap }) =
 
   return (
     <div className="mb-4">
-      <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Swing Proporcional de Votos (%)</h4>
       <div
         style={{
           display: 'flex',
@@ -310,7 +308,6 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
       <div className="lg:col-span-2 p-4 bg-gray-50 rounded-lg shadow-sm h-full space-y-6">
         <CustomSwingChart data={dataForSwingColumnChart} colorMap={colorMap} />
         <div>
-            <h4 className="text-lg font-semibold text-gray-700 mb-3 text-center">Movimentação de Assentos Proporcionais</h4>
             <div className="space-y-1">
               <div className="grid grid-cols-5 gap-1 text-xs font-semibold text-gray-500 uppercase pb-2 border-b mb-2">
                 <span className="col-span-1 truncate">Frente</span>
