@@ -48,7 +48,7 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
   stateName,
 }) => {
   if (!swingDataPercent || swingDataPercent.length === 0) {
-    return <p className="text-gray-500 text-center py-4">Dados de swing proporcional de votos não disponíveis para {stateName}.</p>;
+    return <p className="text-gray-500 text-center py-4">Dados de movimentação proporcional de votos não disponíveis para {stateName}.</p>;
   }
 
   const barChartData = [...swingDataPercent].sort((a,b) => b.currentPercent - a.currentPercent);
@@ -70,14 +70,13 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
       {/* Coluna 1: Gráfico de Barras Agrupadas */}
       <div className="lg:col-span-3 p-4 bg-gray-50 rounded-lg shadow-sm h-full">
-        <h4 className="text-lg font-semibold text-gray-700 mb-3 text-center">Variação Percentual de Votos Proporcionais</h4>
         {/* Linha 80 do seu log provavelmente aponta para este ResponsiveContainer */}
         <ResponsiveContainer width="100%" height={250 + barChartData.length * 55}>
           <BarChart
             data={barChartData}
             layout="vertical"
             margin={{ left: 10, right: 55, top: 5, bottom: 5 }} // Aumentada margem direita para labels
-            barCategoryGap="30%"
+            barCategoryGap="10%"
             barGap={5}
           >
             <CartesianGrid strokeDasharray="3 3" />
@@ -118,14 +117,13 @@ const StateProportionalSwing: React.FC<StateProportionalSwingProps> = ({
 
       {/* Coluna 2: Tabela de Assentos */}
       <div className="lg:col-span-2 p-4 bg-gray-50 rounded-lg shadow-sm h-full">
-        <h4 className="text-lg font-semibold text-gray-700 mb-3 text-center">Movimentação de Assentos Proporcionais</h4>
         <div className="space-y-1">
           <div className="grid grid-cols-5 gap-1 text-xs font-semibold text-gray-500 uppercase pb-2 border-b mb-2"> {/* Mudado para 5 colunas */}
             <span className="col-span-1">Frente</span> {/* Ajustado col-span */}
             <span className="text-right">2018</span>
-            <span className="text-right">2022</span>
+            <span className="text-right">Agora</span>
             <span className="text-right">Saldo</span>
-            <span className="text-right">Swing %</span>
+            <span className="text-right">Movimento %</span>
           </div>
           {seatTableData.map((item) => {
             const color = colorMap[item.legend] ?? FALLBACK_COLOR;
