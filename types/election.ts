@@ -86,4 +86,5 @@ export interface CandidateVote {
     previousPercent: number;
     swing: number; // currentPercent - previousPercent
   }
+
   
