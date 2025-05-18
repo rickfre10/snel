@@ -196,14 +196,14 @@ export default function StatePage() {
         winner = sortedVotes[0] || null; runnerUp = sortedVotes[1] || null;
       }
       tickerEntries.push({
-        districtId: district.district_id as number, districtName: district.district_name, stateId: district.uf, stateName: district.uf_name,
+        district_id: district.district_id as number, districtName: district.district_name, stateId: district.uf, stateName: district.uf_name,
         winnerName: winner?.candidate_name || null, winnerLegend: winner?.parl_front_legend || null,
         winnerPercentage: winner && totalVotesInDistrict > 0 ? (parseNumber(winner.votes_qtn) / totalVotesInDistrict * 100) : null,
         runnerUpName: runnerUp?.candidate_name || null, runnerUpLegend: runnerUp?.parl_front_legend || null,
         runnerUpPercentage: runnerUp && totalVotesInDistrict > 0 ? (parseNumber(runnerUp.votes_qtn) / totalVotesInDistrict * 100) : null,
       });
     });
-    return tickerEntries.sort((a,b) => a.districtId - b.districtId);
+    return tickerEntries.sort((a,b) => a.district_id - b.district_id);
   }, [candidateVotesInState, stateId]);
 
   const previousPRDataForThisState = useMemo(() => { // Definição ÚNICA

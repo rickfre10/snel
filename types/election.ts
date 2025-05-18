@@ -2,7 +2,7 @@
 
 // Votos de Candidatos (ajuste as propriedades/tipos se necessário)
 export interface CandidateVote {
-    district_id: string | number; // Planilha pode retornar como string
+    district_id: number; // Planilha pode retornar como string
     candidate_name: string;
     party_legend?: string;
     parl_front_legend: string | null; // Mudou de ?: string para : string | null
@@ -25,7 +25,7 @@ export interface CandidateVote {
   
   // Informações dos Distritos (ajuste as propriedades/tipos se necessário)
   export interface DistrictInfoFromData {
-    district_id: string | number;
+    district_id: number;
     district_name: string;
     uf: string;
     uf_name: string;
@@ -68,7 +68,7 @@ export interface CandidateVote {
     name: string; // district_name
   }
   export interface TickerEntry {
-    districtId: number;
+    district_id: number;
     districtName: string;
     stateId: string; // uf
     stateName: string;
@@ -88,7 +88,7 @@ export interface CandidateVote {
   }
 
   export interface DistrictInfoFromData {
-    districtId: number;
+    district_id: number;
     district_name: string;
     uf: string;
     uf_name: string;
