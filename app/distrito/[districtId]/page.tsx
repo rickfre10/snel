@@ -11,7 +11,7 @@ import DistrictBarChart from '@/components/DistrictBarChart';
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, DistrictResultInfo, StateOption, DistrictOption, TickerEntry } from '@/types/election';
 import { districtsData, partyData } from '@/lib/staticData';
 import SwingAnalysis from '@/components/SwingAnalysis';
-import { previousDistrictResultsData } from '@/lib/previousElectionData';
+import { previousDistrictResultsData, PreviousDistrictResult } from '@/lib/previousElectionData';
 
 type DistrictViewMode = 'candidates' | 'bars' | 'swing' ;
 
@@ -117,6 +117,33 @@ export default function DistrictDetailPage() {
     return apiVotesData.candidateVotes.filter(vote => parseInt(String(vote.district_id), 10) === districtId );
   }, [apiVotesData?.candidateVotes, districtId]);
 
+  const districtResults = useMemo(() => {
+    if (!filteredCandidateVotes || filteredCandidateVotes.length === 0) { return { votes: [], totalVotes: 0, leadingCandidateId: null }; }
+    const votesWithNumeric = filteredCandidateVotes.map((v: CandidateVote) => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
+    const totalVotes = votesWithNumeric.reduce((sum: number, current: { numericVotes: number }) => sum + current.numericVotes, 0);
+    
+    // Ordena para garantir que o primeiro é o líder (necessário para status)
+    const sortedVotes = [...votesWithNumeric].sort((a,b) => b.numericVotes - a.numericVotes);
+
+    let leadingCandidateId: string | number | null = null; 
+    if (sortedVotes.length > 0) {
+        leadingCandidateId = sortedVotes[0].candidate_name; // Ou ID se preferir
+    }
+
+    const votesWithPercentage = sortedVotes.map(vote => ({ 
+        ...vote, 
+        percentage: totalVotes > 0 ? ((vote.numericVotes / totalVotes) * 100) : 0, 
+    }));
+    return { votes: votesWithPercentage as (CandidateVote & { numericVotes: number, percentage: number })[], totalVotes, leadingCandidateId };
+}, [filteredCandidateVotes]);
+
+if (!districtId) {
+return <div className="container mx-auto p-6 text-center text-red-600">ID do Distrito inválido na URL. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>
+}
+if (!currentDistrictInfo) {
+return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>
+}
+
   // --- NOVO: useMemo para pegar dados da eleição anterior ---
 const previousResultForThisDistrict = useMemo(() => {
   if (!districtId) return undefined;
@@ -124,36 +151,81 @@ const previousResultForThisDistrict = useMemo(() => {
 }, [districtId]);
 // --------------------------------------------------------
 
-  const districtResults = useMemo(() => {
-        if (!filteredCandidateVotes || filteredCandidateVotes.length === 0) { return { votes: [], totalVotes: 0, leadingCandidateId: null }; }
-        const votesWithNumeric = filteredCandidateVotes.map((v: CandidateVote) => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
-        const totalVotes = votesWithNumeric.reduce((sum: number, current: { numericVotes: number }) => sum + current.numericVotes, 0);
-        
-        // Ordena para garantir que o primeiro é o líder (necessário para status)
-        const sortedVotes = [...votesWithNumeric].sort((a,b) => b.numericVotes - a.numericVotes);
-
-        let leadingCandidateId: string | number | null = null; 
-        if (sortedVotes.length > 0) {
-            leadingCandidateId = sortedVotes[0].candidate_name; // Ou ID se preferir
-        }
-
-        const votesWithPercentage = sortedVotes.map(vote => ({ 
-            ...vote, 
-            percentage: totalVotes > 0 ? ((vote.numericVotes / totalVotes) * 100) : 0, 
-        }));
-        return { votes: votesWithPercentage as (CandidateVote & { numericVotes: number, percentage: number })[], totalVotes, leadingCandidateId };
-    }, [filteredCandidateVotes]);
-
-  if (!districtId) {
-    return <div className="container mx-auto p-6 text-center text-red-600">ID do Distrito inválido na URL. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>
-  }
-  if (!currentDistrictInfo) {
-    return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>
-  }
 
   const urnasApuradas = 1230;
   const urnasTotais = 1500;
   const percentualApurado = urnasTotais > 0 ? (urnasApuradas / urnasTotais) * 100 : 0;
+
+  const swingAnalysisData = useMemo(() => {
+    if (!districtId || !currentDistrictInfo || !districtResults.votes || districtResults.votes.length === 0) {
+        return null;
+    }
+
+    const currentWinner = districtResults.votes[0]; // Já tem nome, parl_front_legend, percentage, numericVotes
+    const currentRunnerUp = districtResults.votes[1] || null; // Pode ser null
+
+    const previousResult = previousDistrictResultsData.find(d => d.district_id === districtId);
+
+    if (!previousResult) { // Não há dados anteriores para este distrito
+        return {
+            currentWinner,
+            currentRunnerUp,
+            previousWinnerLegend: null,
+            previousWinnerPercentage: null,
+            swingText: "Dados da eleição anterior não disponíveis para este distrito.",
+            swingValueForGraph: 0, // Representa 50/50 no gráfico
+            graphTargetLegend: currentWinner.parl_front_legend, // Foco no vencedor atual
+            graphOpponentLegend: currentRunnerUp?.parl_front_legend || "Outros",
+        };
+    }
+
+    let swingText = "";
+    let swingValueForGraph = 0;
+    let graphTargetLegend = currentWinner.parl_front_legend;
+    let graphOpponentLegend: string | null = previousResult.winner_2018_legend;
+
+    const currentWinnerLegend = currentWinner.parl_front_legend;
+    const previousWinnerLegend = previousResult.winner_2018_legend;
+
+    if (currentWinnerLegend === previousWinnerLegend) { // Manteve a frente
+        swingValueForGraph = currentWinner.percentage - previousResult.winner_2018_percentage;
+        graphOpponentLegend = currentRunnerUp?.parl_front_legend || "Outros"; // Comparação visual com o 2º atual
+
+        if (swingValueForGraph > 0) {
+            swingText = `Movimentação de +${swingValueForGraph.toFixed(1)} p.p. para ${currentWinnerLegend} (vs. ${previousResult.winner_2018_percentage.toFixed(1)}% em 2018)`;
+        } else if (swingValueForGraph < 0) {
+             // Perdeu para si mesmo, mas a perda "beneficia" o segundo
+             swingText = `Movimentação de ${swingValueForGraph.toFixed(1)} p.p. para ${currentWinnerLegend} (vs. ${previousResult.winner_2018_percentage.toFixed(1)}% em 2018). Comparativamente, ${currentRunnerUp?.parl_front_legend || 'a oposição'} avançou.`;
+        } else {
+            swingText = `${currentWinnerLegend} manteve a liderança com performance similar a 2018.`;
+        }
+    } else { // Virada
+        // Encontrar a performance atual da frente que PERDEU
+        const previousWinnerCurrentPerformance = districtResults.votes.find(
+            v => v.parl_front_legend === previousWinnerLegend
+        );
+        const previousWinnerCurrentPercentage = previousWinnerCurrentPerformance?.percentage ?? 0;
+
+        // Swing é a "perda" da frente anterior, atribuída como ganho para a nova frente
+        swingValueForGraph = previousResult.winner_2018_percentage - previousWinnerCurrentPercentage;
+        swingText = `VIRADA! Movimentação de ${swingValueForGraph.toFixed(1)} p.p. de ${previousWinnerLegend} para ${currentWinnerLegend}.`;
+        // No gráfico, o foco é no novo vencedor (currentWinnerLegend) e o swing é o que ele "tirou" do antigo
+        graphOpponentLegend = previousWinnerLegend;
+    }
+
+    return {
+        currentWinner,
+        currentRunnerUp,
+        previousWinnerLegend,
+        previousWinnerPercentage: previousResult.winner_2018_percentage,
+        swingText,
+        swingValueForGraph: Math.max(-10, Math.min(10, swingValueForGraph)), // Cap em +/-10pp para o gráfico
+        graphTargetLegend,
+        graphOpponentLegend,
+    };
+
+}, [districtId, currentDistrictInfo, districtResults, previousDistrictResultsData]);
+
 
   // Lógica para o Status do Distrito
   const leaderCandidate = districtResults.votes.length > 0 ? districtResults.votes[0] : null;
@@ -239,7 +311,7 @@ const previousResultForThisDistrict = useMemo(() => {
                     Gráfico Barras
                 </button>
                 <button onClick={() => setDistrictViewMode('swing')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'swing' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                  Swing
+                  Movimentação
                 </button>
             </nav>
         </div>
@@ -261,17 +333,20 @@ const previousResultForThisDistrict = useMemo(() => {
                 /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
             )}
            {/* --- NOVO: Renderização da Visão de Swing --- */}
-        {districtViewMode === 'swing' && (
-            currentDistrictInfo && districtResults.votes.length > 0 ? (
-                <SwingAnalysis
-                    currentResults={districtResults.votes} // Passa todos os candidatos atuais ordenados
-                    previousResult={previousResultForThisDistrict}
-                    colorMap={coalitionColorMap}
-                    districtName={currentDistrictInfo.district_name}
-                />
-            ) : (
-                <p className="text-center text-gray-500">Dados insuficientes para análise de swing.</p>
-            )
+           {districtViewMode === 'swing' && (
+            // Só renderiza se swingAnalysisData não for null
+            swingAnalysisData ? (
+            <SwingAnalysis
+            analysisData={swingAnalysisData} // Agora TS sabe que não é null aqui
+            colorMap={coalitionColorMap}
+            districtName={currentDistrictInfo.district_name} // Garanta que currentDistrictInfo não é null aqui também
+              />
+              ) : (
+              // Mensagem se swingAnalysisData for null mas a view é 'swing'
+              <p className="text-center text-gray-500">
+            {isLoadingVotes ? 'Calculando dados de movimentação...' : 'Dados insuficientes para análise de movimentação.'}
+               </p>
+              )
         )}
         {/* ----------------------------------------- */} 
         </>
