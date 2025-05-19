@@ -1,92 +1,155 @@
-// lib/electionCalculations.ts
+// lib/statusCalculator.ts
 
-/**
- * Representa os votos proporcionais para uma legenda (frente/partido).
- */
-export interface ProportionalVotesInput {
-    legend: string; // Identificador da frente/partido (ex: parl_front_legend)
-    votes: number;  // Total de votos proporcionais para esta legenda no estado
+export interface CoalitionVoteInfo {
+  legend: string;
+  votes: number;
+  name?: string;
+}
+
+export interface DistrictStatusInput {
+  isLoading: boolean;
+  leadingCoalition?: CoalitionVoteInfo;
+  runnerUpCoalition?: CoalitionVoteInfo;
+  totalVotesInDistrict: number;
+  remainingVotesEstimate: number;
+  previousSeatHolderCoalitionLegend?: string | null;
+  coalitionColorMap: Record<string, string>;
+  fallbackCoalitionColor?: string;
+}
+
+export interface DistrictStatusOutput {
+  label: string;
+  backgroundColor: string;
+  textColor: string;
+  isFinal: boolean;
+  actingCoalitionLegend?: string;
+}
+
+// Função getTextColorForBackground (mantenha a sua versão)
+function getTextColorForBackground(hexcolor: string): string {
+    if (!hexcolor) return '#1F2937';
+    hexcolor = hexcolor.replace("#", "");
+    if (hexcolor.length !== 6 && hexcolor.length !== 3) return '#1F2937';
+    if (hexcolor.length === 3) {
+        hexcolor = hexcolor.split('').map(char => char + char).join('');
+    }
+    try {
+        const r = parseInt(hexcolor.substring(0, 2), 16);
+        const g = parseInt(hexcolor.substring(2, 4), 16);
+        const b = parseInt(hexcolor.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128 || hexcolor.toLowerCase() === 'ffffff' || hexcolor.toLowerCase() === '#ffffff') ? '#1F2937' : '#FFFFFF';
+    } catch (e) { return '#1F2937'; }
+}
+
+// Cores para status GENÉRICOS
+const GENERIC_STATUS_COLORS = {
+  LOADING: { bg: '#E5E7EB', textKey: '#6B7280' },         // gray-200, gray-500
+  AWAITING_DATA: { bg: '#E5E7EB', textKey: '#6B7280' },    // gray-200, gray-500
+  PROCESSING: { bg: '#E5E7EB', textKey: '#6B7280' },      // gray-200, gray-500
+  DISPUTA_ACIRRADA: {bg: '#FBBF24', textKey: getTextColorForBackground('#FBBF24')}, // amber-400
+  MUITO_PROXIMO: { bg: '#F59E0B', textKey: getTextColorForBackground('#F59E0B') }, // amber-500
+  // Cores para LIDERANDO, GANHOU, MANTEVE, ELEITO serão derivadas da coalizão
+};
+
+const DEFAULT_FALLBACK_COALITION_COLOR = '#6B7280'; // Cinza médio (Tailwind gray-500)
+
+export function calculateDistrictDynamicStatus(input: DistrictStatusInput): DistrictStatusOutput {
+  const {
+    isLoading,
+    leadingCoalition,
+    runnerUpCoalition,
+    totalVotesInDistrict,
+    remainingVotesEstimate,
+    previousSeatHolderCoalitionLegend,
+    coalitionColorMap, // Recebido como input
+    fallbackCoalitionColor = DEFAULT_FALLBACK_COALITION_COLOR // Usa o default se não provido
+  } = input;
+
+  if (isLoading) {
+    return { label: "Carregando...", isFinal: false, backgroundColor: GENERIC_STATUS_COLORS.LOADING.bg, textColor: GENERIC_STATUS_COLORS.LOADING.textKey, actingCoalitionLegend: undefined };
   }
-  
-  /**
-   * Aloca assentos de representação proporcional usando o método D'Hondt
-   * com uma cláusula de barreira.
-   *
-   * @param proportionalVotesForState Array de objetos com votos por legenda para um estado específico.
-   * @param totalSeatsForState Número total de assentos proporcionais a serem alocados no estado.
-   * @param barrierPercentage Percentual da cláusula de barreira (ex: 5 para 5%). Default é 5.
-   * @returns Um Record onde a chave é a legenda e o valor é o número de assentos PR ganhos.
-   */
-  export function calculateProportionalSeats(
-    proportionalVotesForState: ProportionalVotesInput[],
-    totalSeatsForState: number,
-    barrierPercentage: number = 5
-  ): Record<string, number> {
-    const seatsWon: Record<string, number> = {};
-  
-    if (totalSeatsForState === 0 || proportionalVotesForState.length === 0) {
-      return seatsWon;
-    }
-  
-    // 1. Calcular o total de votos válidos para a eleição proporcional no estado
-    const totalValidProportionalVotes = proportionalVotesForState.reduce(
-      (sum, party) => sum + party.votes,
-      0
-    );
-  
-    if (totalValidProportionalVotes === 0) {
-      return seatsWon;
-    }
-  
-    // 2. Calcular o valor da cláusula de barreira em votos
-    const barrierVotes = (barrierPercentage / 100) * totalValidProportionalVotes;
-  
-    // 3. Filtrar legendas que não atingiram a cláusula de barreira
-    const eligibleParties = proportionalVotesForState.filter(
-      (party) => party.votes >= barrierVotes
-    );
-  
-    if (eligibleParties.length === 0) {
-      return seatsWon; // Nenhuma legenda atingiu a cláusula de barreira
-    }
-  
-    // 4. Inicializar a contagem de assentos para legendas elegíveis
-    eligibleParties.forEach((party) => {
-      seatsWon[party.legend] = 0;
-    });
-  
-    // 5. Aplicar o método D'Hondt para alocar os assentos
-    for (let i = 0; i < totalSeatsForState; i++) {
-      let maxQuotient = -1;
-      let partyToGetSeat = "";
-  
-      eligibleParties.forEach((party) => {
-        const currentQuotient = party.votes / (seatsWon[party.legend] + 1);
-        if (currentQuotient > maxQuotient) {
-          maxQuotient = currentQuotient;
-          partyToGetSeat = party.legend;
-        } else if (currentQuotient === maxQuotient) {
-          // Critério de desempate (opcional, D'Hondt pode não precisar se os votos forem únicos)
-          // Se houver empate estrito nos quocientes, geralmente a legenda com mais votos totais
-          // (antes da divisão) leva vantagem, ou por sorteio.
-          // Para simplificar, a primeira encontrada com o quociente máximo leva.
-          // Ou, para um desempate mais robusto (maior número de votos originais):
-          const currentPartyTotalVotes = eligibleParties.find(p => p.legend === partyToGetSeat)?.votes || 0;
-          if (party.votes > currentPartyTotalVotes) {
-              partyToGetSeat = party.legend;
-          }
-        }
-      });
-  
-      if (partyToGetSeat) {
-        seatsWon[partyToGetSeat]++;
-      } else {
-        // Isso pode acontecer se não houver mais legendas elegíveis com votos
-        // ou se todos os votos forem zero após a barreira, o que já é tratado.
-        // Ou se o número de assentos for maior que o possível de alocar (raro).
-        break;
+
+  if (!leadingCoalition || totalVotesInDistrict === 0) {
+    return { label: "Aguardando dados", isFinal: false, backgroundColor: GENERIC_STATUS_COLORS.AWAITING_DATA.bg, textColor: GENERIC_STATUS_COLORS.AWAITING_DATA.textKey, actingCoalitionLegend: undefined };
+  }
+
+  const leaderLegend = leadingCoalition.legend;
+  const leaderVotes = leadingCoalition.votes;
+  const leaderColor = coalitionColorMap[leaderLegend] || fallbackCoalitionColor;
+
+  if (!runnerUpCoalition) {
+    const isOutcomeCertain = remainingVotesEstimate <= 0;
+    if (isOutcomeCertain) {
+      const isMaintained = previousSeatHolderCoalitionLegend === leaderLegend;
+      if (previousSeatHolderCoalitionLegend) {
+        const statusText = isMaintained ? 'manteve' : 'ganhou';
+        return {
+          label: `${leaderLegend} ${statusText}`,
+          isFinal: true,
+          backgroundColor: leaderColor, // Cor da coalizão
+          textColor: getTextColorForBackground(leaderColor),
+          actingCoalitionLegend: leaderLegend
+        };
       }
+      return { label: `${leaderLegend} eleito`, isFinal: true, backgroundColor: leaderColor, textColor: getTextColorForBackground(leaderColor), actingCoalitionLegend: leaderLegend };
     }
-  
-    return seatsWon;
+    return { label: `${leaderLegend} liderando`, isFinal: false, backgroundColor: leaderColor, textColor: getTextColorForBackground(leaderColor), actingCoalitionLegend: leaderLegend };
   }
+
+  const runnerUpVotes = runnerUpCoalition.votes;
+  const voteDifference = leaderVotes - runnerUpVotes;
+
+  if (voteDifference < 0) {
+      if (totalVotesInDistrict > 0 && (Math.abs(voteDifference) / totalVotesInDistrict) * 100 <= 1.0 && remainingVotesEstimate > Math.abs(voteDifference) ) {
+          return { label: "Muito próximo", isFinal: false, backgroundColor: GENERIC_STATUS_COLORS.MUITO_PROXIMO.bg, textColor: GENERIC_STATUS_COLORS.MUITO_PROXIMO.textKey, actingCoalitionLegend: leaderLegend };
+      }
+      return { label: "Disputa acirrada", isFinal: false, backgroundColor: GENERIC_STATUS_COLORS.DISPUTA_ACIRRADA.bg, textColor: GENERIC_STATUS_COLORS.DISPUTA_ACIRRADA.textKey, actingCoalitionLegend: undefined };
+  }
+
+  const percentageAdvantage = totalVotesInDistrict > 0 ? (voteDifference / totalVotesInDistrict) * 100 : 100;
+  const canOutcomeBeReversed = remainingVotesEstimate >= voteDifference;
+
+  if (canOutcomeBeReversed) {
+    if (percentageAdvantage > 1.0) {
+      return { label: `${leaderLegend} liderando`, isFinal: false, backgroundColor: leaderColor, textColor: getTextColorForBackground(leaderColor), actingCoalitionLegend: leaderLegend };
+    } else {
+      return { label: "Muito próximo", isFinal: false, backgroundColor: GENERIC_STATUS_COLORS.MUITO_PROXIMO.bg, textColor: GENERIC_STATUS_COLORS.MUITO_PROXIMO.textKey, actingCoalitionLegend: leaderLegend };
+    }
+  } else { // Não há votos suficientes para reverter
+    const isMaintained = previousSeatHolderCoalitionLegend === leaderLegend;
+    if (previousSeatHolderCoalitionLegend) {
+      const statusText = isMaintained ? 'manteve' : 'ganhou';
+      return {
+        label: `${leaderLegend} ${statusText}`,
+        isFinal: true,
+        backgroundColor: leaderColor, // Cor da coalizão
+        textColor: getTextColorForBackground(leaderColor),
+        actingCoalitionLegend: leaderLegend
+      };
+    }
+    return { label: `${leaderLegend} eleito`, isFinal: true, backgroundColor: leaderColor, textColor: getTextColorForBackground(leaderColor), actingCoalitionLegend: leaderLegend };
+  }
+}
+
+// A função getSimplifiedCandidateStatus continua a mesma, pois ela já usa o output de calculateDistrictDynamicStatus
+export function getSimplifiedCandidateStatus(
+  districtStatus: DistrictStatusOutput,
+  candidateCoalitionLegend: string | undefined,
+  isCandidateTheLeaderInDistrictCompute: boolean
+): "Eleito" | "Liderando" | "Processando" {
+  if (districtStatus.label === "Carregando..." || districtStatus.label === "Aguardando dados" || districtStatus.label === "Processando...") {
+    return "Processando";
+  }
+  if (districtStatus.actingCoalitionLegend) {
+    if (districtStatus.actingCoalitionLegend === candidateCoalitionLegend) {
+      return districtStatus.isFinal ? "Eleito" : "Liderando";
+    } else {
+      return "Processando";
+    }
+  }
+  if (districtStatus.label === "Muito próximo") {
+    return isCandidateTheLeaderInDistrictCompute ? "Liderando" : "Processando";
+  }
+  return "Processando";
+}

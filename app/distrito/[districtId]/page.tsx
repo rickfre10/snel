@@ -207,6 +207,8 @@ export default function DistrictDetailPage() {
       totalVotesInDistrict: districtResults.totalVotes,
       remainingVotesEstimate: remainingVotesEstimate,
       previousSeatHolderCoalitionLegend: previousSeatHolder,
+      coalitionColorMap: coalitionColorMap, // Nome exato
+      fallbackCoalitionColor: COALITION_FALLBACK_COLOR // Nome exato
     };
 
     return calculateDistrictDynamicStatus(statusInput);
@@ -217,6 +219,7 @@ export default function DistrictDetailPage() {
     districtResults.totalVotes,
     currentDistrictInfo, // Adicionado currentDistrictInfo para voters_qtn/polls_qtn
     previousResultForThisDistrict,
+    coalitionColorMap
   ]);
 
 
