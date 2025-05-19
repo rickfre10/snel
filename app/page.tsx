@@ -365,25 +365,41 @@ const grandTotalSeats = useMemo(() => {
 
       {/* Mantém a estrutura principal e ordem do seu código original */}
       <main className="container mx-auto p-4 lg:p-6 space-y-8">
-        {/* BLOCO NOVO: Navegação Rápida por Estados */}
-        {/* ================================================================== */}
-        <div className="my-4 p-3 bg-white rounded-lg shadow-md border border-gray-200">
-          <div className="flex flex-wrap justify-center gap-2">
-            {states.map(s => (
-              <Link 
-                key={s.id} 
-                href={`/estado/${s.id.toLowerCase()}?time=${currentTime}`} 
-                legacyBehavior // Mantido para usar <a> aninhado, como no exemplo da página de estado
-              >
-                <a className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium shadow-sm transition-colors">
-                  {s.id}
-                </a>
-              </Link>
-            ))}
-          </div>
-        </div>
-        {/* ================================================================== */}
-        {/* FIM DO BLOCO NOVO */}
+       {/* BLOCO ATUALIZADO: Navegação Rápida (Incluindo Estados e Movimentação) */}
+    <div className="my-4 p-3 bg-white rounded-lg shadow-md border border-gray-200">
+      <h2 className="text-lg font-semibold mb-3 text-center text-gray-700">
+        Navegação Rápida:
+      </h2>
+      <div className="flex flex-wrap justify-center items-center gap-2"> {/* Adicionado items-center para alinhamento vertical */}
+
+        {/* Botão para Movimentação de Assentos */}
+        <Link 
+          href={`/ganhos-e-perdas?time=${currentTime}`} // Assumindo que a rota é /ganhos-e-perdas
+          legacyBehavior
+        >
+          <a className="px-3 py-1.5 bg-sky-500 text-white rounded-md hover:bg-sky-600 focus:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium shadow-sm transition-colors">
+            Movimentação de Assentos
+          </a>
+        </Link>
+
+        {/* Separador Visual Opcional (aparece em telas sm e maiores) */}
+        <span className="text-gray-300 hidden sm:inline mx-2">|</span>
+
+        {/* Botões dos Estados */}
+        {states.map(s => (
+          <Link 
+            key={s.id} 
+            href={`/estado/<span class="math-inline">\{s\.id\.toLowerCase\(\)\}?time\=</span>{currentTime}`} 
+            legacyBehavior
+          >
+            <a className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium shadow-sm transition-colors">
+              {s.name} ({s.id})
+            </a>
+          </Link>
+        ))}
+      </div>
+    </div>
+    {/* FIM DO BLOCO ATUALIZADO */}
 
          {/* 1. Mapa Interativo */}
         <div className="relative"> {/* Mantido wrapper relativo para tooltip */}

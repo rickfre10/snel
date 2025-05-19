@@ -295,6 +295,11 @@ const filteredDistrictListForDisplay = useMemo(() => {
                 <title>Ganhos e Perdas de Assentos - Eleições</title>
             </Head>
             <main className="container mx-auto p-4 lg:p-6 space-y-6"> {/* Reduzido space-y */}
+            <div className="container mx-auto p-4 lg:p-6 space-y-8">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <Link href="/" className="text-blue-600 hover:underline">&larr; Visão Nacional</Link>
+        </div>
+        </div>
                 <header className="text-center mb-6"> {/* Reduzido mb */}
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Ganhos e Perdas de Assentos</h1>
                     {/* Removida descrição ou pode ser mais curta */}
