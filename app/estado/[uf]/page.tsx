@@ -13,7 +13,8 @@ import {
     previousStateProportionalPercentagesData,
     PreviousStateProportionalPercentage,
     previousStateProportionalSeatsData,
-    PreviousStateProportionalSeats
+    PreviousStateProportionalSeats,
+    previousDistrictResultsData
 } from '@/lib/previousElectionData'; // Importa dados da eleição anterior
 
 // Tipos
@@ -32,9 +33,16 @@ import type {
 import SeatCompositionPanel from '@/components/SeatCompositionPanel';
 import RaceTicker from '@/components/RaceTicker';
 import ProportionalSeatAllocationDetails from '@/components/ProportionalSeatAllocationDetails';
-import ProportionalBarChart from '@/components/ProportionalBarChart'; // Mudei de ProportionalBarChart para PieChart
+import ProportionalBarChart from '@/components/ProportionalBarChart'; 
 import InteractiveMap from '@/components/InteractiveMap';
 import StateProportionalSwing from '@/components/StateProportionalSwing';
+
+import {
+  calculateDistrictDynamicStatus,
+  DistrictStatusInput,
+  CoalitionVoteInfo,
+  DistrictStatusOutput
+} from '@/lib/statusCalculator';
 
 // Configuração de assentos
 const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4 };
@@ -48,6 +56,8 @@ const parseNumber = (value: any): number => {
     }
     return 0;
 };
+
+const COALITION_FALLBACK_COLOR = '#6B7280';
 
 interface ApiVotesData { time: number; candidateVotes: CandidateVote[]; proportionalVotes: ProportionalVote[]; }
 type StateViewMode = 'placarEstadual' | 'votacaoProporcional' | 'verDistritos' | 'swingProporcional';
@@ -183,31 +193,115 @@ export default function StatePage() {
   }, [districtSeatsByFrontInState, proportionalSeatsByFront]);
 
   const districtResultsForTicker: TickerEntry[] = useMemo(() => {
-    if (!candidateVotesInState || !districtsData || !stateId) return [];
+    if (isLoading || !candidateVotesInState || !districtsData || !stateId || !stateInfo || !coalitionColorMap) {
+      return [];
+    }
+
     const tickerEntries: TickerEntry[] = [];
     const districtsInThisState = districtsData.filter((d: DistrictInfoFromData) => d.uf === stateId);
+
     districtsInThisState.forEach(district => {
-      const votesInDistrict = candidateVotesInState.filter( vote => parseNumber(vote.district_id) === district.district_id );
-      let winner: CandidateVote | null = null; let runnerUp: CandidateVote | null = null; let totalVotesInDistrict = 0;
-      if (votesInDistrict.length > 0) {
-        const votesWithNumeric = votesInDistrict.map(v => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
-        totalVotesInDistrict = votesWithNumeric.reduce((sum: number, cv: {numericVotes: number}) => sum + cv.numericVotes, 0);
-        const sortedVotes = votesWithNumeric.sort((a,b) => b.numericVotes - a.numericVotes);
-        winner = sortedVotes[0] || null; runnerUp = sortedVotes[1] || null;
+      const votesInCurrentDistrict = candidateVotesInState.filter(
+        vote => parseNumber(vote.district_id) === district.district_id
+      );
+
+      // Estas variáveis manterão os objetos processados com numericVotes e percentage
+      let leadingCandidateProcessed: (CandidateVote & { numericVotes: number; percentage: number }) | null = null;
+      let runnerUpCandidateProcessed: (CandidateVote & { numericVotes: number; percentage: number }) | null = null;
+      let totalVotesInThisDistrict = 0;
+
+      if (votesInCurrentDistrict.length > 0) {
+        const votesWithNumeric = votesInCurrentDistrict.map(v => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
+        totalVotesInThisDistrict = votesWithNumeric.reduce((sum, cv) => sum + cv.numericVotes, 0);
+        const sortedVotes = [...votesWithNumeric].sort((a,b) => b.numericVotes - a.numericVotes);
+        
+        const winnerCandidateRaw = sortedVotes[0] || null; // Tipo é (CandidateVote & { numericVotes: number }) | null
+        const runnerUpCandidateRaw = sortedVotes[1] || null; // Tipo é (CandidateVote & { numericVotes: number }) | null
+
+        if (winnerCandidateRaw) {
+            leadingCandidateProcessed = {
+                ...winnerCandidateRaw, // Espalha todas as props de CandidateVote e numericVotes
+                numericVotes: winnerCandidateRaw.numericVotes, // Reafirma explicitamente numericVotes
+                percentage: totalVotesInThisDistrict > 0 ? (winnerCandidateRaw.numericVotes / totalVotesInThisDistrict) * 100 : 0
+            };
+        }
+        if (runnerUpCandidateRaw) {
+            runnerUpCandidateProcessed = {
+                ...runnerUpCandidateRaw, // Espalha todas as props de CandidateVote e numericVotes
+                numericVotes: runnerUpCandidateRaw.numericVotes, // Reafirma explicitamente numericVotes
+                percentage: totalVotesInThisDistrict > 0 ? (runnerUpCandidateRaw.numericVotes / totalVotesInThisDistrict) * 100 : 0
+            };
+        }
       }
+
+      // O restante da lógica para montar statusInputForTickerItem e detailedStatus permanece igual...
+      let leadingCoalitionForStatus: CoalitionVoteInfo | undefined = undefined;
+      if (leadingCandidateProcessed) { // Agora usa leadingCandidateProcessed que já tem numericVotes
+        leadingCoalitionForStatus = {
+          legend: leadingCandidateProcessed.parl_front_legend || leadingCandidateProcessed.party_legend || "N/D",
+          votes: leadingCandidateProcessed.numericVotes, // numericVotes está aqui
+          name: leadingCandidateProcessed.candidate_name
+        };
+      }
+
+      let runnerUpCoalitionForStatus: CoalitionVoteInfo | undefined = undefined;
+      if (runnerUpCandidateProcessed) { // Usa runnerUpCandidateProcessed
+        runnerUpCoalitionForStatus = {
+          legend: runnerUpCandidateProcessed.parl_front_legend || runnerUpCandidateProcessed.party_legend || "N/D",
+          votes: runnerUpCandidateProcessed.numericVotes, // numericVotes está aqui
+          name: runnerUpCandidateProcessed.candidate_name
+        };
+      }
+
+      const previousResultForThisDistrict = previousDistrictResultsData.find(d => d.district_id === district.district_id);
+      const previousSeatHolderLegend = previousResultForThisDistrict?.winner_2018_legend || null;
+
+      let remainingVotesEst = 0;
+      if (district.voters_qtn && totalVotesInThisDistrict >= 0) { 
+          remainingVotesEst = district.voters_qtn - totalVotesInThisDistrict;
+          if (remainingVotesEst < 0) remainingVotesEst = 0;
+      }
+
+      const statusInputForTickerItem: DistrictStatusInput = {
+        isLoading: isLoading,
+        leadingCoalition: leadingCoalitionForStatus,
+        runnerUpCoalition: runnerUpCoalitionForStatus,
+        totalVotesInDistrict: totalVotesInThisDistrict,
+        remainingVotesEstimate: remainingVotesEst,
+        previousSeatHolderCoalitionLegend: previousSeatHolderLegend,
+        coalitionColorMap: coalitionColorMap,
+        fallbackCoalitionColor: COALITION_FALLBACK_COLOR
+      };
+
+      const detailedStatus = calculateDistrictDynamicStatus(statusInputForTickerItem);
+
       tickerEntries.push({
-        district_id: district.district_id as number, districtName: district.district_name, stateId: district.uf, stateName: district.uf_name,
-        winnerName: winner?.candidate_name || null, winnerLegend: winner?.parl_front_legend || null,
-        winnerPercentage: winner && totalVotesInDistrict > 0 ? (parseNumber(winner.votes_qtn) / totalVotesInDistrict * 100) : null,
-        runnerUpName: runnerUp?.candidate_name || null, runnerUpLegend: runnerUp?.parl_front_legend || null,
-        runnerUpPercentage: runnerUp && totalVotesInDistrict > 0 ? (parseNumber(runnerUp.votes_qtn) / totalVotesInDistrict * 100) : null,
-        statusLabel: '',
-        statusBgColor: '',
-        statusTextColor: ''
+        district_id: district.district_id,
+        districtName: district.district_name,
+        stateId: district.uf,
+        stateName: stateInfo.uf_name,
+        
+        statusLabel: detailedStatus.label,
+        statusBgColor: detailedStatus.backgroundColor,
+        statusTextColor: detailedStatus.textColor,
+
+        winnerName: leadingCandidateProcessed?.candidate_name || null,
+        winnerLegend: detailedStatus.actingCoalitionLegend || leadingCoalitionForStatus?.legend || null,
+        winnerPercentage: leadingCandidateProcessed?.percentage ?? null, // Usa a percentage já calculada
+        runnerUpName: runnerUpCandidateProcessed?.candidate_name || null,
+        runnerUpLegend: runnerUpCoalitionForStatus?.legend || null,
+        runnerUpPercentage: runnerUpCandidateProcessed?.percentage ?? null, // Usa a percentage já calculada
       });
     });
     return tickerEntries.sort((a,b) => a.district_id - b.district_id);
-  }, [candidateVotesInState, stateId]);
+  }, [
+    isLoading, 
+    candidateVotesInState, 
+    stateId, 
+    districtsData, 
+    stateInfo,     
+    coalitionColorMap
+  ]);
 
   const previousPRDataForThisState = useMemo(() => { // Definição ÚNICA
     if (!stateId) return null;
