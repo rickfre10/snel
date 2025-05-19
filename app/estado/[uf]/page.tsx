@@ -405,25 +405,24 @@ export default function StatePage() {
         </div>
       </div>
 
-      <header className="mb-6">
-        {/* 1. TÍTULO ATUALIZADO */}
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 text-center">{stateName}</h1>
+      <header className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        {/* Título Alinhado à Esquerda */}
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 w-full md:w-auto text-center md:text-left">
+          {stateName}
+        </h1>
         
-        {/* 5. ADICIONADO PERCENTUAL DE APURAÇÃO DO ESTADO */}
+        {/* Componente de Apuração (será empurrado para a direita em telas md+) */}
         {stateInfo && pageData && (
-            <div className="mt-3 flex justify-center">
-            <div className="w-full max-w-lg"> {/* Aumentada um pouco a largura máxima */}
+            <div className="w-full md:w-auto md:max-w-lg flex-shrink-0"> {/* Controla a largura e evita que encolha demais */}
                 <ApuracaoVisao
                 isLoadingVotes={isLoading}
-                statusLabel={isLoading && !pageData ? "Carregando apuração..." : `Apuração em ${stateLevelScrutinyData.stateNameForLabel}`}
-                // Cores neutras para o status geral do estado, pode personalizar se quiser
-                statusLabelColor={isLoading && !pageData ? "#E5E7EB" : "#D1D5DB"} 
-                statusLabelTextColor={isLoading && !pageData ? "#6B7280" : "#374151"} 
+                statusLabel={isLoading && !pageData ? "Carregando apuração..." : `Apuração em andamento`}
+                statusLabelColor={(isLoading && !pageData) || !stateLevelScrutinyData.stateNameForLabel ? "#E5E7EB" : "#D1D5DB"} 
+                statusLabelTextColor={(isLoading && !pageData) || !stateLevelScrutinyData.stateNameForLabel ? "#6B7280" : "#374151"} 
                 areVotesBeingCounted={stateLevelScrutinyData.areVotesBeingCounted}
                 apuratedVotesCount={stateLevelScrutinyData.apuratedStateVotes}
-                totalPollsCount={stateLevelScrutinyData.totalPollsInState} // Total de urnas do estado
+                totalPollsCount={stateLevelScrutinyData.totalPollsInState}
                 />
-            </div>
             </div>
         )}
       </header>
@@ -461,7 +460,7 @@ export default function StatePage() {
               </div>
 
               {/* 2. PAINEL DE ASSENTOS DO ESTADO */}
-              <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+              <div>
                 <p className="text-sm text-gray-500 mb-3 text-center"> 
                   Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState}) 
                   {' | '}Maioria: {majorityThresholdStateChamber} 
