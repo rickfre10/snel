@@ -368,9 +368,6 @@ const grandTotalSeats = useMemo(() => {
         {/* BLOCO NOVO: Navegação Rápida por Estados */}
         {/* ================================================================== */}
         <div className="my-4 p-3 bg-white rounded-lg shadow-md border border-gray-200">
-          <h2 className="text-lg font-semibold mb-3 text-center text-gray-700">
-            Navegar por Estado:
-          </h2>
           <div className="flex flex-wrap justify-center gap-2">
             {states.map(s => (
               <Link 
@@ -379,7 +376,7 @@ const grandTotalSeats = useMemo(() => {
                 legacyBehavior // Mantido para usar <a> aninhado, como no exemplo da página de estado
               >
                 <a className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium shadow-sm transition-colors">
-                  {s.name} ({s.id})
+                  {s.id}
                 </a>
               </Link>
             ))}
