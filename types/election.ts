@@ -81,6 +81,8 @@ export interface CandidateVote {
     statusLabel: string;
     statusBgColor: string;
     statusTextColor: string;
+    isFinal?: boolean;
+
   }
 
   export interface ProportionalSwingEntry {

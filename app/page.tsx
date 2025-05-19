@@ -8,16 +8,13 @@ import { useRouter } from 'next/navigation'; // Importar para navegação
 // Componentes de Visualização da Home
 import InteractiveMap from '../components/InteractiveMap';
 import SeatCompositionPanel from '../components/SeatCompositionPanel';
-// Componentes de detalhe não são mais renderizados aqui, mas podem ser importados se tipos forem necessários
-// import CandidateDisplay from '../components/CandidateDisplay';
-// import DistrictBarChart from '../components/DistrictBarChart';
-// import ProportionalPieChart from '../components/ProportionalPieChart';
 import RaceTicker from '../components/RaceTicker';
 
 // Tipos e Dados Estáticos (Ajuste caminho)
 // Importa todos os tipos necessários, incluindo os que são calculados aqui mas usados em outros lugares
 import { CandidateVote, ProportionalVote, DistrictInfoFromData, PartyInfo, StateOption, DistrictOption, DistrictResultInfo, TickerEntry } from '../types/election';
 import { districtsData, partyData} from '../lib/staticData';
+import { previousDistrictResultsData } from '../lib/previousElectionData';
 import { mapDimensions } from '../lib/mapLayout'; //
 
 // --- IMPORTAR LÓGICA DE CÁLCULO E DADOS DE CONFIGURAÇÃO PR ---
@@ -38,6 +35,13 @@ interface ApiVotesData {
   candidateVotes: CandidateVote[];
   proportionalVotes: ProportionalVote[];
 }
+
+import {
+  calculateDistrictDynamicStatus,
+  DistrictStatusInput,
+  DistrictStatusOutput,
+  CoalitionVoteInfo
+} from '../lib/statusCalculator';
 
 // Helper parseNumber
 const parseNumber = (value: any): number => {
@@ -230,23 +234,110 @@ const grandTotalSeats = useMemo(() => {
   // Calcular Dados para o Ticker
   const tickerData: TickerEntry[] = useMemo(() => {
     const dataForTicker: TickerEntry[] = [];
-    if (!apiVotesData?.candidateVotes || !districtsData) { return dataForTicker; }
-    const votesByDistrict: Record<string, CandidateVote[]> = {};
-    apiVotesData.candidateVotes.forEach((vote: CandidateVote) => { const districtIdStr = String(vote.district_id); if (!districtIdStr || !vote.candidate_name || vote.votes_qtn === undefined || vote.votes_qtn === null) return; if (!votesByDistrict[districtIdStr]) { votesByDistrict[districtIdStr] = []; } votesByDistrict[districtIdStr].push(vote); });
-    Object.keys(votesByDistrict).forEach(districtIdStr => { const votes = votesByDistrict[districtIdStr]; if (!votes || votes.length === 0) return; const votesWithCalc = votes.map(v => ({ ...v, numericVotes: parseNumber(v.votes_qtn) })); const totalVotes = votesWithCalc.reduce((sum: number, current: { numericVotes: number }) => sum + current.numericVotes, 0); const votesProcessed = votesWithCalc.map(v => ({ ...v, percentage: totalVotes > 0 ? ((v.numericVotes / totalVotes) * 100) : 0, })).sort((a, b) => b.numericVotes - a.numericVotes); const districtNum = parseInt(districtIdStr, 10); const districtInfo = districtsData.find(d => d.district_id === districtNum); if (!districtInfo) return; const entry: TickerEntry = {
-      district_id: districtNum, districtName: districtInfo.district_name, stateId: districtInfo.uf, stateName: districtInfo.uf_name, winnerName: votesProcessed[0]?.candidate_name || null, winnerLegend: votesProcessed[0]?.parl_front_legend || null, winnerPercentage: votesProcessed[0]?.percentage ?? null, runnerUpLegend: votesProcessed[1]?.parl_front_legend || null, runnerUpPercentage: votesProcessed[1]?.percentage ?? null, runnerUpName: votesProcessed[1]?.candidate_name || null,
-      statusLabel: '',
-      statusBgColor: '',
-      statusTextColor: ''
-    }; dataForTicker.push(entry); });
-    dataForTicker.sort((a, b) => a.district_id - b.district_id);
-    return dataForTicker;
-  }, [apiVotesData?.candidateVotes]);
+    // Se os votos da API ainda estão carregando, ou dados essenciais não existem, retorna array vazio.
+    // O RaceTicker já tem uma lógica para não renderizar nada se data estiver vazio.
+    if (isLoadingVotes || !apiVotesData?.candidateVotes || !districtsData || !coalitionColorMap) {
+      return dataForTicker;
+    }
 
-  // REMOVIDO: useMemo para filteredCandidateVotes
-  // REMOVIDO: useMemo para filteredProportionalVotes
-  // REMOVIDO: useMemo para districtResults
-  // REMOVIDO: useMemo para selectedDistrictName
+    const votesByDistrict: Record<string, CandidateVote[]> = {};
+    apiVotesData.candidateVotes.forEach((vote: CandidateVote) => {
+      const districtIdStr = String(vote.district_id);
+      // Validações básicas para os dados do voto
+      if (!districtIdStr || typeof vote.candidate_name !== 'string' || vote.votes_qtn === undefined || vote.votes_qtn === null) {
+        return;
+      }
+      if (!votesByDistrict[districtIdStr]) {
+        votesByDistrict[districtIdStr] = [];
+      }
+      votesByDistrict[districtIdStr].push(vote);
+    });
+
+    Object.keys(votesByDistrict).forEach(districtIdStr => {
+      const votesInCurrentDistrict = votesByDistrict[districtIdStr];
+      if (!votesInCurrentDistrict || votesInCurrentDistrict.length === 0) return;
+
+      const districtNum = parseInt(districtIdStr, 10);
+      const districtInfo = districtsData.find(d => d.district_id === districtNum);
+      if (!districtInfo) return;
+
+      // Processar votos para encontrar líder, vice, total, etc.
+      const votesWithNumeric = votesInCurrentDistrict.map(v => ({ ...v, numericVotes: parseNumber(v.votes_qtn) }));
+      const totalVotesInDistrict = votesWithNumeric.reduce((sum, current) => sum + current.numericVotes, 0);
+      const sortedVotes = [...votesWithNumeric].sort((a, b) => b.numericVotes - a.numericVotes);
+      
+      const leadingCandidateData = sortedVotes[0] || null;
+      const runnerUpCandidateData = sortedVotes[1] || null;
+
+      let leadingCoalition: CoalitionVoteInfo | undefined = undefined;
+      if (leadingCandidateData) {
+        leadingCoalition = {
+          legend: leadingCandidateData.parl_front_legend || leadingCandidateData.party_legend || "N/D", // Use party_legend como fallback
+          votes: leadingCandidateData.numericVotes,
+          name: leadingCandidateData.candidate_name
+        };
+      }
+
+      let runnerUpCoalition: CoalitionVoteInfo | undefined = undefined;
+      if (runnerUpCandidateData) {
+        runnerUpCoalition = {
+          legend: runnerUpCandidateData.parl_front_legend || runnerUpCandidateData.party_legend || "N/D",
+          votes: runnerUpCandidateData.numericVotes,
+          name: runnerUpCandidateData.candidate_name
+        };
+      }
+
+      const previousResult = previousDistrictResultsData.find(d => d.district_id === districtNum);
+      const previousSeatHolderCoalitionLegend = previousResult?.winner_2018_legend || null;
+
+      let remainingVotesEstimate = 0;
+      if (districtInfo.voters_qtn && totalVotesInDistrict >= 0) {
+          remainingVotesEstimate = districtInfo.voters_qtn - totalVotesInDistrict;
+          if (remainingVotesEstimate < 0) remainingVotesEstimate = 0; 
+      }
+
+
+      const statusInput: DistrictStatusInput = {
+        isLoading: isLoadingVotes, // Para o statusCalculator, os dados já foram carregados se chegamos aqui
+                                   // No entanto, se `isLoadingVotes` for true, ele retornará "Carregando..."
+        leadingCoalition: leadingCoalition,
+        runnerUpCoalition: runnerUpCoalition,
+        totalVotesInDistrict: totalVotesInDistrict,
+        remainingVotesEstimate: remainingVotesEstimate,
+        previousSeatHolderCoalitionLegend: previousSeatHolderCoalitionLegend,
+        coalitionColorMap: coalitionColorMap,
+      };
+
+      const detailedStatus = calculateDistrictDynamicStatus(statusInput);
+
+      const leadingCandidatePercentage = leadingCandidateData && totalVotesInDistrict > 0 ? (leadingCandidateData.numericVotes / totalVotesInDistrict) * 100 : null;
+      const runnerUpPercentage = runnerUpCandidateData && totalVotesInDistrict > 0 ? (runnerUpCandidateData.numericVotes / totalVotesInDistrict) * 100 : null;
+
+      const entry: TickerEntry = {
+        district_id: districtNum,
+        districtName: districtInfo.district_name,
+        stateId: districtInfo.uf,
+        stateName: districtInfo.uf_name,
+        
+        statusLabel: detailedStatus.label,
+        statusBgColor: detailedStatus.backgroundColor,
+        statusTextColor: detailedStatus.textColor,
+
+        winnerName: leadingCandidateData?.candidate_name || null,
+        // Use o actingCoalitionLegend do status se disponível, caso contrário, o do candidato líder
+        winnerLegend: detailedStatus.actingCoalitionLegend || leadingCoalition?.legend || null,
+        winnerPercentage: leadingCandidatePercentage,
+        runnerUpLegend: runnerUpCoalition?.legend || null,
+        runnerUpPercentage: runnerUpPercentage,
+        runnerUpName: runnerUpCandidateData?.candidate_name || null,
+      };
+      dataForTicker.push(entry);
+    });
+
+    dataForTicker.sort((a, b) => (a.district_id - b.district_id)); // Ordena por ID do distrito
+    return dataForTicker;
+  }, [apiVotesData, isLoadingVotes, coalitionColorMap]);
+
 
   // --- Handlers ---
   // Mantém handlers dos dropdowns, eles ainda controlam o estado localmente
