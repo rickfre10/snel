@@ -374,7 +374,7 @@ const grandTotalSeats = useMemo(() => {
           href={`/ganhos-e-perdas?time=${currentTime}`} // Assumindo que a rota é /ganhos-e-perdas
           legacyBehavior
         >
-          <a className="px-3 py-1.5 bg-sky-500 text-white rounded-md hover:bg-red-600 focus:bg-red-600 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium shadow-sm transition-colors">
+          <a className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium shadow-sm transition-colors">
             Movimentação de Assentos
           </a>
         </Link>
