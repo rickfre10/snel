@@ -84,16 +84,16 @@ const RaceTicker: React.FC<RaceTickerProps> = ({ data, colorMap, interval = 5000
 
         {/* 2. Frente Liderando (Estilo Tag) */}
         <div className={`flex items-center flex-shrink-0 min-w-0 ${!currentEntry.winnerLegend ? 'italic text-gray-500' : ''}`}>
-          {currentEntry.winnerLegend ? (
-            <span
-              className="px-2 py-0.5 rounded text-xs font-medium"
-              style={{ backgroundColor: winnerColor, color: winnerTagTextColor }} // Cor de fundo e texto dinâmicos
-            >
-              {currentEntry.winnerLegend} liderando
-            </span>
-          ) : (
-            <span>Muito próximo</span>
-          )}
+        {currentEntry.statusLabel ? (
+        <span
+          className="px-2 py-0.5 rounded text-xs font-medium"
+          style={{ backgroundColor: currentEntry.statusBgColor, color: currentEntry.statusTextColor }}
+        >
+          {currentEntry.statusLabel}
+        </span>
+       ) : (
+          <span className="text-xs italic text-gray-500 whitespace-nowrap">Apurando...</span> // Fallback se statusLabel não vier
+        )}
         </div>
 
         {/* 3. Vencedor (Nome e %) - Com mais espaço */}

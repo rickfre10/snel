@@ -201,6 +201,9 @@ export default function StatePage() {
         winnerPercentage: winner && totalVotesInDistrict > 0 ? (parseNumber(winner.votes_qtn) / totalVotesInDistrict * 100) : null,
         runnerUpName: runnerUp?.candidate_name || null, runnerUpLegend: runnerUp?.parl_front_legend || null,
         runnerUpPercentage: runnerUp && totalVotesInDistrict > 0 ? (parseNumber(runnerUp.votes_qtn) / totalVotesInDistrict * 100) : null,
+        statusLabel: '',
+        statusBgColor: '',
+        statusTextColor: ''
       });
     });
     return tickerEntries.sort((a,b) => a.district_id - b.district_id);

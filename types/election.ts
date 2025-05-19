@@ -78,6 +78,9 @@ export interface CandidateVote {
     runnerUpLegend: string | null;
     runnerUpPercentage: number | null;
     runnerUpName: string | null; // Nome do segundo colocado
+    statusLabel: string;
+    statusBgColor: string;
+    statusTextColor: string;
   }
 
   export interface ProportionalSwingEntry {
