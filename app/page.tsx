@@ -367,9 +367,6 @@ const grandTotalSeats = useMemo(() => {
       <main className="container mx-auto p-4 lg:p-6 space-y-8">
        {/* BLOCO ATUALIZADO: Navegação Rápida (Incluindo Estados e Movimentação) */}
     <div className="my-4 p-3 bg-white rounded-lg shadow-md border border-gray-200">
-      <h2 className="text-lg font-semibold mb-3 text-center text-gray-700">
-        Navegação Rápida:
-      </h2>
       <div className="flex flex-wrap justify-center items-center gap-2"> {/* Adicionado items-center para alinhamento vertical */}
 
         {/* Botão para Movimentação de Assentos */}
@@ -377,7 +374,7 @@ const grandTotalSeats = useMemo(() => {
           href={`/ganhos-e-perdas?time=${currentTime}`} // Assumindo que a rota é /ganhos-e-perdas
           legacyBehavior
         >
-          <a className="px-3 py-1.5 bg-sky-500 text-white rounded-md hover:bg-sky-600 focus:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium shadow-sm transition-colors">
+          <a className="px-3 py-1.5 bg-sky-500 text-white rounded-md hover:bg-red-600 focus:bg-red-600 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium shadow-sm transition-colors">
             Movimentação de Assentos
           </a>
         </Link>
@@ -393,7 +390,7 @@ const grandTotalSeats = useMemo(() => {
             legacyBehavior
           >
             <a className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium shadow-sm transition-colors">
-              {s.name} ({s.id})
+              {s.id}
             </a>
           </Link>
         ))}
