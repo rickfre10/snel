@@ -22,6 +22,26 @@ import {
     DistrictStatusOutput 
 } from '@/lib/statusCalculator';
 
+const TEXT_COLOR_DARK_LOCAL = '#1F2937'; // Use nomes diferentes se houver conflito
+const TEXT_COLOR_LIGHT_LOCAL = '#FFFFFF';
+
+function getTextColorForBackground(hexcolor: string): string {
+    if (!hexcolor) return TEXT_COLOR_DARK_LOCAL;
+    let cleanHex = hexcolor.replace("#", "");
+    if (cleanHex.length === 3) {
+        cleanHex = cleanHex.split('').map(char => char + char).join('');
+    }
+    if (cleanHex.length !== 6) return TEXT_COLOR_DARK_LOCAL;
+    try {
+        const r = parseInt(cleanHex.substring(0, 2), 16);
+        const g = parseInt(cleanHex.substring(2, 4), 16);
+        const b = parseInt(cleanHex.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128 || cleanHex.toLowerCase() === 'ffffff') ? TEXT_COLOR_DARK_LOCAL : TEXT_COLOR_LIGHT_LOCAL;
+    } catch (e) {
+        return TEXT_COLOR_DARK_LOCAL;
+    }
+}
 
 interface ApiVotesData {
     time: number;
@@ -69,8 +89,8 @@ export default function GainsLossesPage() {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedStateFilter, setSelectedStateFilter] = useState<string | null>(null); // Novo estado para o filtro
-    const [resultTypeFilter, setResultTypeFilter] = useState<'allDefinitive' | 'gainsAndHolds'>('allDefinitive');
-
+    const [resultTypeFilter, setResultTypeFilter] = useState<'onlyGains' | 'allDefinitive'>('onlyGains');
+    
     const router = useRouter();
 
     // Seu useEffect para buscar apiVotesData (similar a outras páginas)
@@ -209,21 +229,17 @@ export default function GainsLossesPage() {
             }
         });
         return changes.sort((a,b)=> a.districtId - b.districtId);
-    }, [isLoading, apiVotesData, districtsData, selectedStateFilter, coalitionColorMap]);
+}, [isLoading, apiVotesData, districtsData, selectedStateFilter, coalitionColorMap]);
 
-    const filteredDistrictListForDisplay = useMemo(() => {
-        if (resultTypeFilter === 'allDefinitive') {
-            return districtSeatChanges; // Já contém apenas resultados finais
-        }
-        if (resultTypeFilter === 'gainsAndHolds') {
-            return districtSeatChanges.filter(item =>
-                item.status.label.includes('ganhou') || 
-                item.status.label.includes('manteve') ||
-                item.status.label.includes('eleito') // "Eleito" pode ser um ganho se não havia dados anteriores
-            );
-        }
-        return districtSeatChanges; // Fallback
-    }, [districtSeatChanges, resultTypeFilter]);
+const filteredDistrictListForDisplay = useMemo(() => {
+    if (resultTypeFilter === 'onlyGains') {
+        return districtSeatChanges.filter(item => {
+            return item.currentWinnerCoalition !== item.previousHolderCoalition;
+        });
+    }
+    // 'allDefinitive' mostra todos os itens, que já são apenas os finais (ganhos ou mantidos)
+    return districtSeatChanges;
+}, [districtSeatChanges, resultTypeFilter]);
 
     // --- CÁLCULO DO SUMÁRIO DE GANHOS E PERDAS ---
     const gainLossSummary = useMemo((): CoalitionGainLossSummary => {
@@ -270,7 +286,7 @@ export default function GainsLossesPage() {
     }, [districtSeatChanges, partyData]);
 
 
-    if (isLoading) return <div className="container mx-auto p-6 text-center">Carregando dados...</div>;
+    if (isLoading && !apiVotesData) return <div className="container mx-auto p-6 text-center">Carregando dados...</div>;
     if (error) return <div className="container mx-auto p-6 text-center text-red-500">Erro: {error}</div>;
 
     return (
@@ -278,149 +294,164 @@ export default function GainsLossesPage() {
             <Head>
                 <title>Ganhos e Perdas de Assentos - Eleições</title>
             </Head>
-            <main className="container mx-auto p-4 lg:p-6 space-y-8">
-                <header className="text-center mb-8">
+            <main className="container mx-auto p-4 lg:p-6 space-y-6"> {/* Reduzido space-y */}
+                <header className="text-center mb-6"> {/* Reduzido mb */}
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Ganhos e Perdas de Assentos</h1>
-                    <p className="text-lg text-gray-600">Acompanhe a dinâmica das disputas distritais.</p>
+                    {/* Removida descrição ou pode ser mais curta */}
                 </header>
 
-                {/* SEÇÃO DE FILTROS */}
-                <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200 space-y-4">
-                    <div>
-                        <span className="block text-sm font-medium text-gray-700 mb-1">
-                            Filtrar por Estado:
-                        </span>
-                        <div className="flex flex-wrap gap-2">
+                {/* SEÇÃO DE FILTROS UNIFICADA */}
+                <section className="p-3 bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+                        {/* Filtro de Estado com Botões */}
+                        <button
+                            onClick={() => setSelectedStateFilter(null)}
+                            className={`px-3 py-1 text-xs sm:text-sm font-medium rounded-md border ${!selectedStateFilter ? 'bg-blue-600 text-white border-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-300'}`}
+                        >
+                            Nacional
+                        </button>
+                        {allStates.map(s => (
                             <button
-                                onClick={() => setSelectedStateFilter(null)}
-                                className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md border ${!selectedStateFilter ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'}`}
+                                key={s.id}
+                                onClick={() => setSelectedStateFilter(s.id)}
+                                className={`px-3 py-1 text-xs sm:text-sm font-medium rounded-md border ${selectedStateFilter === s.id ? 'bg-blue-600 text-white border-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-300'}`}
                             >
-                                Nacional (Tudo)
+                                {s.id}
                             </button>
-                            {allStates.map(s => (
-                                <button
-                                    key={s.id}
-                                    onClick={() => setSelectedStateFilter(s.id)}
-                                    className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md border ${selectedStateFilter === s.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'}`}
-                                >
-                                    {s.id}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div>
-                        <span className="block text-sm font-medium text-gray-700 mb-1">
-                            Mostrar Resultados:
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={() => setResultTypeFilter('allDefinitive')}
-                                className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md border ${resultTypeFilter === 'allDefinitive' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'}`}
-                            >
-                                Todos (Ganhos, Perdas, Mantidos)
-                            </button>
-                            <button
-                                onClick={() => setResultTypeFilter('gainsAndHolds')}
-                                className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md border ${resultTypeFilter === 'gainsAndHolds' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'}`}
-                            >
-                                Apenas Ganhos & Mantidos
-                            </button>
-                        </div>
+                        ))}
+
+                        {/* Separador */}
+                        <span className="mx-1 text-gray-300 self-center">|</span>
+
+                        {/* Filtro de Tipo de Resultado */}
+                        <button
+                            onClick={() => setResultTypeFilter('onlyGains')}
+                            className={`px-3 py-1 text-xs sm:text-sm font-medium rounded-md border ${resultTypeFilter === 'onlyGains' ? 'bg-blue-600 text-white border-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-300'}`}
+                        >
+                            Assentos Ganhos
+                        </button>
+                        <button
+                            onClick={() => setResultTypeFilter('allDefinitive')}
+                            className={`px-3 py-1 text-xs sm:text-sm font-medium rounded-md border ${resultTypeFilter === 'allDefinitive' ? 'bg-blue-600 text-white border-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-300'}`}
+                        >
+                            Todos Assentos (Ganhos/Mantidos)
+                        </button>
                     </div>
                 </section>
 
-
-                {/* Sumário Nacional/Estadual de Ganhos e Perdas - VISUAL ATUALIZADO */}
-                <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                        Sumário de Mudanças por Coalizão {selectedStateFilter ? `(${allStates.find(s => s.id === selectedStateFilter)?.name || selectedStateFilter})` : '(Nacional)'}
-                    </h2>
-                    {Object.keys(gainLossSummary).length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* Sumário Nacional/Estadual de Ganhos e Perdas - VISUAL COMPACTO E ATUALIZADO */}
+                {Object.keys(gainLossSummary).length > 0 && (
+                    <section className="p-3 bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                        {/* Título removido */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                             {Object.entries(gainLossSummary)
                                 .filter(([_, data]) => data.gained > 0 || data.lost > 0 || data.held > 0)
                                 .sort(([, a], [, b]) => (b.net - a.net) || (b.gained - a.gained) )
                                 .map(([coalition, data]) => (
-                                <div key={coalition} className="p-4 rounded-lg border-2 shadow-sm flex flex-col items-center" style={{borderColor: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}>
-                                    <h3 className="font-bold text-xl mb-2 truncate" style={{color: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}>{coalition}</h3>
-                                    <div className="w-full border-t-2 mb-3" style={{borderColor: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}></div>
+                                <div key={coalition} className="p-2.5 rounded-md border shadow-sm flex flex-col items-center text-center" style={{borderColor: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}>
+                                    <span
+                                        className="px-2 py-0.5 rounded-full text-xs font-semibold mb-2 whitespace-nowrap shadow"
+                                        style={{
+                                            backgroundColor: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR,
+                                            color: getTextColorForBackground(coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR)
+                                        }}
+                                    >
+                                        {coalition}
+                                    </span>
                                     
-                                    <div className="grid grid-cols-2 gap-x-2 w-full text-sm mb-1 text-center">
-                                        <span className="font-semibold text-gray-600">GANHOS</span>
-                                        <span className="font-semibold text-gray-600">PERDAS</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-2 w-full text-2xl font-bold mb-3 text-center">
-                                        <span className="text-green-600">{data.gained}</span>
-                                        <span className="text-red-600">{data.lost}</span>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-2 gap-x-2 w-full text-sm mb-1 text-center">
-                                        <span className="font-semibold text-gray-600">MANTEVE</span>
-                                        <span className="font-semibold text-gray-600">SALDO</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-2 w-full text-2xl font-bold text-center">
-                                        <span className="text-blue-600">{data.held}</span>
-                                        <span className={`${data.net >= 0 ? 'text-green-700' : 'text-red-700'}`}>{data.net > 0 ? '+' : ''}{data.net}</span>
+                                    <div className="w-full text-xs space-y-0.5"> {/* Reduzido space-y */}
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">GANHOS:</span>
+                                            <span className="font-semibold text-green-600">{data.gained}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">PERDAS:</span>
+                                            <span className="font-semibold text-red-600">{data.lost}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">MANTEVE:</span>
+                                            <span className="font-semibold text-blue-600">{data.held}</span>
+                                        </div>
+                                        <div className="flex justify-between mt-1 pt-1 border-t">
+                                            <span className="font-semibold text-gray-700">SALDO:</span>
+                                            <span className={`font-bold ${data.net >= 0 ? 'text-green-700' : 'text-red-700'}`}>{data.net > 0 ? '+' : ''}{data.net}</span>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <p className="text-gray-500 text-center py-5">Nenhum dado de sumário para os filtros selecionados.</p>
-                    )}
-                </section>
+                    </section>
+                )}
 
                 {/* Lista Detalhada de Distritos - USA filteredDistrictListForDisplay */}
-                <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-gray-700 mb-4">
+                <section className="space-y-2.5"> {/* Reduzido space-y */}
+                    <h2 className="text-lg font-semibold text-gray-700 mb-3"> {/* Reduzido mb */}
                         Detalhes por Distrito {selectedStateFilter ? `(${allStates.find(s => s.id === selectedStateFilter)?.name || selectedStateFilter})` : ''}
+                        {resultTypeFilter === 'onlyGains' ? ' (Apenas Assentos Ganhos)' : ' (Todos Assentos Ganhos/Mantidos)'}
                     </h2>
                     {filteredDistrictListForDisplay.length > 0 ? (
-                        filteredDistrictListForDisplay.map(item => (
-                            <div key={item.districtId} className="p-3 bg-white rounded-md shadow border border-l-4" style={{borderLeftColor: item.status.backgroundColor}}>
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                                    <div className="mb-2 sm:mb-0">
-                                        <h3 className="text-md font-semibold text-gray-800">{item.districtName} <span className="text-xs font-normal text-gray-500">({item.stateId})</span></h3>
-                                        <p className="text-xs text-gray-600">
-                                            Vencedor: <span className="font-medium">{item.currentWinnerName || "N/A"}</span>
-                                            {item.currentWinnerCoalition && ` (${item.currentWinnerCoalition})`}
-                                        </p>
-                                        {item.previousHolderCoalition && item.currentWinnerCoalition !== item.previousHolderCoalition && item.status.isFinal && (
-                                            <p className="text-xs text-gray-500">
-                                                (Ganhou de: {item.previousHolderCoalition})
+                        filteredDistrictListForDisplay.map(item => {
+                            const isTurnover = item.previousHolderCoalition && 
+                                             item.currentWinnerCoalition && 
+                                             item.currentWinnerCoalition !== item.previousHolderCoalition &&
+                                             item.status.isFinal; // Garante que a virada é definitiva
+
+                            // Define a cor da borda esquerda: cor do status, mas se for virada, usa uma cor de destaque (ex: laranja)
+                            const leftBorderColor = isTurnover 
+                                ? '#F59E0B' // Cor laranja para virada (amber-500)
+                                : item.status.backgroundColor;
+
+                            return (
+                                <div 
+                                    key={item.districtId} 
+                                    className={`p-3 bg-white rounded-md shadow border border-l-4 ${isTurnover ? 'ring-2 ring-offset-1 ring-amber-400' : 'border-gray-200'}`} 
+                                    style={{ borderLeftColor: leftBorderColor }}
+                                >
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                                        <div className="mb-2 sm:mb-0 flex-grow pr-2">
+                                            <h3 className="text-md font-semibold text-gray-800">{item.districtName} <span className="text-xs font-normal text-gray-500">({item.stateId})</span></h3>
+                                            <p className="text-xs text-gray-600">
+                                                Vencedor: <span className="font-medium">{item.currentWinnerName || "N/A"}</span>
+                                                {item.currentWinnerCoalition && ` (${item.currentWinnerCoalition})`}
                                             </p>
-                                        )}
-                                        {item.previousHolderCoalition && item.currentWinnerCoalition === item.previousHolderCoalition && item.status.isFinal && (
-                                            <p className="text-xs text-gray-500">
-                                                (Manteve de: {item.previousHolderCoalition})
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="text-left sm:text-right">
-                                        <span 
-                                            className="px-2 py-1 rounded text-xs font-semibold whitespace-nowrap"
-                                            style={{backgroundColor: item.status.backgroundColor, color: item.status.textColor}}
-                                        >
-                                            {item.status.label}
-                                        </span>
-                                        {(item.marginVotes !== null || item.marginPercentage !== null) && item.status.isFinal && (
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                Margem: {item.marginVotes?.toLocaleString('pt-BR')} votos 
-                                                {item.marginPercentage !== null ? ` (${item.marginPercentage?.toFixed(2)} p.p.)` : ''}
-                                            </p>
-                                        )}
+                                            {isTurnover && (
+                                                <p className="text-xs text-amber-600 font-semibold">
+                                                    GANHOU DE: {item.previousHolderCoalition}
+                                                </p>
+                                            )}
+                                            {!isTurnover && item.previousHolderCoalition && item.currentWinnerCoalition === item.previousHolderCoalition && item.status.isFinal && (
+                                                <p className="text-xs text-gray-500">
+                                                    (Manteve de: {item.previousHolderCoalition})
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="text-left sm:text-right flex-shrink-0">
+                                            <span 
+                                                className="px-2 py-1 rounded text-xs font-semibold whitespace-nowrap"
+                                                style={{backgroundColor: item.status.backgroundColor, color: item.status.textColor}}
+                                            >
+                                                {item.status.label}
+                                            </span>
+                                            {(item.marginVotes !== null || item.marginPercentage !== null) && item.status.isFinal && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Margem: {item.marginVotes?.toLocaleString('pt-BR')} votos 
+                                                    {item.marginPercentage !== null ? ` (${item.marginPercentage?.toFixed(1)} p.p.)` : ''} {/* Ajustado para 1 casa decimal */}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <p className="text-gray-600 text-center py-10">
-                            Nenhum distrito corresponde aos filtros selecionados ou não há resultados definitivos.
+                            Nenhum distrito corresponde aos filtros selecionados.
                         </p>
                     )}
                 </section>
-                 {/* Controles de Tempo (como antes) */}
-                <div className="text-center p-4 bg-white rounded-lg shadow-md border border-gray-200 container mx-auto mt-8 mb-6">
+                
+                {/* Controles de Tempo */}
+                <div className="text-center p-4 bg-white rounded-lg shadow-md border border-gray-200 container mx-auto mt-6 mb-6"> {/* Reduzido mt */}
                   {/* ... seu seletor de tempo ... */}
                   <h3 className="text-lg font-medium mb-2 text-gray-700">Ver Apuração em:</h3>
                     <div className="inline-flex rounded-md shadow-sm" role="group">
