@@ -22,6 +22,7 @@ import {
     DistrictStatusOutput 
 } from '@/lib/statusCalculator';
 
+
 interface ApiVotesData {
     time: number;
     candidateVotes: CandidateVote[];
@@ -68,6 +69,7 @@ export default function GainsLossesPage() {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedStateFilter, setSelectedStateFilter] = useState<string | null>(null); // Novo estado para o filtro
+    const [resultTypeFilter, setResultTypeFilter] = useState<'allDefinitive' | 'gainsAndHolds'>('allDefinitive');
 
     const router = useRouter();
 
@@ -176,37 +178,52 @@ export default function GainsLossesPage() {
             };
             const detailedStatus = calculateDistrictDynamicStatus(statusInput);
 
-            let marginVotes: number | null = null;
-            let marginPercentage: number | null = null;
-
-            if (leadingCoalition && runnerUpCoalition) {
-                marginVotes = leadingCoalition.votes - runnerUpCoalition.votes;
-                if (totalVotesInDistrict > 0) {
-                    const leaderPercentage = (leadingCoalition.votes / totalVotesInDistrict) * 100;
-                    const runnerUpPercentageCalc = (runnerUpCoalition.votes / totalVotesInDistrict) * 100;
-                    marginPercentage = leaderPercentage - runnerUpPercentageCalc;
+            if (detailedStatus.isFinal) {
+                let marginVotes: number | null = null;
+                let marginPercentage: number | null = null;
+                if (leadingCoalition && runnerUpCoalition) {
+                    marginVotes = leadingCoalition.votes - runnerUpCoalition.votes;
+                    if (totalVotesInDistrict > 0) {
+                        const leaderPercentage = (leadingCoalition.votes / totalVotesInDistrict) * 100;
+                        const runnerUpPercentageCalc = (runnerUpCoalition.votes / totalVotesInDistrict) * 100;
+                        marginPercentage = leaderPercentage - runnerUpPercentageCalc;
+                    }
+                } else if (leadingCoalition) {
+                    marginVotes = leadingCoalition.votes;
+                    if (totalVotesInDistrict > 0) {
+                        marginPercentage = (leadingCoalition.votes / totalVotesInDistrict) * 100;
+                    }
                 }
-            } else if (leadingCoalition) { // Líder sem vice claro
-                marginVotes = leadingCoalition.votes;
-                if (totalVotesInDistrict > 0) {
-                    marginPercentage = (leadingCoalition.votes / totalVotesInDistrict) * 100;
-                }
+                
+                changes.push({
+                    districtId: district.district_id,
+                    districtName: district.district_name,
+                    stateId: district.uf,
+                    currentWinnerName: leadingCoalition?.name || null,
+                    currentWinnerCoalition: detailedStatus.actingCoalitionLegend || leadingCoalition?.legend || null,
+                    previousHolderCoalition: previousHolder, // 'previousHolder' já calculado
+                    status: detailedStatus, // 'detailedStatus' já calculado
+                    marginVotes,
+                    marginPercentage,
+                });
             }
-            
-            changes.push({
-                districtId: district.district_id,
-                districtName: district.district_name,
-                stateId: district.uf,
-                currentWinnerName: leadingCoalition?.name || null,
-                currentWinnerCoalition: detailedStatus.actingCoalitionLegend || leadingCoalition?.legend || null,
-                previousHolderCoalition: previousHolder,
-                status: detailedStatus,
-                marginVotes,
-                marginPercentage,
-            });
         });
         return changes.sort((a,b)=> a.districtId - b.districtId);
-    }, [isLoading, apiVotesData, districtsData, selectedStateFilter, coalitionColorMap]); // Adicionadas dependências
+    }, [isLoading, apiVotesData, districtsData, selectedStateFilter, coalitionColorMap]);
+
+    const filteredDistrictListForDisplay = useMemo(() => {
+        if (resultTypeFilter === 'allDefinitive') {
+            return districtSeatChanges; // Já contém apenas resultados finais
+        }
+        if (resultTypeFilter === 'gainsAndHolds') {
+            return districtSeatChanges.filter(item =>
+                item.status.label.includes('ganhou') || 
+                item.status.label.includes('manteve') ||
+                item.status.label.includes('eleito') // "Eleito" pode ser um ganho se não havia dados anteriores
+            );
+        }
+        return districtSeatChanges; // Fallback
+    }, [districtSeatChanges, resultTypeFilter]);
 
     // --- CÁLCULO DO SUMÁRIO DE GANHOS E PERDAS ---
     const gainLossSummary = useMemo((): CoalitionGainLossSummary => {
@@ -267,67 +284,119 @@ export default function GainsLossesPage() {
                     <p className="text-lg text-gray-600">Acompanhe a dinâmica das disputas distritais.</p>
                 </header>
 
-                {/* Filtro de Estado */}
-                <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                    <label htmlFor="state-filter-select" className="block text-sm font-medium text-gray-700 mb-1">
-                        Filtrar por Estado:
-                    </label>
-                    <select
-                        id="state-filter-select"
-                        value={selectedStateFilter || ""}
-                        onChange={(e) => setSelectedStateFilter(e.target.value || null)}
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-highlight focus:border-highlight sm:text-sm rounded-md"
-                    >
-                        <option value="">Todos os Estados (Nacional)</option>
-                        {allStates.map(s => (
-                            <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
-                        ))}
-                    </select>
-                </section>
-
-                {/* Sumário Nacional/Estadual de Ganhos e Perdas */}
-                <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                        Sumário de Mudanças por Coalizão {selectedStateFilter ? `(${selectedStateFilter})` : '(Nacional)'}
-                    </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {Object.entries(gainLossSummary)
-                            .filter(([_, data]) => data.gained > 0 || data.lost > 0 || data.held > 0) // Mostra apenas quem teve alguma atividade
-                            .sort(([, a], [, b]) => (b.net - a.net) || (b.gained - a.gained) ) // Ordena por saldo líquido, depois por ganhos
-                            .map(([coalition, data]) => (
-                            <div key={coalition} className="p-3 rounded-md border" style={{borderColor: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}>
-                                <h3 className="font-bold text-md truncate" style={{color: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}>{coalition}</h3>
-                                <p className="text-sm text-green-600">Ganhos: {data.gained}</p>
-                                <p className="text-sm text-red-600">Perdas: {data.lost}</p>
-                                <p className="text-sm text-blue-600">Manteve: {data.held}</p>
-                                <p className="text-sm font-semibold">Saldo: {data.net > 0 ? '+' : ''}{data.net}</p>
-                            </div>
-                        ))}
+                {/* SEÇÃO DE FILTROS */}
+                <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200 space-y-4">
+                    <div>
+                        <span className="block text-sm font-medium text-gray-700 mb-1">
+                            Filtrar por Estado:
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={() => setSelectedStateFilter(null)}
+                                className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md border ${!selectedStateFilter ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'}`}
+                            >
+                                Nacional (Tudo)
+                            </button>
+                            {allStates.map(s => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => setSelectedStateFilter(s.id)}
+                                    className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md border ${selectedStateFilter === s.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'}`}
+                                >
+                                    {s.id}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <span className="block text-sm font-medium text-gray-700 mb-1">
+                            Mostrar Resultados:
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={() => setResultTypeFilter('allDefinitive')}
+                                className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md border ${resultTypeFilter === 'allDefinitive' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'}`}
+                            >
+                                Todos (Ganhos, Perdas, Mantidos)
+                            </button>
+                            <button
+                                onClick={() => setResultTypeFilter('gainsAndHolds')}
+                                className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md border ${resultTypeFilter === 'gainsAndHolds' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'}`}
+                            >
+                                Apenas Ganhos & Mantidos
+                            </button>
+                        </div>
                     </div>
                 </section>
 
-                {/* Lista Detalhada de Distritos */}
-                <section className="space-y-4">
+
+                {/* Sumário Nacional/Estadual de Ganhos e Perdas - VISUAL ATUALIZADO */}
+                <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
                     <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                        Detalhes por Distrito {selectedStateFilter ? `(${selectedStateFilter})` : ''}
+                        Sumário de Mudanças por Coalizão {selectedStateFilter ? `(${allStates.find(s => s.id === selectedStateFilter)?.name || selectedStateFilter})` : '(Nacional)'}
                     </h2>
-                    {districtSeatChanges.length > 0 ? (
-                        districtSeatChanges.map(item => (
-                            <div key={item.districtId} className="p-4 bg-white rounded-lg shadow-md border border-l-4" style={{borderLeftColor: item.status.backgroundColor}}>
+                    {Object.keys(gainLossSummary).length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {Object.entries(gainLossSummary)
+                                .filter(([_, data]) => data.gained > 0 || data.lost > 0 || data.held > 0)
+                                .sort(([, a], [, b]) => (b.net - a.net) || (b.gained - a.gained) )
+                                .map(([coalition, data]) => (
+                                <div key={coalition} className="p-4 rounded-lg border-2 shadow-sm flex flex-col items-center" style={{borderColor: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}>
+                                    <h3 className="font-bold text-xl mb-2 truncate" style={{color: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}>{coalition}</h3>
+                                    <div className="w-full border-t-2 mb-3" style={{borderColor: coalitionColorMap[coalition] || COALITION_FALLBACK_COLOR}}></div>
+                                    
+                                    <div className="grid grid-cols-2 gap-x-2 w-full text-sm mb-1 text-center">
+                                        <span className="font-semibold text-gray-600">GANHOS</span>
+                                        <span className="font-semibold text-gray-600">PERDAS</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-2 w-full text-2xl font-bold mb-3 text-center">
+                                        <span className="text-green-600">{data.gained}</span>
+                                        <span className="text-red-600">{data.lost}</span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-x-2 w-full text-sm mb-1 text-center">
+                                        <span className="font-semibold text-gray-600">MANTEVE</span>
+                                        <span className="font-semibold text-gray-600">SALDO</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-2 w-full text-2xl font-bold text-center">
+                                        <span className="text-blue-600">{data.held}</span>
+                                        <span className={`${data.net >= 0 ? 'text-green-700' : 'text-red-700'}`}>{data.net > 0 ? '+' : ''}{data.net}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 text-center py-5">Nenhum dado de sumário para os filtros selecionados.</p>
+                    )}
+                </section>
+
+                {/* Lista Detalhada de Distritos - USA filteredDistrictListForDisplay */}
+                <section className="space-y-3">
+                    <h2 className="text-xl font-semibold text-gray-700 mb-4">
+                        Detalhes por Distrito {selectedStateFilter ? `(${allStates.find(s => s.id === selectedStateFilter)?.name || selectedStateFilter})` : ''}
+                    </h2>
+                    {filteredDistrictListForDisplay.length > 0 ? (
+                        filteredDistrictListForDisplay.map(item => (
+                            <div key={item.districtId} className="p-3 bg-white rounded-md shadow border border-l-4" style={{borderLeftColor: item.status.backgroundColor}}>
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-800">{item.districtName} <span className="text-sm font-normal text-gray-500">({item.stateId})</span></h3>
+                                    <div className="mb-2 sm:mb-0">
+                                        <h3 className="text-md font-semibold text-gray-800">{item.districtName} <span className="text-xs font-normal text-gray-500">({item.stateId})</span></h3>
                                         <p className="text-xs text-gray-600">
                                             Vencedor: <span className="font-medium">{item.currentWinnerName || "N/A"}</span>
                                             {item.currentWinnerCoalition && ` (${item.currentWinnerCoalition})`}
                                         </p>
-                                        {item.previousHolderCoalition && item.currentWinnerCoalition !== item.previousHolderCoalition && (
+                                        {item.previousHolderCoalition && item.currentWinnerCoalition !== item.previousHolderCoalition && item.status.isFinal && (
                                             <p className="text-xs text-gray-500">
-                                                (Anteriormente: {item.previousHolderCoalition})
+                                                (Ganhou de: {item.previousHolderCoalition})
+                                            </p>
+                                        )}
+                                        {item.previousHolderCoalition && item.currentWinnerCoalition === item.previousHolderCoalition && item.status.isFinal && (
+                                            <p className="text-xs text-gray-500">
+                                                (Manteve de: {item.previousHolderCoalition})
                                             </p>
                                         )}
                                     </div>
-                                    <div className="mt-2 sm:mt-0 text-left sm:text-right">
+                                    <div className="text-left sm:text-right">
                                         <span 
                                             className="px-2 py-1 rounded text-xs font-semibold whitespace-nowrap"
                                             style={{backgroundColor: item.status.backgroundColor, color: item.status.textColor}}
@@ -337,7 +406,7 @@ export default function GainsLossesPage() {
                                         {(item.marginVotes !== null || item.marginPercentage !== null) && item.status.isFinal && (
                                             <p className="text-xs text-gray-500 mt-1">
                                                 Margem: {item.marginVotes?.toLocaleString('pt-BR')} votos 
-                                                ({item.marginPercentage?.toFixed(2)}%)
+                                                {item.marginPercentage !== null ? ` (${item.marginPercentage?.toFixed(2)} p.p.)` : ''}
                                             </p>
                                         )}
                                     </div>
@@ -346,16 +415,17 @@ export default function GainsLossesPage() {
                         ))
                     ) : (
                         <p className="text-gray-600 text-center py-10">
-                            {selectedStateFilter ? `Nenhuma mudança de assento ou dados para ${selectedStateFilter}.` : "Nenhum dado de mudança de assento disponível."}
+                            Nenhum distrito corresponde aos filtros selecionados ou não há resultados definitivos.
                         </p>
                     )}
                 </section>
-                 {/* Controles de Tempo */}
+                 {/* Controles de Tempo (como antes) */}
                 <div className="text-center p-4 bg-white rounded-lg shadow-md border border-gray-200 container mx-auto mt-8 mb-6">
-                    <h3 className="text-lg font-medium mb-2 text-gray-700">Ver Apuração em:</h3>
+                  {/* ... seu seletor de tempo ... */}
+                  <h3 className="text-lg font-medium mb-2 text-gray-700">Ver Apuração em:</h3>
                     <div className="inline-flex rounded-md shadow-sm" role="group">
-                        <button onClick={() => setCurrentTime(50)} disabled={isLoading} className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${currentTime === 50 ? 'bg-highlight text-white border-highlight' : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100'} disabled:opacity-50 transition-colors`}>50%</button>
-                        <button onClick={() => setCurrentTime(100)} disabled={isLoading} className={`px-4 py-2 text-sm font-medium rounded-r-lg border border-l-0 ${currentTime === 100 ? 'bg-highlight text-white border-highlight' : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100'} disabled:opacity-50 transition-colors`}>100%</button>
+                        <button onClick={() => setCurrentTime(50)} disabled={isLoading} className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${currentTime === 50 ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'} disabled:opacity-50 transition-colors`}>50%</button>
+                        <button onClick={() => setCurrentTime(100)} disabled={isLoading} className={`px-4 py-2 text-sm font-medium rounded-r-lg border border-l-0 ${currentTime === 100 ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'} disabled:opacity-50 transition-colors`}>100%</button>
                     </div>
                     {isLoading && <p className="text-sm text-gray-500 mt-2 animate-pulse">Carregando resultados ({currentTime}%)...</p>}
                     {error && <p className="text-sm text-red-600 mt-2">Erro: {error}</p>}
