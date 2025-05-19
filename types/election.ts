@@ -101,3 +101,17 @@ export interface CandidateVote {
     polls_qtn: number;
   }
   
+
+  export interface SeatChangeInfo {
+    district_id: number;
+    districtName: string;
+    stateId: string;
+    currentWinnerName?: string | null;
+    currentWinnerCoalitionLegend?: string | null;
+    previousHolderCoalitionLegend?: string | null; // Quem perdeu a cadeira
+    statusLabel: string; // Ex: "TDS ganhou de UNI" ou "UNI manteve"
+    statusBgColor: string;
+    statusTextColor: string;
+    marginVotes?: number;
+    marginPercentage?: number;
+  }
