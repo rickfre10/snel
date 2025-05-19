@@ -8,14 +8,14 @@ import React, { useMemo, useState, useEffect } from 'react';
 // Funções e dados estáticos
 import { calculateProportionalSeats, ProportionalVotesInput } from '@/lib/electionCalculations';
 import { partyData, districtsData } from '@/lib/staticData';
-import { haagarStateLayout, haagarDistrictLayout } from '@/lib/mapLayout'; // Importa layout do mapa
+import { haagarDistrictLayout } from '@/lib/mapLayout'; // Usado para o mapa dos distritos
 import {
     previousStateProportionalPercentagesData,
     PreviousStateProportionalPercentage,
     previousStateProportionalSeatsData,
     PreviousStateProportionalSeats,
-    previousDistrictResultsData
-} from '@/lib/previousElectionData'; // Importa dados da eleição anterior
+    previousDistrictResultsData // Necessário para o status do ticker
+} from '@/lib/previousElectionData';
 
 // Tipos
 import type {
@@ -23,29 +23,29 @@ import type {
     CandidateVote,
     TickerEntry,
     DistrictInfoFromData,
-    PartyInfo,
     DistrictResultInfo,
-    StateOption,
-    ProportionalSwingEntry // Certifique-se que esta está em types/election.ts
+    ProportionalSwingEntry
 } from '@/types/election';
 
 // Componentes
 import SeatCompositionPanel from '@/components/SeatCompositionPanel';
 import RaceTicker from '@/components/RaceTicker';
 import ProportionalSeatAllocationDetails from '@/components/ProportionalSeatAllocationDetails';
-import ProportionalBarChart from '@/components/ProportionalBarChart'; 
+import ProportionalBarChart from '@/components/ProportionalBarChart';
 import InteractiveMap from '@/components/InteractiveMap';
 import StateProportionalSwing from '@/components/StateProportionalSwing';
+import ApuracaoVisao from '@/components/ApuracaoVisao'; // Importado para apuração do estado
 
+// Lógica de Status Dinâmico
 import {
   calculateDistrictDynamicStatus,
   DistrictStatusInput,
-  CoalitionVoteInfo,
-  DistrictStatusOutput
+  CoalitionVoteInfo
 } from '@/lib/statusCalculator';
 
 // Configuração de assentos
 const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4 };
+const COALITION_FALLBACK_COLOR = '#6B7280';
 
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
@@ -57,12 +57,10 @@ const parseNumber = (value: any): number => {
     return 0;
 };
 
-const COALITION_FALLBACK_COLOR = '#6B7280';
-
 interface ApiVotesData { time: number; candidateVotes: CandidateVote[]; proportionalVotes: ProportionalVote[]; }
-type StateViewMode = 'placarEstadual' | 'votacaoProporcional' | 'verDistritos' | 'swingProporcional';
 
-// REMOVIDA definição local de ProportionalSwingEntry (deve vir de types/election.ts)
+// 1. StateViewMode ATUALIZADO
+type StateViewMode = 'visaoGeral' | 'votacaoProporcional' | 'movimentacao';
 
 export default function StatePage() {
   const params = useParams();
@@ -73,7 +71,8 @@ export default function StatePage() {
   const [pageData, setPageData] = useState<ApiVotesData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<StateViewMode>('placarEstadual');
+  // 2. Visão Inicial ATUALIZADA
+  const [currentView, setCurrentView] = useState<StateViewMode>('visaoGeral');
   const [hoveredDistrictInfo, setHoveredDistrictInfo] = useState<string | null>(null);
 
   const stateId = useMemo(() => (params.uf as string)?.toUpperCase(), [params.uf]);
@@ -89,8 +88,8 @@ export default function StatePage() {
   }, [stateId]);
 
   const totalPRSeatsForThisState = useMemo(() => {
-    if (!stateId) return undefined;
-    return totalProportionalSeatsByState[stateId];
+    if (!stateId) return 0;
+    return totalProportionalSeatsByState[stateId] || 0;
   }, [stateId]);
 
   const coalitionColorMap: Record<string, string> = useMemo(() => {
@@ -98,6 +97,9 @@ export default function StatePage() {
     partyData.forEach(party => {
       if (party.parl_front_legend && party.parl_front_color) {
         map[party.parl_front_legend] = party.parl_front_color;
+      }
+      if (party.party_legend && party.party_color && !map[party.party_legend]) {
+        map[party.party_legend] = party.party_color;
       }
     });
     return map;
@@ -111,10 +113,11 @@ export default function StatePage() {
     return Array.from(uniqueStates, ([id, name]) => ({ id, name })).sort((a,b) => a.name.localeCompare(b.name));
   }, []);
 
-  // --- Fetch de Dados ---
   useEffect(() => {
-    if (!stateId || !stateInfo || totalPRSeatsForThisState === undefined) {
-      // setError pode ser setado aqui, mas a renderização condicional abaixo tratará
+    if (!stateId || !stateInfo) {
+      setIsLoading(false);
+      if (!stateId) setError("ID do Estado não fornecido na URL.");
+      else if (!stateInfo) setError(`Informações para o estado ${stateId} não encontradas.`);
       return;
     }
     const loadData = async () => {
@@ -128,10 +131,8 @@ export default function StatePage() {
       } finally { setIsLoading(false); }
     };
     loadData();
-  }, [stateId, currentTime, stateInfo, totalPRSeatsForThisState]);
+  }, [stateId, currentTime, stateInfo]);
 
-  // --- Cálculos Derivados (useMemo) ---
-  // Estas são as definições ÚNICAS destes useMemos
   const proportionalVotesInput: ProportionalVotesInput[] = useMemo(() => {
     if (!pageData?.proportionalVotes || !stateId) return [];
     return pageData.proportionalVotes
@@ -143,17 +144,13 @@ export default function StatePage() {
   }, [pageData?.proportionalVotes, stateId]);
 
   const proportionalSeatsByFront = useMemo(() => {
-    if (totalPRSeatsForThisState === undefined || proportionalVotesInput.length === 0) return {};
-    return calculateProportionalSeats(
-      proportionalVotesInput,
-      totalPRSeatsForThisState,
-      5
-    );
+    if (totalPRSeatsForThisState === 0 || proportionalVotesInput.length === 0) return {};
+    return calculateProportionalSeats( proportionalVotesInput, totalPRSeatsForThisState, 5 );
   }, [proportionalVotesInput, totalPRSeatsForThisState]);
 
   const candidateVotesInState = useMemo(() => {
     if (!pageData?.candidateVotes || !stateId) return [];
-    const districtIdsInThisStateSet = new Set(districtsData.filter((d: DistrictInfoFromData) => d.uf === stateId).map((d: DistrictInfoFromData) => d.district_id));
+    const districtIdsInThisStateSet = new Set(districtsData.filter(d => d.uf === stateId).map(d => d.district_id));
     return pageData.candidateVotes.filter(vote =>
         districtIdsInThisStateSet.has(parseNumber(vote.district_id))
     );
@@ -164,7 +161,7 @@ export default function StatePage() {
     if (!candidateVotesInState) return counts;
     const votesByDistrict: Record<string, CandidateVote[]> = {};
     candidateVotesInState.forEach(vote => {
-      const districtIdStr = String(vote.district_id);
+      const districtIdStr = String(parseNumber(vote.district_id));
       if (!votesByDistrict[districtIdStr]) votesByDistrict[districtIdStr] = [];
       votesByDistrict[districtIdStr].push(vote);
     });
@@ -192,20 +189,36 @@ export default function StatePage() {
     return combined;
   }, [districtSeatsByFrontInState, proportionalSeatsByFront]);
 
+  // 3. Cálculo para Apuração Geral do Estado
+  const stateLevelScrutinyData = useMemo(() => {
+    if (!stateId || !districtsData || !pageData?.candidateVotes || !stateInfo) {
+      return { apuratedStateVotes: 0, totalPollsInState: 0, areVotesBeingCounted: false, stateNameForLabel: stateInfo?.uf_name || stateId || "" };
+    }
+    const districtsInThisState = districtsData.filter(d => d.uf === stateId);
+    const totalPollsInState = districtsInThisState.reduce((acc, district) => acc + (district.polls_qtn || 0), 0);
+    const districtIdsInStateSet = new Set(districtsInThisState.map(d => d.district_id));
+    const apuratedStateVotes = pageData.candidateVotes
+      .filter(vote => districtIdsInStateSet.has(parseNumber(vote.district_id)))
+      .reduce((acc, vote) => acc + parseNumber(vote.votes_qtn), 0);
+    return {
+      apuratedStateVotes,
+      totalPollsInState,
+      areVotesBeingCounted: apuratedStateVotes > 0,
+      stateNameForLabel: stateInfo.uf_name
+    };
+  }, [stateId, pageData?.candidateVotes, stateInfo]); // districtsData é estático
+
   const districtResultsForTicker: TickerEntry[] = useMemo(() => {
     if (isLoading || !candidateVotesInState || !districtsData || !stateId || !stateInfo || !coalitionColorMap) {
       return [];
     }
-
     const tickerEntries: TickerEntry[] = [];
-    const districtsInThisState = districtsData.filter((d: DistrictInfoFromData) => d.uf === stateId);
+    const districtsInThisState = districtsData.filter(d => d.uf === stateId);
 
     districtsInThisState.forEach(district => {
       const votesInCurrentDistrict = candidateVotesInState.filter(
         vote => parseNumber(vote.district_id) === district.district_id
       );
-
-      // Estas variáveis manterão os objetos processados com numericVotes e percentage
       let leadingCandidateProcessed: (CandidateVote & { numericVotes: number; percentage: number }) | null = null;
       let runnerUpCandidateProcessed: (CandidateVote & { numericVotes: number; percentage: number }) | null = null;
       let totalVotesInThisDistrict = 0;
@@ -214,112 +227,80 @@ export default function StatePage() {
         const votesWithNumeric = votesInCurrentDistrict.map(v => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
         totalVotesInThisDistrict = votesWithNumeric.reduce((sum, cv) => sum + cv.numericVotes, 0);
         const sortedVotes = [...votesWithNumeric].sort((a,b) => b.numericVotes - a.numericVotes);
-        
-        const winnerCandidateRaw = sortedVotes[0] || null; // Tipo é (CandidateVote & { numericVotes: number }) | null
-        const runnerUpCandidateRaw = sortedVotes[1] || null; // Tipo é (CandidateVote & { numericVotes: number }) | null
-
+        const winnerCandidateRaw = sortedVotes[0] || null;
+        const runnerUpCandidateRaw = sortedVotes[1] || null;
         if (winnerCandidateRaw) {
             leadingCandidateProcessed = {
-                ...winnerCandidateRaw, // Espalha todas as props de CandidateVote e numericVotes
-                numericVotes: winnerCandidateRaw.numericVotes, // Reafirma explicitamente numericVotes
+                ...winnerCandidateRaw, numericVotes: winnerCandidateRaw.numericVotes,
                 percentage: totalVotesInThisDistrict > 0 ? (winnerCandidateRaw.numericVotes / totalVotesInThisDistrict) * 100 : 0
             };
         }
         if (runnerUpCandidateRaw) {
             runnerUpCandidateProcessed = {
-                ...runnerUpCandidateRaw, // Espalha todas as props de CandidateVote e numericVotes
-                numericVotes: runnerUpCandidateRaw.numericVotes, // Reafirma explicitamente numericVotes
+                ...runnerUpCandidateRaw, numericVotes: runnerUpCandidateRaw.numericVotes,
                 percentage: totalVotesInThisDistrict > 0 ? (runnerUpCandidateRaw.numericVotes / totalVotesInThisDistrict) * 100 : 0
             };
         }
       }
-
-      // O restante da lógica para montar statusInputForTickerItem e detailedStatus permanece igual...
       let leadingCoalitionForStatus: CoalitionVoteInfo | undefined = undefined;
-      if (leadingCandidateProcessed) { // Agora usa leadingCandidateProcessed que já tem numericVotes
+      if (leadingCandidateProcessed) {
         leadingCoalitionForStatus = {
           legend: leadingCandidateProcessed.parl_front_legend || leadingCandidateProcessed.party_legend || "N/D",
-          votes: leadingCandidateProcessed.numericVotes, // numericVotes está aqui
-          name: leadingCandidateProcessed.candidate_name
+          votes: leadingCandidateProcessed.numericVotes, name: leadingCandidateProcessed.candidate_name
         };
       }
-
       let runnerUpCoalitionForStatus: CoalitionVoteInfo | undefined = undefined;
-      if (runnerUpCandidateProcessed) { // Usa runnerUpCandidateProcessed
+      if (runnerUpCandidateProcessed) {
         runnerUpCoalitionForStatus = {
           legend: runnerUpCandidateProcessed.parl_front_legend || runnerUpCandidateProcessed.party_legend || "N/D",
-          votes: runnerUpCandidateProcessed.numericVotes, // numericVotes está aqui
-          name: runnerUpCandidateProcessed.candidate_name
+          votes: runnerUpCandidateProcessed.numericVotes, name: runnerUpCandidateProcessed.candidate_name
         };
       }
-
       const previousResultForThisDistrict = previousDistrictResultsData.find(d => d.district_id === district.district_id);
       const previousSeatHolderLegend = previousResultForThisDistrict?.winner_2018_legend || null;
-
       let remainingVotesEst = 0;
       if (district.voters_qtn && totalVotesInThisDistrict >= 0) { 
           remainingVotesEst = district.voters_qtn - totalVotesInThisDistrict;
           if (remainingVotesEst < 0) remainingVotesEst = 0;
       }
-
       const statusInputForTickerItem: DistrictStatusInput = {
-        isLoading: isLoading,
-        leadingCoalition: leadingCoalitionForStatus,
-        runnerUpCoalition: runnerUpCoalitionForStatus,
-        totalVotesInDistrict: totalVotesInThisDistrict,
-        remainingVotesEstimate: remainingVotesEst,
-        previousSeatHolderCoalitionLegend: previousSeatHolderLegend,
-        coalitionColorMap: coalitionColorMap,
-        fallbackCoalitionColor: COALITION_FALLBACK_COLOR
+        isLoading: isLoading, leadingCoalition: leadingCoalitionForStatus,
+        runnerUpCoalition: runnerUpCoalitionForStatus, totalVotesInDistrict: totalVotesInThisDistrict,
+        remainingVotesEstimate: remainingVotesEst, previousSeatHolderCoalitionLegend: previousSeatHolderLegend,
+        coalitionColorMap: coalitionColorMap, fallbackCoalitionColor: COALITION_FALLBACK_COLOR
       };
-
       const detailedStatus = calculateDistrictDynamicStatus(statusInputForTickerItem);
-
       tickerEntries.push({
-        district_id: district.district_id,
-        districtName: district.district_name,
-        stateId: district.uf,
-        stateName: stateInfo.uf_name,
-        
-        statusLabel: detailedStatus.label,
-        statusBgColor: detailedStatus.backgroundColor,
-        statusTextColor: detailedStatus.textColor,
-
+        district_id: district.district_id, districtName: district.district_name,
+        stateId: district.uf, stateName: stateInfo.uf_name,
+        statusLabel: detailedStatus.label, statusBgColor: detailedStatus.backgroundColor, statusTextColor: detailedStatus.textColor,
         winnerName: leadingCandidateProcessed?.candidate_name || null,
         winnerLegend: detailedStatus.actingCoalitionLegend || leadingCoalitionForStatus?.legend || null,
-        winnerPercentage: leadingCandidateProcessed?.percentage ?? null, // Usa a percentage já calculada
+        winnerPercentage: leadingCandidateProcessed?.percentage ?? null,
         runnerUpName: runnerUpCandidateProcessed?.candidate_name || null,
         runnerUpLegend: runnerUpCoalitionForStatus?.legend || null,
-        runnerUpPercentage: runnerUpCandidateProcessed?.percentage ?? null, // Usa a percentage já calculada
+        runnerUpPercentage: runnerUpCandidateProcessed?.percentage ?? null,
       });
     });
     return tickerEntries.sort((a,b) => a.district_id - b.district_id);
-  }, [
-    isLoading, 
-    candidateVotesInState, 
-    stateId, 
-    districtsData, 
-    stateInfo,     
-    coalitionColorMap
-  ]);
+  }, [ isLoading, candidateVotesInState, stateId, stateInfo, coalitionColorMap ]);
 
-  const previousPRDataForThisState = useMemo(() => { // Definição ÚNICA
+  const previousPRDataForThisState = useMemo(() => {
     if (!stateId) return null;
-    return previousStateProportionalPercentagesData.find((s: PreviousStateProportionalPercentage) => s.uf === stateId);
+    return previousStateProportionalPercentagesData.find(s => s.uf === stateId);
   }, [stateId]);
-
-  const previousPRSeatsForThisState = useMemo(() => { // Definição ÚNICA
+  const previousPRSeatsForThisState = useMemo(() => {
     if (!stateId) return null;
-    return previousStateProportionalSeatsData.find((s: PreviousStateProportionalSeats) => s.uf === stateId);
+    return previousStateProportionalSeatsData.find(s => s.uf === stateId);
   }, [stateId]);
 
   const districtResultsSummaryForStateMap: Record<string, DistrictResultInfo> = useMemo(() => {
     const summary: Record<string, DistrictResultInfo> = {};
     if (!pageData?.candidateVotes || !districtsData || !stateId) return summary;
     const votesByDistrictInState: Record<string, CandidateVote[]> = {};
-    const districtIdsInThisStateSet = new Set(districtsData.filter((d: DistrictInfoFromData) => d.uf === stateId).map((d: DistrictInfoFromData) => String(d.district_id)));
+    const districtIdsInThisStateSet = new Set(districtsData.filter(d => d.uf === stateId).map(d => String(d.district_id)));
     pageData.candidateVotes.forEach((vote: CandidateVote) => {
-        const districtIdStr = String(vote.district_id);
+        const districtIdStr = String(parseNumber(vote.district_id));
         if (districtIdsInThisStateSet.has(districtIdStr)) {
             if (!votesByDistrictInState[districtIdStr]) { votesByDistrictInState[districtIdStr] = []; }
             if (vote.candidate_name && vote.votes_qtn !== undefined && vote.votes_qtn !== null) {
@@ -331,7 +312,7 @@ export default function StatePage() {
         const votes = votesByDistrictInState[districtIdStr];
         if (!votes || votes.length === 0) return;
         const winner = votes.reduce((cw, cv) => (parseNumber(cw.votes_qtn) > parseNumber(cv.votes_qtn) ? cw : cv), votes[0]);
-        const districtInfoForMap = districtsData.find((d: DistrictInfoFromData) => String(d.district_id) === districtIdStr);
+        const districtInfoForMap = districtsData.find(d => String(d.district_id) === districtIdStr);
         if (winner) {
             summary[districtIdStr] = {
                 winnerLegend: winner.parl_front_legend ?? null, winnerName: winner.candidate_name,
@@ -339,7 +320,7 @@ export default function StatePage() {
             };
         }
     });
-    districtsData.filter((d: DistrictInfoFromData)=>d.uf === stateId).forEach((d: DistrictInfoFromData) => {
+    districtsData.filter(d=>d.uf === stateId).forEach(d => {
         const districtIdStr = String(d.district_id);
         if (!summary[districtIdStr]) { summary[districtIdStr] = { winnerLegend: null, districtName: d.district_name, maxVotes: 0 }; }
     });
@@ -355,9 +336,9 @@ export default function StatePage() {
     return percentages;
   }, [proportionalVotesInput]);
 
-  const stateProportionalSwingData = useMemo((): ProportionalSwingEntry[] => { // Definição ÚNICA
+  const stateProportionalSwingData = useMemo((): ProportionalSwingEntry[] => {
     if (!stateId || !currentProportionalPercentages || Object.keys(currentProportionalPercentages).length === 0) return [];
-    const previousStateData = previousStateProportionalPercentagesData.find((s: PreviousStateProportionalPercentage) => s.uf === stateId);
+    const previousStateData = previousPRDataForThisState;
     if (!previousStateData) {
       return Object.entries(currentProportionalPercentages).map(([legend, currentPercent]) => ({
         legend, currentPercent, previousPercent: 0, swing: currentPercent,
@@ -371,47 +352,43 @@ export default function StatePage() {
         swingEntries.push({ legend, currentPercent, previousPercent, swing: currentPercent - previousPercent });
     });
     return swingEntries.sort((a, b) => b.swing - a.swing || b.currentPercent - a.currentPercent);
-  }, [stateId, currentProportionalPercentages]); // Removido previousStateProportionalPercentagesData daqui, pois previousPRDataForThisState já a tem
+  }, [stateId, currentProportionalPercentages, previousPRDataForThisState]);
 
-  // Handlers (COPIADOS DO SEU CÓDIGO)
   const handleStateMapDistrictHover = (districtInfo: DistrictResultInfo | null, districtId: string | null) => {
     if (districtInfo && districtId) {
-       const staticDistrictInfo = districtsData.find((d: DistrictInfoFromData) => String(d.district_id) === districtId);
+       const staticDistrictInfo = districtsData.find(d => String(d.district_id) === districtId);
        const districtName = districtInfo.districtName || staticDistrictInfo?.district_name || `Distrito ${districtId}`;
-      setHoveredDistrictInfo(
-        `Distrito: ${districtName} | Vencedor: ${districtInfo.winnerName || 'N/A'} (${districtInfo.winnerLegend || 'N/D'})`
-      );
+      setHoveredDistrictInfo( `Distrito: ${districtName} | Vencedor: ${districtInfo.winnerName || 'N/A'} (${districtInfo.winnerLegend || 'N/D'})`);
     } else { setHoveredDistrictInfo(null); }
   };
-  const handleStateMapDistrictClick = (districtInfo: DistrictResultInfo | null, districtId: string) => {
-    if (districtId) { router.push(`/distrito/${districtId}?time=${currentTime}`); }
+  const handleStateMapDistrictClick = (districtInfo: DistrictResultInfo | null, districtIdStr: string) => {
+    if (districtIdStr) {
+        const districtNum = parseNumber(districtIdStr);
+        router.push(`/distrito/${districtNum}?time=${currentTime}`);
+    }
   };
 
-  // --- Filtrar layout do mapa para o estado atual ---
   const filteredMapLayout = useMemo(() => {
-    if (!stateId || !haagarDistrictLayout) return []; // districtsData não é necessário se já usado em districtIdsInStateSet
-    const districtIdsInStateSet = new Set(
-      districtsData.filter((d: DistrictInfoFromData) => d.uf === stateId).map((d: DistrictInfoFromData) => String(d.district_id))
-    );
+    if (!stateId || !haagarDistrictLayout) return [];
+    const districtIdsInStateSet = new Set( districtsData.filter(d => d.uf === stateId).map(d => String(d.district_id)));
     return haagarDistrictLayout.filter(layoutItem => districtIdsInStateSet.has(layoutItem.id));
-  }, [stateId]); // Removido districtsData e haagarMapLayout se forem estáticos globais importados
+  }, [stateId]);
 
-  // --- Lógica de Renderização ---
-  if (!stateId || !stateInfo || totalPRSeatsForThisState === undefined) {
-    return <div className="container mx-auto p-6 text-center text-red-500">Estado ({params.uf}) não encontrado ou não configurado para proporcional. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
+  if (!stateId || !stateInfo ) {
+    const message = !stateId ? "ID do Estado não fornecido." : `Estado ${params.uf} não encontrado.`;
+    return <div className="container mx-auto p-6 text-center text-red-500">{message} <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
-  const stateName = stateInfo.uf_name;
-  const totalDistrictSeatsInState = districtsData.filter((d: DistrictInfoFromData) => d.uf === stateId).length;
-  const totalSeatsInStateChamber = totalDistrictSeatsInState + (totalPRSeatsForThisState || 0);
+  const stateName = stateInfo.uf_name; // Garantido que stateInfo não é nulo aqui
+  const totalDistrictSeatsInState = districtsData.filter(d => d.uf === stateId).length;
+  const totalSeatsInStateChamber = totalDistrictSeatsInState + totalPRSeatsForThisState;
   const majorityThresholdStateChamber = Math.floor(totalSeatsInStateChamber / 2) + 1;
   const majorityThresholdPR = totalPRSeatsForThisState > 0 ? Math.floor(totalPRSeatsForThisState / 2) + 1 : 0;
 
-  if (isLoading) { return <div className="container mx-auto p-6 text-center text-gray-500 animate-pulse">Carregando dados para {stateName}...</div>; }
+  if (isLoading && !pageData) { return <div className="container mx-auto p-6 text-center text-gray-500 animate-pulse">Carregando dados para {stateName}...</div>; }
   if (error) { return <div className="container mx-auto p-6 text-center text-red-500">Erro ao carregar dados: {error}. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>; }
-  if (!pageData) { return <div className="container mx-auto p-6 text-center text-gray-500">Dados de votos não disponíveis para {stateName} no momento {currentTime}%. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>; }
+  if (!pageData && !isLoading) { return <div className="container mx-auto p-6 text-center text-gray-500">Dados de votos não disponíveis para {stateName} no momento {currentTime}%. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>; }
 
   return (
-    // O JSX principal como no seu código, com as correções e chamadas aos componentes corretos
     <div className="container mx-auto p-4 lg:p-6 space-y-8">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <Link href="/" className="text-blue-600 hover:underline">&larr; Visão Nacional</Link>
@@ -428,56 +405,121 @@ export default function StatePage() {
         </div>
       </div>
 
-      <header className="text-center">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">{stateName} ({stateId})</h1> {/* Adicionado stateId */}
+      <header className="mb-6">
+        {/* 1. TÍTULO ATUALIZADO */}
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 text-center">{stateName}</h1>
+        
+        {/* 5. ADICIONADO PERCENTUAL DE APURAÇÃO DO ESTADO */}
+        {stateInfo && pageData && (
+            <div className="mt-3 flex justify-center">
+            <div className="w-full max-w-lg"> {/* Aumentada um pouco a largura máxima */}
+                <ApuracaoVisao
+                isLoadingVotes={isLoading}
+                statusLabel={isLoading && !pageData ? "Carregando apuração..." : `Apuração em ${stateLevelScrutinyData.stateNameForLabel}`}
+                // Cores neutras para o status geral do estado, pode personalizar se quiser
+                statusLabelColor={isLoading && !pageData ? "#E5E7EB" : "#D1D5DB"} 
+                statusLabelTextColor={isLoading && !pageData ? "#6B7280" : "#374151"} 
+                areVotesBeingCounted={stateLevelScrutinyData.areVotesBeingCounted}
+                apuratedVotesCount={stateLevelScrutinyData.apuratedStateVotes}
+                totalPollsCount={stateLevelScrutinyData.totalPollsInState} // Total de urnas do estado
+                />
+            </div>
+            </div>
+        )}
       </header>
 
-      {/* Botões de Navegação da Visão */}
+      {/* 2. & 4. Botões de Navegação da Visão ATUALIZADOS */}
       <div className="my-6 border-b border-gray-200">
         <nav className="-mb-px flex space-x-4 sm:space-x-6 overflow-x-auto justify-center" aria-label="State Views">
-            <button onClick={() => setCurrentView('placarEstadual')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'placarEstadual' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Placar Estadual</button>
-            <button onClick={() => setCurrentView('votacaoProporcional')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'votacaoProporcional' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Votação Proporcional</button>
-            <button onClick={() => setCurrentView('verDistritos')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'verDistritos' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Ver Distritos</button>
-            <button onClick={() => setCurrentView('swingProporcional')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'swingProporcional' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-              Swing Proporcional
-            </button>
+            <button onClick={() => setCurrentView('visaoGeral')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'visaoGeral' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Visão Geral</button>
+            {totalPRSeatsForThisState > 0 && ( // Só mostra abas de proporcional se houver assentos PR
+              <>
+                <button onClick={() => setCurrentView('votacaoProporcional')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'votacaoProporcional' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Votação Proporcional</button>
+                <button onClick={() => setCurrentView('movimentacao')} className={`whitespace-nowrap pb-3 px-2 border-b-2 font-medium text-xs sm:text-sm ${currentView === 'movimentacao' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                  Movimentação
+                </button>
+              </>
+            )}
         </nav>
       </div>
 
-      {/* Renderização Condicional da Visão */}
+      {/* 3. Renderização Condicional da Visão ATUALIZADA */}
       <div className="mt-4">
-          {currentView === 'placarEstadual' && ( <section> <p className="text-sm text-gray-500 mb-3 text-center"> Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState ?? 0}) {' | '}Maioria: {majorityThresholdStateChamber} </p> <SeatCompositionPanel seatData={totalSeatsByFrontForState} colorMap={coalitionColorMap} totalSeats={totalSeatsInStateChamber} /> </section> )}
-          {currentView === 'votacaoProporcional' && (totalPRSeatsForThisState ?? 0) > 0 && ( <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"> <div> <ProportionalSeatAllocationDetails allocatedSeats={proportionalSeatsByFront} colorMap={coalitionColorMap} stateName={stateName} totalSeatsInState={totalPRSeatsForThisState!} majorityThreshold={majorityThresholdPR} rawVotes={proportionalVotesInput} /> </div> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Votos Proporcionais</h3> {proportionalVotesInput.length > 0 ? ( <ProportionalBarChart data={proportionalVotesInput.map(pv => ({ name: pv.legend, value: pv.votes }))} colorMap={coalitionColorMap} /> ) : ( <p className="text-center text-gray-500 py-10">Sem dados de votos proporcionais para este estado.</p> )} </div> </section> )}
-          {currentView === 'verDistritos' && (
-             <section className="space-y-6"> <div> 
-              {(filteredMapLayout.length > 0 && Object.keys(districtResultsSummaryForStateMap).length > 0) ? 
-              ( <InteractiveMap 
-              results={districtResultsSummaryForStateMap} 
-              colorMap={coalitionColorMap} onDistrictHover={handleStateMapDistrictHover} 
-              onDistrictClick={handleStateMapDistrictClick}
-              />
-              ):(<p className="text-gray-600 py-10 text-center">Não foi possível renderizar o mapa.</p> )} {hoveredDistrictInfo && ( <div className="mt-2 text-center text-sm text-gray-700 p-2 bg-gray-100 rounded">{hoveredDistrictInfo}</div> )} </div> <div> {districtResultsForTicker.length > 0 ? ( <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> ) : ( <p className="text-gray-600 py-10 text-center">Sem resultados distritais.</p> )} </div> 
-              </section> 
+          {currentView === 'visaoGeral' && stateInfo && pageData && (
+            <section className="space-y-8"> {/* Espaçamento entre os componentes da visão geral */}
+              {/* 1. MAPA */}
+              <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+                 <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Mapa dos Distritos em {stateName}</h2>
+                {(filteredMapLayout.length > 0 && Object.keys(districtResultsSummaryForStateMap).length > 0) ? 
+                ( <InteractiveMap 
+                    results={districtResultsSummaryForStateMap} 
+                    colorMap={coalitionColorMap} 
+                    onDistrictHover={handleStateMapDistrictHover} 
+                    onDistrictClick={handleStateMapDistrictClick}
+                  />
+                ) : (<p className="text-gray-600 py-10 text-center">Não foi possível renderizar o mapa dos distritos.</p> )}
+                {hoveredDistrictInfo && ( <div className="mt-2 text-center text-sm text-gray-700 p-2 bg-gray-100 rounded">{hoveredDistrictInfo}</div> )}
+              </div>
+
+              {/* 2. PAINEL DE ASSENTOS DO ESTADO */}
+              <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-700 mb-1 text-center">Composição da Câmara Estadual</h2>
+                <p className="text-sm text-gray-500 mb-3 text-center"> 
+                  Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState}) 
+                  {' | '}Maioria: {majorityThresholdStateChamber} 
+                </p>
+                <SeatCompositionPanel 
+                  seatData={totalSeatsByFrontForState} 
+                  colorMap={coalitionColorMap} 
+                  totalSeats={totalSeatsInStateChamber} 
+                />
+              </div>
               
+              {/* 3. TICKER DOS DISTRITOS DO ESTADO */}
+              {districtResultsForTicker.length > 0 && (
+                <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Resultados nos Distritos de {stateName}</h2>
+                  <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> 
+                </div>
               )}
-          {currentView === 'swingProporcional' && (
-          <section>
+            </section> 
+          )}
+
+          {currentView === 'votacaoProporcional' && totalPRSeatsForThisState > 0 && stateInfo && pageData && (
+            <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Detalhes da Votação Proporcional</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                <div> 
+                  <ProportionalSeatAllocationDetails allocatedSeats={proportionalSeatsByFront} colorMap={coalitionColorMap} stateName={stateName} totalSeatsInState={totalPRSeatsForThisState} majorityThreshold={majorityThresholdPR} rawVotes={proportionalVotesInput} /> 
+                </div> 
+                <div> 
+                  <h3 className="text-lg font-semibold mb-2 text-gray-700">Votos Proporcionais por Legenda</h3> 
+                  {proportionalVotesInput.length > 0 ? ( 
+                    <ProportionalBarChart data={proportionalVotesInput.map(pv => ({ name: pv.legend, value: pv.votes }))} colorMap={coalitionColorMap} /> 
+                  ) : ( <p className="text-center text-gray-500 py-10">Sem dados de votos proporcionais para este estado.</p> )} 
+                </div> 
+              </div>
+            </section>
+          )}
+          
+          {currentView === 'movimentacao' && totalPRSeatsForThisState > 0 && stateInfo && pageData && (
+          <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Movimentação Proporcional de Votos</h2>
             {stateProportionalSwingData.length > 0 ? (
             <StateProportionalSwing
                 swingDataPercent={stateProportionalSwingData}
                 currentPRSeatsByFront={proportionalSeatsByFront}
-                previousPRSeatsDataForState={previousPRSeatsForThisState} // Passando os dados corretos
+                previousPRSeatsDataForState={previousPRSeatsForThisState}
                 colorMap={coalitionColorMap}
                 stateName={stateName}
               />
                ) : (
-               <p className="text-center text-gray-500 py-10">Dados insuficientes para análise de swing proporcional.</p>
+               <p className="text-center text-gray-500 py-10">Dados insuficientes para análise de movimentação proporcional.</p>
                )}
           </section>
         )}
       </div>
 
-      {/* Seletor de Tempo (Movido para o final) */}
       <div className="mt-8 text-center p-4 bg-white rounded-lg shadow-md border border-gray-200">
         <label htmlFor="time-select-state" className="text-sm font-medium mr-2">Ver Apuração em:</label>
         <select id="time-select-state" value={currentTime} onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))} disabled={isLoading} className="rounded border-gray-300 shadow-sm" >
@@ -485,6 +527,6 @@ export default function StatePage() {
             <option value={100}>100%</option>
         </select>
       </div>
-    </div> // <-- GARANTIR QUE ESTE É O FECHAMENTO CORRETO DA DIV PRINCIPAL DO RETURN
+    </div>
   );
 }
