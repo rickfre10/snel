@@ -456,7 +456,7 @@ export default function StatePage() {
               colorMap={coalitionColorMap} onDistrictHover={handleStateMapDistrictHover} 
               onDistrictClick={handleStateMapDistrictClick}
               />
-              ):(<p className="text-gray-600 py-10 text-center">Não foi possível renderizar o mapa.</p> )} {hoveredDistrictInfo && ( <div className="mt-2 text-center text-sm text-gray-700 p-2 bg-gray-100 rounded">{hoveredDistrictInfo}</div> )} </div> <div> <h3 className="text-xl font-semibold mb-2 text-gray-700">Ticker dos Distritos de {stateName}</h3> {districtResultsForTicker.length > 0 ? ( <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> ) : ( <p className="text-gray-600 py-10 text-center">Sem resultados distritais.</p> )} </div> 
+              ):(<p className="text-gray-600 py-10 text-center">Não foi possível renderizar o mapa.</p> )} {hoveredDistrictInfo && ( <div className="mt-2 text-center text-sm text-gray-700 p-2 bg-gray-100 rounded">{hoveredDistrictInfo}</div> )} </div> <div> {districtResultsForTicker.length > 0 ? ( <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> ) : ( <p className="text-gray-600 py-10 text-center">Sem resultados distritais.</p> )} </div> 
               </section> 
               
               )}

@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/navigation'; // Importar para navegação
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 // Componentes de Visualização da Home
 import InteractiveMap from '../components/InteractiveMap';
@@ -364,6 +365,28 @@ const grandTotalSeats = useMemo(() => {
 
       {/* Mantém a estrutura principal e ordem do seu código original */}
       <main className="container mx-auto p-4 lg:p-6 space-y-8">
+        {/* BLOCO NOVO: Navegação Rápida por Estados */}
+        {/* ================================================================== */}
+        <div className="my-4 p-3 bg-white rounded-lg shadow-md border border-gray-200">
+          <h2 className="text-lg font-semibold mb-3 text-center text-gray-700">
+            Navegar por Estado:
+          </h2>
+          <div className="flex flex-wrap justify-center gap-2">
+            {states.map(s => (
+              <Link 
+                key={s.id} 
+                href={`/estado/${s.id.toLowerCase()}?time=${currentTime}`} 
+                legacyBehavior // Mantido para usar <a> aninhado, como no exemplo da página de estado
+              >
+                <a className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium shadow-sm transition-colors">
+                  {s.name} ({s.id})
+                </a>
+              </Link>
+            ))}
+          </div>
+        </div>
+        {/* ================================================================== */}
+        {/* FIM DO BLOCO NOVO */}
 
          {/* 1. Mapa Interativo */}
         <div className="relative"> {/* Mantido wrapper relativo para tooltip */}
