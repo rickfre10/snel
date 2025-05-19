@@ -448,8 +448,7 @@ export default function StatePage() {
           {currentView === 'visaoGeral' && stateInfo && pageData && (
             <section className="space-y-8"> {/* Espaçamento entre os componentes da visão geral */}
               {/* 1. MAPA */}
-              <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                 <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Mapa dos Distritos em {stateName}</h2>
+              <div>
                 {(filteredMapLayout.length > 0 && Object.keys(districtResultsSummaryForStateMap).length > 0) ? 
                 ( <InteractiveMap 
                     results={districtResultsSummaryForStateMap} 
@@ -463,7 +462,6 @@ export default function StatePage() {
 
               {/* 2. PAINEL DE ASSENTOS DO ESTADO */}
               <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-700 mb-1 text-center">Composição da Câmara Estadual</h2>
                 <p className="text-sm text-gray-500 mb-3 text-center"> 
                   Total de Assentos: {totalSeatsInStateChamber} (Distritais: {totalDistrictSeatsInState}, Proporcionais: {totalPRSeatsForThisState}) 
                   {' | '}Maioria: {majorityThresholdStateChamber} 
@@ -477,8 +475,7 @@ export default function StatePage() {
               
               {/* 3. TICKER DOS DISTRITOS DO ESTADO */}
               {districtResultsForTicker.length > 0 && (
-                <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Resultados nos Distritos de {stateName}</h2>
+                <div>
                   <RaceTicker data={districtResultsForTicker} colorMap={coalitionColorMap} /> 
                 </div>
               )}
@@ -487,7 +484,6 @@ export default function StatePage() {
 
           {currentView === 'votacaoProporcional' && totalPRSeatsForThisState > 0 && stateInfo && pageData && (
             <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Detalhes da Votação Proporcional</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div> 
                   <ProportionalSeatAllocationDetails allocatedSeats={proportionalSeatsByFront} colorMap={coalitionColorMap} stateName={stateName} totalSeatsInState={totalPRSeatsForThisState} majorityThreshold={majorityThresholdPR} rawVotes={proportionalVotesInput} /> 
@@ -504,7 +500,6 @@ export default function StatePage() {
           
           {currentView === 'movimentacao' && totalPRSeatsForThisState > 0 && stateInfo && pageData && (
           <section className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Movimentação Proporcional de Votos</h2>
             {stateProportionalSwingData.length > 0 ? (
             <StateProportionalSwing
                 swingDataPercent={stateProportionalSwingData}
