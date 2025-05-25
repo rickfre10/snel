@@ -147,17 +147,16 @@ const ComparisonTableDisplay: React.FC<ComparisonTableDisplayProps> = ({ entries
 
   return (
     <div className="overflow-x-auto bg-gray-50 p-4 rounded-lg shadow">
-      <h3 className="text-xl font-semibold text-gray-700 mb-4 text-center">Resumo da Movimentação Nacional e Estadual</h3>
       <table className="min-w-full divide-y divide-gray-300 text-sm">
         <thead className="bg-gray-100">
           <tr>
             <th scope="col" className="py-3 px-3 text-left font-semibold text-gray-900">Legenda</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Cadeiras Proporcionais Nacionais (Soma dos Estados)">Cad. Nac. (Atual)</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Cadeiras Proporcionais Nacionais Anteriores (Soma dos Estados)">Cad. Nac. (Ant)</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Cadeiras Proporcionais Nacionais (Soma dos Estados)">Cadeiras 2022</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Cadeiras Proporcionais Nacionais Anteriores (Soma dos Estados)">Cadeiras 2018</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Saldo de Cadeiras Nacionais">Saldo Cad.</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos Nac. (Atual)</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos Nac. (Ant)</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">Swing % Nac.</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2018))</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2022))</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">Movimentacao %</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">Detalhes Estaduais</th>
           </tr>
         </thead>
@@ -203,12 +202,12 @@ const ComparisonTableDisplay: React.FC<ComparisonTableDisplayProps> = ({ entries
                           <thead className="bg-slate-100">
                             <tr>
                               <th className="py-1.5 px-2 text-left font-semibold text-slate-700">Estado</th>
-                              <th className="py-1.5 px-2 text-center font-semibold text-slate-700">Cad. (Atual)</th>
-                              <th className="py-1.5 px-2 text-center font-semibold text-slate-700">Cad. (Ant)</th>
-                              <th className="py-1.5 px-2 text-center font-semibold text-slate-700">Saldo Cad.</th>
-                              {item.stateDetails.some(sd => sd.currentPercentInState !== undefined) && <th className="py-1.5 px-2 text-center font-semibold text-slate-700">% (Atual)</th>}
-                              {item.stateDetails.some(sd => sd.previousPercentInState !== undefined) && <th className="py-1.5 px-2 text-center font-semibold text-slate-700">% (Ant)</th>}
-                              {item.stateDetails.some(sd => sd.currentPercentInState !== undefined && sd.previousPercentInState !== undefined) && <th className="py-1.5 px-2 text-center font-semibold text-slate-700">Swing %</th>}
+                              <th className="py-1.5 px-2 text-center font-semibold text-slate-700">Cadeiras (2022)</th>
+                              <th className="py-1.5 px-2 text-center font-semibold text-slate-700">Cadeiras (2018)</th>
+                              <th className="py-1.5 px-2 text-center font-semibold text-slate-700">Saldo</th>
+                              {item.stateDetails.some(sd => sd.currentPercentInState !== undefined) && <th className="py-1.5 px-2 text-center font-semibold text-slate-700">% (2022)</th>}
+                              {item.stateDetails.some(sd => sd.previousPercentInState !== undefined) && <th className="py-1.5 px-2 text-center font-semibold text-slate-700">% (2018)</th>}
+                              {item.stateDetails.some(sd => sd.currentPercentInState !== undefined && sd.previousPercentInState !== undefined) && <th className="py-1.5 px-2 text-center font-semibold text-slate-700">Movimentação %</th>}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200">
@@ -276,7 +275,6 @@ const NationalProportionalOverview: React.FC<NationalProportionalOverviewProps> 
 
   return (
     <div className="p-4 md:p-6 bg-white rounded-xl shadow-xl space-y-10">
-      <h2 className="text-3xl font-bold text-center text-gray-800 tracking-tight">Panorama Proporcional Nacional</h2>
       
       <StackedPercentBarChartDisplay
         currentData={currentVotingData}

@@ -205,24 +205,9 @@ export default function NacionalOverviewPage() {
     <div className="bg-slate-100 min-h-screen py-8">
       <div className="container mx-auto px-2 sm:px-4 lg:px-6 space-y-10">
         <header className="text-center mb-8">
-          <div className="mb-6">
-            <label htmlFor="time-select-national" className="text-sm font-medium mr-2 text-slate-700">Ver Apuração em:</label>
-            <select 
-              id="time-select-national" 
-              value={currentTime} 
-              onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))} 
-              className="rounded border-gray-300 shadow-sm p-2 text-sm"
-            >
-                <option value={50}>50%</option>
-                <option value={100}>100%</option>
-            </select>
-          </div>
-          <h1 className="text-4xl font-extrabold text-slate-900 sm:text-5xl tracking-tight">
+          <h1 className="text-4xl font-bold text-slate-900 sm:text-5xl tracking-tight">
             Panorama Nacional Proporcional
           </h1>
-          <p className="mt-4 text-xl text-slate-700">
-            Comparativo da votação proporcional: Atual vs. Eleição Anterior ({currentTime}% apurados).
-          </p>
         </header>
         <main>
           <NationalProportionalOverview
