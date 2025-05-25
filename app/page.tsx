@@ -386,7 +386,7 @@ const grandTotalSeats = useMemo(() => {
         {states.map(s => (
           <Link 
             key={s.id} 
-            href={`/estado/<span class="math-inline">\{s\.id\.toLowerCase\(\)\}?time\=</span>{currentTime}`} 
+            href={`/estado/${s.id.toLowerCase()}?time=${currentTime}`}
             legacyBehavior
           >
             <a className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium shadow-sm transition-colors">
