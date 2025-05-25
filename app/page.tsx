@@ -370,30 +370,40 @@ const grandTotalSeats = useMemo(() => {
       <div className="flex flex-wrap justify-center items-center gap-2"> {/* Adicionado items-center para alinhamento vertical */}
 
         {/* Botão para Movimentação de Assentos */}
-        <Link 
-          href={`/ganhos-e-perdas?time=${currentTime}`} // Assumindo que a rota é /ganhos-e-perdas
-          legacyBehavior
-        >
-          <a className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm font-medium shadow-sm transition-colors">
-            Movimentação de Assentos
-          </a>
-        </Link>
+  <Link
+    href={`/ganhos-e-perdas?time=${currentTime}`}
+    legacyBehavior
+  >
+    <a className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 focus:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 text-sm font-medium shadow-sm transition-colors">
+      Movimentação de Assentos
+    </a>
+  </Link>
 
-        {/* Separador Visual Opcional (aparece em telas sm e maiores) */}
-        <span className="text-gray-300 hidden sm:inline mx-2">|</span>
+  {/* NOVO Botão para Panorama Nacional */}
+  <Link
+    href={`/nacional?time=${currentTime}`}
+    legacyBehavior
+  >
+    <a className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 focus:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 text-sm font-medium shadow-sm transition-colors">
+      Panorama Nacional
+    </a>
+  </Link>
 
-        {/* Botões dos Estados */}
-        {states.map(s => (
-          <Link 
-            key={s.id} 
-            href={`/estado/${s.id.toLowerCase()}?time=${currentTime}`}
-            legacyBehavior
-          >
-            <a className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium shadow-sm transition-colors">
-              {s.id}
-            </a>
-          </Link>
-        ))}
+  {/* Separador Visual Opcional (aparece em telas sm e maiores) */}
+  <span className="text-gray-300 hidden sm:inline mx-2">|</span>
+
+  {/* Botões dos Estados */}
+  {states.map(s => (
+    <Link
+      key={s.id}
+      href={`/estado/${s.id.toLowerCase()}?time=${currentTime}`}
+      legacyBehavior
+    >
+      <a className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium shadow-sm transition-colors">
+        {s.id}
+      </a>
+    </Link>
+  ))}
       </div>
     </div>
     {/* FIM DO BLOCO ATUALIZADO */}

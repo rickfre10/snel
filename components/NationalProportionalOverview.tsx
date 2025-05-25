@@ -115,7 +115,6 @@ const StackedPercentBarChartDisplay: React.FC<StackedPercentBarChartDisplayProps
 
   return (
     <div className="p-4 bg-gray-50 rounded-lg shadow">
-      <h3 className="text-xl font-semibold text-gray-700 mb-4 text-center">Composição Nacional de Votos Proporcionais (%)</h3>
       <StackedBarView label="Eleição Atual" segments={currentSegments} />
       <StackedBarView label="Eleição Anterior" segments={previousSegments} />
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 justify-center">
@@ -154,9 +153,9 @@ const ComparisonTableDisplay: React.FC<ComparisonTableDisplayProps> = ({ entries
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Cadeiras Proporcionais Nacionais (Soma dos Estados)">Cadeiras 2022</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Cadeiras Proporcionais Nacionais Anteriores (Soma dos Estados)">Cadeiras 2018</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Saldo de Cadeiras Nacionais">Saldo Cad.</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2018))</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2022))</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">Movimentacao %</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2018)</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2022)</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">Movimentação %</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">Detalhes Estaduais</th>
           </tr>
         </thead>
