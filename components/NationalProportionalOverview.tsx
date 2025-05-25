@@ -153,8 +153,8 @@ const ComparisonTableDisplay: React.FC<ComparisonTableDisplayProps> = ({ entries
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Cadeiras Proporcionais Nacionais (Soma dos Estados)">Cadeiras 2022</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Cadeiras Proporcionais Nacionais Anteriores (Soma dos Estados)">Cadeiras 2018</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900 Tooltip" title="Saldo de Cadeiras Nacionais">Saldo Cad.</th>
-            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2018)</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2022)</th>
+            <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">% Votos (2018)</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">Movimentação %</th>
             <th scope="col" className="py-3 px-2 text-center font-semibold text-gray-900">Detalhes Estaduais</th>
           </tr>
