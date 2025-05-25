@@ -416,12 +416,11 @@ const grandTotalSeats = useMemo(() => {
                  colorMap={coalitionColorMap}
                  totalSeats={grandTotalSeats}
              />
-        </div>
-
-        {/* 3. Ticker */}
+             {/* 3. Ticker */}
         {(tickerData.length > 0 && !isLoadingVotes) && (
             <RaceTicker data={tickerData} colorMap={coalitionColorMap} interval={8000} />
         )}
+        </div>
 
           {/* Seletores Geográficos ATUALIZADOS */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 my-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
