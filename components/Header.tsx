@@ -19,7 +19,7 @@ const Header: React.FC = () => {
       priority
      className="h-6 md:h-8 w-auto"
       />
-      <span className="font-bold text-lg text-gray-800 group-hover:text-grey-800 transition-colors"> {/* Exemplo de mudança de cor no hover */}
+      <span className="font-bold text-lg text-white-800 group-hover:text-white-800 transition-colors"> {/* Exemplo de mudança de cor no hover */}
         Eleições
       </span>
       </Link>
