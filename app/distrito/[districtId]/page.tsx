@@ -1,429 +1,216 @@
-// app/distrito/[districtId]/page.tsx
+// app/parlamento/page.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
-// Seus componentes existentes
-import CandidateCardInfo, { CandidateCardInfoProps } from '@/components/CandidateCardInfo'; // Importe o tipo das props também
-import DistrictBarChart from '@/components/DistrictBarChart';
-import ApuracaoVisao from '@/components/ApuracaoVisao';
+import ParliamentCompositionChart from '@/components/ParliamentCompositionChart';
+import CoalitionBuilderSimulator from '@/components/CoalitionBuilderSimulator';
 
-// Tipos e Dados Estáticos
-import { CandidateVote, DistrictInfoFromData } from '@/types/election'; // Removidos PartyInfo, DistrictResultInfo, TickerEntry, ProportionalVote se não usados diretamente aqui
-import { districtsData, partyData } from '@/lib/staticData'; // partyData ainda é usado para coalitionColorMap
-import { previousDistrictResultsData } from '@/lib/previousElectionData'; // Removido PreviousDistrictResult se só o array é usado
+import { calculateProportionalSeats } from '@/lib/electionCalculations';
+import { partyData, districtsData } from '@/lib/staticData';
 
-// Importar a nova lógica de status
-import { calculateDistrictDynamicStatus, getSimplifiedCandidateStatus, DistrictStatusInput, DistrictStatusOutput, CoalitionVoteInfo } from '@/lib/statusCalculator'; // Ajuste o caminho
-import SwingAnalysis from '@/components/SwingAnalysis';
+import type { ProportionalVote, CandidateVote, DistrictInfoFromData } from '@/types/election';
 
-type DistrictViewMode = 'candidates' | 'bars' | 'swing' ;
+// Constantes do Parlamento Nacional
+const TOTAL_SEATS_IN_PARLIAMENT = 213; // 120 Distritais + 93 Proporcionais
+const MAJORITY_THRESHOLD = Math.floor(TOTAL_SEATS_IN_PARLIAMENT / 2) + 1; // 107
 
-interface ApiVotesData {
-  time: number;
-  candidateVotes: CandidateVote[];
-  // proportionalVotes: ProportionalVote[]; // Removido se não usado nesta página
-}
-
-// ... (FALLBACK_COLOR, COALITION_FALLBACK_COLOR, parseNumber, getTextColorForBackground - mantenha como estão) ...
-const FALLBACK_COLOR = '#D1D5DB';
-const COALITION_FALLBACK_COLOR = '#6B7280';
+const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4 };
 
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-        const cleanedStr = value.replace(/\./g, '').replace(',', '.');
-        const num = parseFloat(cleanedStr);
-        return isNaN(num) ? 0 : num;
-    }
+    if (typeof value === 'string') { const cleanedStr = String(value).replace(/\./g, '').replace(',', '.'); const num = parseFloat(cleanedStr); return isNaN(num) ? 0 : num; }
     return 0;
 };
-
-function getTextColorForBackground(hexcolor: string): string {
-    if (!hexcolor) return '#1F2937'; 
-    hexcolor = hexcolor.replace("#", "");
-    if (hexcolor.length !== 6 && hexcolor.length !== 3) return '#1F2937';
-    if (hexcolor.length === 3) {
-        hexcolor = hexcolor.split('').map(char => char + char).join('');
-    }
-    try {
-        const r = parseInt(hexcolor.substring(0, 2), 16);
-        const g = parseInt(hexcolor.substring(2, 4), 16);
-        const b = parseInt(hexcolor.substring(4, 6), 16);
-        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        return (yiq >= 128 || hexcolor.toLowerCase() === 'ffffff' || hexcolor.toLowerCase() === '#ffffff') ? '#1F2937' : '#FFFFFF';
-    } catch (e) { return '#1F2937'; }
+interface ApiAllVotesData {
+  time: number;
+  proportionalVotes: ProportionalVote[];
+  candidateVotes: CandidateVote[];
 }
 
+const buildColorMap = (): Record<string, string> => {
+  const map: Record<string, string> = {};
+  partyData.forEach(party => { if (party.parl_front_legend && party.parl_front_color) map[party.parl_front_legend] = party.parl_front_color; });
+  // Adicionar cores para legendas de partido também, se necessário, como fallback
+   partyData.forEach(party => { if (party.party_legend && party.party_color && !map[party.party_legend]) map[party.party_legend] = party.party_color; });
+  return map;
+};
+const getAllUfInfo = (): { uf: string; stateName: string }[] => {
+  const ufMap = new Map<string, string>();
+  districtsData.forEach(d => { if (d.uf && d.uf_name && !ufMap.has(d.uf)) ufMap.set(d.uf, d.uf_name); });
+  Object.keys(totalProportionalSeatsByState).forEach(uf => { if (!ufMap.has(uf)) { const dName = districtsData.find(d_1 => d_1.uf === uf); ufMap.set(uf, dName?.uf_name || uf); } });
+  return Array.from(ufMap, ([uf, stateName]) => ({ uf, stateName })).sort((a,b) => a.stateName.localeCompare(b.stateName));
+};
 
-// Defina o tipo para os candidatos processados que irão para CandidateCardInfo
-interface CandidateVoteProcessedForCard extends CandidateVote {
-  percentage: number;
-  numericVotes: number;
-  status?: string; // Status simplificado: "Eleito", "Liderando", "Processando"
+interface PartySeatDataForParliament {
+    legend: string;
+    seats: number;
+    color: string;
 }
 
+const FALLBACK_COLOR_PARLIAMENT = '#CCCCCC'; // Cinza claro para legendas sem cor definida
 
-export default function DistrictDetailPage() {
-  const params = useParams();
-
-  const districtId = useMemo(() => {
-      const idParam = params.districtId;
-      const id = Array.isArray(idParam) ? idParam[0] : idParam;
-      return id ? parseInt(id, 10) : null;
-  }, [params.districtId]);
-
+export default function ParlamentoNacionalPage() {
+  const searchParamsHook = useSearchParams();
+  const [parliamentSeatData, setParliamentSeatData] = useState<PartySeatDataForParliament[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(100);
-  const [apiVotesData, setApiVotesData] = useState<ApiVotesData | null>(null);
-  const [isLoadingVotes, setIsLoadingVotes] = useState<boolean>(true);
-  const [errorVotes, setErrorVotes] = useState<string | null>(null);
-  const [districtViewMode, setDistrictViewMode] = useState<DistrictViewMode>('candidates');
 
-  const currentDistrictInfo = useMemo(() => {
-    if (!districtId) return null;
-    return districtsData.find(d => d.district_id === districtId);
-  }, [districtId]);
+  const colorMap = useMemo(() => buildColorMap(), []);
+  const allUfInfos = useMemo(() => getAllUfInfo(), []);
+  const initialTimeFromQuery = useMemo(() => searchParamsHook.get('time') ? parseInt(searchParamsHook.get('time')!, 10) : 100, [searchParamsHook]);
 
-  const coalitionColorMap: Record<string, string> = useMemo(() => {
-    const map: Record<string, string> = {};
-    partyData.forEach(party => {
-      if (party.parl_front_legend && party.parl_front_color && !map[party.parl_front_legend]) {
-        map[party.parl_front_legend] = party.parl_front_color;
-      }
-      if (party.party_legend && party.party_color && !map[party.party_legend]) {
-          map[party.party_legend] = party.party_color;
-      }
-    });
-    return map;
-  }, []);
+  useEffect(() => { setCurrentTime(initialTimeFromQuery); }, [initialTimeFromQuery]);
 
   useEffect(() => {
-    if (!districtId) {
-      setIsLoadingVotes(false);
-      setErrorVotes("ID do Distrito inválido.");
-      return;
-    }
-    const fetchVoteData = async () => {
-      setIsLoadingVotes(true); setErrorVotes(null);
+    const fetchAndProcessNationalSeatData = async () => {
+      setIsLoading(true); setError(null);
       try {
-          const response = await fetch(`/api/results?time=${currentTime}`);
-          if (!response.ok) {
-               let errorMsg = 'Erro ao buscar votos';
-               try { errorMsg = (await response.json()).error || errorMsg; } catch (e) {}
-               throw new Error(errorMsg);
+        const response = await fetch(`/api/results?time=${currentTime}`);
+        if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Falha ao buscar dados da API'); }
+        const allVoteData: ApiAllVotesData = await response.json();
+
+        const legendsSet = new Set<string>();
+        partyData.forEach(p => { if (p.parl_front_legend) legendsSet.add(p.parl_front_legend); if (p.party_legend) legendsSet.add(p.party_legend); });
+        allVoteData.proportionalVotes.forEach(v => { if (v.parl_front_legend) legendsSet.add(v.parl_front_legend); });
+        allVoteData.candidateVotes.forEach(v => { if (v.parl_front_legend) legendsSet.add(v.parl_front_legend); if (v.party_legend) legendsSet.add(v.party_legend);});
+        
+        const nationalTotalSeatsByLegend: Record<string, number> = {};
+        Array.from(legendsSet).forEach(l => nationalTotalSeatsByLegend[l] = 0);
+
+        // 1. Calcular Total de Cadeiras Proporcionais Nacionais por Legenda
+        allUfInfos.forEach(({ uf }) => {
+          const allProportionalVotesInUfCurrent = allVoteData.proportionalVotes
+            .filter(v_1 => v_1.uf === uf && v_1.parl_front_legend)
+            .map(v_2 => ({ legend: v_2.parl_front_legend!, votes: parseNumber(v_2.proportional_votes_qtn) }));
+          
+          const seatsForStateProportional = totalProportionalSeatsByState[uf] || 0;
+          if (seatsForStateProportional > 0 && allProportionalVotesInUfCurrent.length > 0) {
+            const calculatedPrSeatsObj = calculateProportionalSeats(allProportionalVotesInUfCurrent, seatsForStateProportional, 5);
+            Array.from(legendsSet).forEach(legend_1 => {
+              nationalTotalSeatsByLegend[legend_1] += calculatedPrSeatsObj[legend_1] || 0;
+            });
           }
-          const data: ApiVotesData = await response.json();
-          setApiVotesData(data);
-      } catch (err: unknown) {
-          setErrorVotes(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido');
-          setApiVotesData(null);
-      } finally {
-          setIsLoadingVotes(false);
-      }
-  };
-  fetchVoteData();
-  }, [currentTime, districtId]);
+        });
 
-  const filteredCandidateVotes = useMemo(() => {
-    if (!apiVotesData?.candidateVotes || !districtId) return [];
-    // Garantir que vote.district_id seja comparado como número
-    return apiVotesData.candidateVotes.filter(vote => Number(vote.district_id) === districtId );
-  }, [apiVotesData?.candidateVotes, districtId]);
-
-  const districtResults = useMemo(() => {
-    if (!filteredCandidateVotes || filteredCandidateVotes.length === 0) {
-      return { votes: [], totalVotes: 0, leadingCandidate: null, runnerUpCandidate: null };
-    }
-    const votesWithNumeric = filteredCandidateVotes.map(v => ({...v, numericVotes: parseNumber(v.votes_qtn)}));
-    const totalVotes = votesWithNumeric.reduce((sum, current) => sum + current.numericVotes, 0);
-    const sortedVotes = [...votesWithNumeric].sort((a,b) => b.numericVotes - a.numericVotes);
-    
-    const leadingCandidate = sortedVotes[0] || null;
-    const runnerUpCandidate = sortedVotes[1] || null;
-
-    const votesWithPercentage = sortedVotes.map(vote => ({
-      ...vote,
-      percentage: totalVotes > 0 ? ((vote.numericVotes / totalVotes) * 100) : 0,
-    }));
-    return {
-      votes: votesWithPercentage as (CandidateVote & { numericVotes: number, percentage: number })[],
-      totalVotes,
-      leadingCandidate: leadingCandidate as (CandidateVote & { numericVotes: number, percentage: number }) | null, // Para ter numericVotes e percentage
-      runnerUpCandidate: runnerUpCandidate as (CandidateVote & { numericVotes: number, percentage: number }) | null, // Para ter numericVotes e percentage
-    };
-  }, [filteredCandidateVotes]);
-
-  const previousResultForThisDistrict = useMemo(() => {
-    if (!districtId) return undefined;
-    return previousDistrictResultsData.find(d => d.district_id === districtId);
-  }, [districtId]);
-
-  // --- CÁLCULO DO NOVO STATUS DINÂMICO ---
-  const detailedDistrictStatus = useMemo((): DistrictStatusOutput => {
-    const previousSeatHolder = previousResultForThisDistrict?.winner_2018_legend || null;
-    
-    let leadingCoalitionData: CoalitionVoteInfo | undefined = undefined;
-    if (districtResults.leadingCandidate) {
-      leadingCoalitionData = {
-        legend: districtResults.leadingCandidate.parl_front_legend || districtResults.leadingCandidate.party_legend || "N/A",
-        votes: districtResults.leadingCandidate.numericVotes,
-        name: districtResults.leadingCandidate.candidate_name
-      };
-    }
-
-    let runnerUpCoalitionData: CoalitionVoteInfo | undefined = undefined;
-    if (districtResults.runnerUpCandidate) {
-      runnerUpCoalitionData = {
-        legend: districtResults.runnerUpCandidate.parl_front_legend || districtResults.runnerUpCandidate.party_legend || "N/A",
-        votes: districtResults.runnerUpCandidate.numericVotes,
-        name: districtResults.runnerUpCandidate.candidate_name
-      };
-    }
-
-    // Cálculo da estimativa de votos restantes
-    // Usaremos voters_qtn como total de eleitores aptos e districtResults.totalVotes como total apurado
-    // Assumindo que currentDistrictInfo.voters_qtn é o total esperado de votos.
-    let remainingVotesEstimate = 0;
-    if (currentDistrictInfo && currentDistrictInfo.voters_qtn && districtResults.totalVotes >= 0) {
-        remainingVotesEstimate = currentDistrictInfo.voters_qtn - districtResults.totalVotes;
-        if (remainingVotesEstimate < 0) remainingVotesEstimate = 0; // Não pode ser negativo
-    } else if (currentDistrictInfo && currentDistrictInfo.polls_qtn > 0) {
-        // Fallback: Estimativa baseada em urnas se voters_qtn não for confiável ou ausente
-        // Supondo que ApuracaoVisao ainda use a lógica de 500 votos/urna para seu display interno,
-        // aqui precisamos de uma estimativa para a lógica de virada.
-        // Se não tivermos urnas apuradas, não podemos estimar bem.
-        // Esta parte pode precisar de mais dados (ex: urnas apuradas de fato).
-        // Por simplicidade, se voters_qtn não estiver disponível, a precisão da virada pode ser comprometida.
-        // Deixaremos remainingVotesEstimate como 0 se não houver voters_qtn para simplificar.
-    }
-
-
-    const statusInput: DistrictStatusInput = {
-      isLoading: isLoadingVotes,
-      leadingCoalition: leadingCoalitionData,
-      runnerUpCoalition: runnerUpCoalitionData,
-      totalVotesInDistrict: districtResults.totalVotes,
-      remainingVotesEstimate: remainingVotesEstimate,
-      previousSeatHolderCoalitionLegend: previousSeatHolder,
-      coalitionColorMap: coalitionColorMap, // Nome exato
-      fallbackCoalitionColor: COALITION_FALLBACK_COLOR // Nome exato
-    };
-
-    return calculateDistrictDynamicStatus(statusInput);
-  }, [
-    isLoadingVotes,
-    districtResults.leadingCandidate,
-    districtResults.runnerUpCandidate,
-    districtResults.totalVotes,
-    currentDistrictInfo, // Adicionado currentDistrictInfo para voters_qtn/polls_qtn
-    previousResultForThisDistrict,
-    coalitionColorMap
-  ]);
-
-
-  // --- Preparar dados para CandidateCardInfo com o novo status ---
-  const processedCandidatesForCard: CandidateCardInfoProps['data'] = useMemo(() => {
-    if (!districtResults.votes || !currentDistrictInfo) return [];
-
-    return districtResults.votes.map(candidate => {
-      const isCandidateTheLeader = candidate.candidate_name === districtResults.leadingCandidate?.candidate_name; // Uma forma de verificar
-      
-      // Adiciona numericVotes e percentage se não estiverem já no tipo base (CandidateVote)
-      // No seu districtResults, 'votes' já tem numericVotes e percentage
-      const candidateProcessed = candidate as (CandidateVote & { numericVotes: number, percentage: number });
-
-      return {
-        ...candidateProcessed,
-        status: getSimplifiedCandidateStatus(
-          detailedDistrictStatus,
-          candidateProcessed.parl_front_legend || candidateProcessed.party_legend,
-          isCandidateTheLeader
-        ),
-      };
-    });
-  }, [districtResults.votes, districtResults.leadingCandidate, detailedDistrictStatus, currentDistrictInfo]);
-
-
-  // SwingAnalysisData (mantenha sua lógica existente, apenas certifique-se que não conflita)
-  const swingAnalysisData = useMemo(() => {
-    // ... sua lógica de swingAnalysisData ...
-    // Certifique-se que districtResults.votes[0] e [1] são usados corretamente aqui
-    // e que currentDistrictInfo está disponível.
-    if (!districtId || !currentDistrictInfo || !districtResults.votes || districtResults.votes.length === 0) {
-        return null;
-    }
-    const currentWinner = districtResults.votes[0];
-    const currentRunnerUp = districtResults.votes[1] || null;
-    const previousResult = previousResultForThisDistrict;
-    // ... resto da sua lógica ...
-    if (!currentWinner) return null; // Adicionar guarda para currentWinner
-
-    let actualSwingValue: number = 0;
-    let swingText = "";
-    let swingValueForGraph = 0;
-    let graphTargetLegend = currentWinner.parl_front_legend;
-    let graphOpponentLegend: string | null = null;
-    let finalContextualSwingColor = '#E5E7EB';
-
-    if (!previousResult) {
-        actualSwingValue = 0;
-        swingText = "Dados de 2018 não disponíveis para este distrito.";
-        graphOpponentLegend = currentRunnerUp?.parl_front_legend || "Outros";
-        finalContextualSwingColor = graphTargetLegend ? (coalitionColorMap[graphTargetLegend] ?? FALLBACK_COLOR) : FALLBACK_COLOR;
-    } else {
-        graphOpponentLegend = previousResult.winner_2018_legend;
-        const currentWinnerLegend = currentWinner.parl_front_legend;
-        const previousWinnerLegend = previousResult.winner_2018_legend;
-        if (currentWinnerLegend && currentWinnerLegend === previousWinnerLegend) {
-            const swing = currentWinner.percentage - previousResult.winner_2018_percentage;
-            actualSwingValue = swing;
-            swingValueForGraph = Math.max(-10, Math.min(10, swing));
-            graphTargetLegend = currentWinnerLegend;
-            graphOpponentLegend = currentRunnerUp?.parl_front_legend || "Outros";
-            if (swing > 0.05) {
-                swingText = `De ${graphOpponentLegend} para ${currentWinnerLegend}.`;
-                finalContextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
-            } else if (swing < -0.05) {
-                swingText = `De ${currentWinnerLegend} para ${graphOpponentLegend}.`;
-                finalContextualSwingColor = graphOpponentLegend !== "Outros" && graphOpponentLegend ? (coalitionColorMap[graphOpponentLegend] ?? FALLBACK_COLOR) : FALLBACK_COLOR;
-            } else {
-                swingText = `${currentWinnerLegend} mantém com performance similar a 2018.`;
-            }
-        } else if (currentWinnerLegend && previousWinnerLegend) {
-            const previousWinnerCurrentPerformance = districtResults.votes.find(
-                v => v.parl_front_legend === previousWinnerLegend
+        // 2. Calcular Total de Cadeiras Distritais Nacionais por Legenda
+        const allDistrictEntities: DistrictInfoFromData[] = districtsData;
+        
+        allDistrictEntities.forEach(district => {
+          const votesInDistrict = allVoteData.candidateVotes.filter(
+            vote => parseNumber(vote.district_id) === district.district_id
+          );
+          if (votesInDistrict.length > 0) {
+            const winner = votesInDistrict.reduce((prev, current) =>
+              parseNumber(prev.votes_qtn) > parseNumber(current.votes_qtn) ? prev : current
             );
-            const previousWinnerCurrentPercentage = previousWinnerCurrentPerformance?.percentage ?? 0;
-            const swing = previousResult.winner_2018_percentage - previousWinnerCurrentPercentage;
-            actualSwingValue = swing;
-            swingValueForGraph = Math.max(-10, Math.min(10, swing));
-            graphTargetLegend = currentWinnerLegend;
-            graphOpponentLegend = previousWinnerLegend;
-            swingText = `De ${previousWinnerLegend} para ${currentWinnerLegend}.`;
-            finalContextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
-        } else if (currentWinnerLegend) {
-            actualSwingValue = currentWinner.percentage;
-            swingText = `${currentWinnerLegend} é o novo líder.`;
-            finalContextualSwingColor = coalitionColorMap[currentWinnerLegend] ?? FALLBACK_COLOR;
-            graphOpponentLegend = "Cenário Anterior";
-        } else {
-            actualSwingValue = 0;
-            swingText = "Resultado indefinido.";
-            graphTargetLegend = null;
-            graphOpponentLegend = null;
-        }
-    }
-    return {
-        currentWinner, currentRunnerUp, previousWinnerInfo: previousResult || null,
-        actualSwingValue, swingValueForGraph, graphTargetLegend, graphOpponentLegend,
-        contextualSwingText: swingText, contextualSwingColor: finalContextualSwingColor,
-    };
-  }, [districtId, currentDistrictInfo, districtResults, previousResultForThisDistrict, coalitionColorMap]);
+            const winnerLegend = winner.parl_front_legend || winner.party_legend; // Prioriza frente, depois partido
+            if (winnerLegend && legendsSet.has(winnerLegend)) {
+              nationalTotalSeatsByLegend[winnerLegend] += 1;
+            } else if (winnerLegend) {
+                // Legenda não estava no Set original, adiciona se não existir e soma
+                if (!nationalTotalSeatsByLegend[winnerLegend]) nationalTotalSeatsByLegend[winnerLegend] = 0;
+                nationalTotalSeatsByLegend[winnerLegend] += 1;
+            }
+          }
+        });
 
-  if (!districtId) { return <div className="container mx-auto p-6 text-center text-red-600">ID do Distrito inválido na URL. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div> }
-  if (!currentDistrictInfo) { return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div> }
+        const finalParliamentSeatData: PartySeatDataForParliament[] = [];
+        let sumOfCalculatedSeats = 0;
+        Array.from(legendsSet).forEach(legend_2 => {
+          const seats = nationalTotalSeatsByLegend[legend_2] || 0;
+          if (seats > 0) { 
+            finalParliamentSeatData.push({
+              legend: legend_2,
+              seats,
+              color: colorMap[legend_2] || FALLBACK_COLOR_PARLIAMENT
+            });
+          }
+          sumOfCalculatedSeats += seats;
+        });
+        
+        console.log("Soma total de assentos calculados (Distrital + Proporcional):", sumOfCalculatedSeats);
+        if (sumOfCalculatedSeats !== TOTAL_SEATS_IN_PARLIAMENT) {
+            console.warn(`ALERTA: A soma dos assentos calculados (${sumOfCalculatedSeats}) não é igual ao total esperado de ${TOTAL_SEATS_IN_PARLIAMENT}.`);
+        }
+        
+        setParliamentSeatData(finalParliamentSeatData.sort((a,b) => b.seats - a.seats));
+
+      } catch (e) {
+        console.error("Erro ao buscar ou processar dados para o parlamento:", e);
+        setError(e instanceof Error ? e.message : "Erro desconhecido.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (allUfInfos.length > 0) { fetchAndProcessNationalSeatData(); }
+    else { setIsLoading(false); setError("Lista de UFs não pôde ser carregada."); }
+  }, [currentTime, allUfInfos, colorMap]); // Adicionado colorMap
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center min-h-screen bg-slate-100"><p className="text-xl text-gray-500 animate-pulse">Carregando dados do parlamento...</p></div>;
+  }
+  if (error) {
+    return <div className="container mx-auto p-6 text-center text-red-500">Erro: {error} <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
+  }
+  if (parliamentSeatData.length === 0 && !isLoading) {
+    return <div className="container mx-auto p-6 text-center text-gray-500">Não há dados de assentos para exibir o parlamento. Verifique a fonte de dados.</div>;
+  }
 
   return (
-    <div className="container mx-auto p-4 lg:p-6 space-y-6">
-      <div className="mb-4">
-        <Link href="/" className="text-blue-600 hover:underline inline-block">&larr; Voltar para Visão Nacional</Link>
-      </div>
-
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
-        <div className="space-y-1">
-          <Link href={`/estado/${currentDistrictInfo.uf.toLowerCase()}?time=${currentTime}`} className="inline-block">
-            <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-gray-300 transition-colors cursor-pointer">
-              {currentDistrictInfo.uf_name}
-            </span>
+    <div className="bg-slate-50 min-h-screen py-8 antialiased">
+      <div className="container mx-auto px-2 sm:px-4 lg:px-6 space-y-10">
+        <header className="text-center mb-8">
+          <Link href="/nacional" className="text-sky-600 hover:text-sky-800 hover:underline mb-6 inline-block transition-colors text-sm">
+            &larr; Voltar para Panorama Nacional Proporcional
           </Link>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
-            {currentDistrictInfo.district_name}
+          <h1 className="text-3xl font-extrabold text-slate-900 sm:text-4xl lg:text-5xl tracking-tight">
+            Parlamento Nacional & Simulador de Coalizões
           </h1>
-        </div>
-        {/* ÁREA DE STATUS E APURAÇÃO UNIFICADA NO ApuracaoVisao */}
-        <ApuracaoVisao
-            isLoadingVotes={isLoadingVotes} // Passa o estado de carregamento dos votos
-            // Props para o rótulo de status dinâmico
-            statusLabel={detailedDistrictStatus.label}
-            statusLabelColor={detailedDistrictStatus.backgroundColor}
-            statusLabelTextColor={detailedDistrictStatus.textColor}
-            // Props existentes para a apuração de urnas/votos
-            areVotesBeingCounted={districtResults.totalVotes > 0}
-            apuratedVotesCount={districtResults.totalVotes}
-            totalPollsCount={currentDistrictInfo?.polls_qtn || 0} // Usa polls_qtn real
-        />
+          <p className="mt-4 text-lg text-slate-600">
+            Composição de <span className="font-semibold">{TOTAL_SEATS_IN_PARLIAMENT}</span> assentos. Maioria: <span className="font-semibold">{MAJORITY_THRESHOLD}</span> assentos. ({currentTime}% apurados)
+          </p>
+           <div className="mt-6">
+            <label htmlFor="time-select-parl" className="text-sm font-medium mr-2 text-slate-700">Ver Apuração em:</label>
+            <select 
+              id="time-select-parl" 
+              value={currentTime} 
+              onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))} 
+              className="rounded border-gray-300 shadow-sm p-2 text-sm focus:ring-sky-500 focus:border-sky-500"
+            >
+                <option value={50}>50%</option>
+                <option value={100}>100%</option>
+            </select>
+          </div>
+        </header>
+
+        <main className="grid grid-cols-1 lg:grid-cols-7 gap-6 xl:gap-8 items-start">
+          <section className="lg:col-span-4">
+            <ParliamentCompositionChart
+              seatData={parliamentSeatData}
+              totalSeatsInParliament={TOTAL_SEATS_IN_PARLIAMENT}
+              majorityThreshold={MAJORITY_THRESHOLD}
+            />
+          </section>
+          <section className="lg:col-span-3">
+            <CoalitionBuilderSimulator
+              partySeatData={parliamentSeatData}
+              totalSeatsInParliament={TOTAL_SEATS_IN_PARLIAMENT}
+              majorityThreshold={MAJORITY_THRESHOLD}
+            />
+          </section>
+        </main>
+
+        <footer className="text-center py-10 mt-12 border-t border-slate-200">
+          <p className="text-xs text-slate-500">
+            Total de {TOTAL_SEATS_IN_PARLIAMENT} assentos na simulação (120 distritais + 93 proporcionais).
+          </p>
+        </footer>
       </div>
-
-      <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-        <div className="mb-4 border-b border-gray-200">
-            <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
-                <button onClick={() => setDistrictViewMode('candidates')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'candidates' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                    Candidatos
-                </button>
-                <button onClick={() => setDistrictViewMode('bars')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'bars' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                    Gráfico Barras
-                </button>
-                <button onClick={() => setDistrictViewMode('swing')} className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm ${districtViewMode === 'swing' ? 'border-highlight text-highlight' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                  Movimentação
-                </button>
-            </nav>
-        </div>
-
-        <div className="mt-4 min-h-[300px]">
-            {isLoadingVotes && <p className="text-center text-gray-500">Carregando...</p>}
-            {!isLoadingVotes && errorVotes && <p className="text-red-600 text-center">Erro: {errorVotes}</p>}
-            {!isLoadingVotes && !errorVotes && apiVotesData && (
-                <>
-                    {districtViewMode === 'candidates' && (
-                        processedCandidatesForCard.length > 0 ?
-                        <CandidateCardInfo
-                            data={processedCandidatesForCard}
-                            // leadingId precisa ser o ID do candidato líder, não apenas o nome.
-                            // Ajustar se necessário, districtResults.leadingCandidate pode ter o ID.
-                            leadingId={districtResults.leadingCandidate?.candidate_id || districtResults.leadingCandidate?.candidate_name || null}
-                            coalitionColorMap={coalitionColorMap}
-                        /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
-                    )}
-                    {districtViewMode === 'bars' && (
-                          districtResults.votes.length > 0 ? // Usa districtResults.votes aqui pois DistrictBarChart espera esse formato
-                        <DistrictBarChart
-                            data={districtResults.votes}
-                            colorMap={coalitionColorMap}
-                        /> : <p className="text-center text-gray-500">Sem dados de candidatos para este distrito neste momento.</p>
-                    )}
-                    {districtViewMode === 'swing' && (
-                        swingAnalysisData && currentDistrictInfo ?
-                        <SwingAnalysis
-                            analysisData={swingAnalysisData}
-                            colorMap={coalitionColorMap}
-                            districtName={currentDistrictInfo.district_name}
-                        />
-                        : (
-                        <p className="text-center text-gray-500">
-                            {isLoadingVotes ? 'Calculando dados de movimentação...' : 'Dados insuficientes para análise de movimentação.'}
-                        </p>
-                        )
-                    )}
-                </>
-            )}
-        </div>
-      </div>
-
-     <div className="text-left p-4 bg-white rounded-lg shadow-md border border-gray-200 mt-8">
-        <label htmlFor="time-select" className="text-sm font-medium mr-2">Ver Apuração em:</label>
-        <select
-           id="time-select"
-           value={currentTime}
-           onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))}
-           disabled={isLoadingVotes}
-           className="rounded border-gray-300 shadow-sm"
-        >
-            <option value={50}>50%</option>
-            <option value={100}>100%</option>
-        </select>
-    </div>
     </div>
   );
 }
