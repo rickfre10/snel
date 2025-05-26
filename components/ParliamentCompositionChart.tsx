@@ -208,7 +208,6 @@ const ParliamentCompositionChart: React.FC<ParliamentCompositionChartProps> = ({
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md text-center">
-      <h3 className="text-xl font-semibold text-gray-800 mb-3">{title}</h3>
       <svg 
         width="100%" 
         viewBox={SVG_VIEW_BOX} 

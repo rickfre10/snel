@@ -71,8 +71,6 @@ const CoalitionBuilderSimulator: React.FC<CoalitionBuilderSimulatorProps> = ({
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md space-y-5">
-      <h3 className="text-xl font-semibold text-gray-800 text-center">{title}</h3>
-
       <div className="max-h-72 overflow-y-auto pr-1 space-y-1.5 border rounded-md p-3 bg-gray-50 custom-scrollbar">
         {sortedPartyList.map(party => (
           <button
