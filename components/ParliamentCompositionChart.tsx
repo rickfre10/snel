@@ -10,16 +10,14 @@ interface SeatEntry {
 }
 
 interface ParliamentCompositionChartProps {
-  seatData: SeatEntry[]; // Fonte da verdade para assentos e cores. A ORDEM AQUI IMPORTA para o preenchimento.
-  totalSeatsInLayout: number; // Deverá ser 213, conforme o SVG.
+  seatData: SeatEntry[]; 
+  totalSeatsInLayout: number; 
   majorityThreshold: number;
   title?: string;
 }
 
 interface CircleLayoutInfo { cx: string; cy: string; r: string; }
 
-// Dados extraídos do SVG fornecido (parliament-svg.html)
-// Contém 213 posições de círculo
 const SVG_CIRCLE_POSITIONS: CircleLayoutInfo[] = [
   // Círculos do primeiro grupo <g id="0-Party-1"> (102 círculos)
   { cx: "10.93", cy: "174.17", r: "4.67"}, { cx: "22.61", cy: "174.17", r: "4.67"},
@@ -77,7 +75,6 @@ const SVG_CIRCLE_POSITIONS: CircleLayoutInfo[] = [
   { cx: "180.00", cy: "57.50", r: "4.67"}, { cx: "180.00", cy: "69.17", r: "4.67"},
   { cx: "180.00", cy: "34.17", r: "4.67"}, { cx: "180.00", cy: "22.50", r: "4.67"},
   { cx: "180.00", cy: "10.83", r: "4.67"},
-  // Círculos do segundo grupo <g id="1-Party-2"> (111 círculos)
   { cx: "187.59", cy: "46.05", r: "4.67"}, { cx: "187.88", cy: "81.15", r: "4.67"}, 
   { cx: "187.73", cy: "92.84", r: "4.67"}, { cx: "195.27", cy: "11.52", r: "4.67"},
   { cx: "195.07", cy: "23.22", r: "4.67"}, { cx: "194.86", cy: "34.93", r: "4.67"},
@@ -132,22 +129,22 @@ const SVG_CIRCLE_POSITIONS: CircleLayoutInfo[] = [
   { cx: "337.39", cy: "174.17", r: "4.67"}, { cx: "349.07", cy: "174.17", r: "4.67"}
 ];
 
-const SVG_VIEW_BOX = "0 0 360 185"; // Baseado no width/height do seu SVG
+const SVG_VIEW_BOX = "0 0 360 185";
 const SVG_TEXT_INFO = { 
   x: "180.0", y: "175.0", content: "213", 
   style: {
-    fontSize:"12px", // Ajustado para melhor visibilidade
+    fontSize:"12px",
     fontWeight: 'bold', 
-    textAlign: 'center', 
+    // textAlign: 'center', // Removido para corrigir o erro TS
     textAnchor: 'middle' as const, 
     fontFamily: 'sans-serif',
-    fill: "#374151" // Tailwind gray-700
+    fill: "#374151"
   } 
 };
 
 const ParliamentCompositionChart: React.FC<ParliamentCompositionChartProps> = ({
   seatData,
-  totalSeatsInLayout, // Este deve ser 213
+  totalSeatsInLayout, 
   majorityThreshold,
   title = "Composição do Parlamento Nacional"
 }) => {
@@ -156,7 +153,7 @@ const ParliamentCompositionChart: React.FC<ParliamentCompositionChartProps> = ({
     return <p className="text-sm text-gray-500 text-center py-4">Dados de assentos indisponíveis.</p>;
   }
   
-  const effectiveLayoutSize = SVG_CIRCLE_POSITIONS.length; // Usar o tamanho real do nosso layout de SVG
+  const effectiveLayoutSize = SVG_CIRCLE_POSITIONS.length; 
   if (totalSeatsInLayout !== effectiveLayoutSize) {
       console.warn(`Alerta: totalSeatsInLayout (${totalSeatsInLayout}) da prop não corresponde ao número de assentos no layout SVG predefinido (${effectiveLayoutSize}). O gráfico usará ${effectiveLayoutSize} posições.`);
   }
@@ -164,9 +161,7 @@ const ParliamentCompositionChart: React.FC<ParliamentCompositionChartProps> = ({
   const renderedCircles: JSX.Element[] = [];
   let currentSeatIndexInLayout = 0;
 
-  // A ORDEM dos partidos em `seatData` determinará a ordem de preenchimento
-  // da esquerda para a direita no layout SVG.
-  for (const party of seatData) {
+  for (const party of seatData) { // seatData deve vir na ordem de preenchimento desejada
     for (let i = 0; i < party.seats; i++) {
       if (currentSeatIndexInLayout < effectiveLayoutSize) {
         const pos = SVG_CIRCLE_POSITIONS[currentSeatIndexInLayout];
@@ -177,15 +172,14 @@ const ParliamentCompositionChart: React.FC<ParliamentCompositionChartProps> = ({
             cy={pos.cy}
             r={pos.r}
             fill={party.color}
-            stroke="#FFFFFF" // Borda branca sutil
-            strokeWidth="0.15" // Ajustado para o raio e viewBox
+            stroke="#FFFFFF"
+            strokeWidth="0.15" 
           >
             <title>{`${party.legend}: Assento ${i + 1} de ${party.seats}`}</title>
           </circle>
         );
         currentSeatIndexInLayout++;
       } else {
-        // Mais assentos nos dados do que posições no layout
         console.warn(`Mais assentos nos dados (${party.legend}: ${party.seats}) do que posições disponíveis no layout SVG (${effectiveLayoutSize}). Alguns assentos de ${party.legend} podem não ser exibidos.`);
         break; 
       }
@@ -193,7 +187,6 @@ const ParliamentCompositionChart: React.FC<ParliamentCompositionChartProps> = ({
     if (currentSeatIndexInLayout >= effectiveLayoutSize) break;
   }
 
-  // Preencher os assentos restantes no layout (se houver) como vagos
   for (let i = currentSeatIndexInLayout; i < effectiveLayoutSize; i++) {
     const pos = SVG_CIRCLE_POSITIONS[i];
     renderedCircles.push(
@@ -202,7 +195,7 @@ const ParliamentCompositionChart: React.FC<ParliamentCompositionChartProps> = ({
         cx={pos.cx}
         cy={pos.cy}
         r={pos.r}
-        fill="#E5E7EB" // Tailwind gray-200 para assentos não preenchidos
+        fill="#E5E7EB" 
         stroke="#FFFFFF"
         strokeWidth="0.15"
       >
@@ -223,6 +216,18 @@ const ParliamentCompositionChart: React.FC<ParliamentCompositionChartProps> = ({
         aria-labelledby="parliamentChartTitleSVG"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <title id="parliamentChartTitleSVG">{title} - {SVG_TEXT_INFO.content} assentos</title>
+        <g>
+          {renderedCircles}
+        </g>
+        <text
+          x={SVG_TEXT_INFO.x}
+          y={SVG_TEXT_INFO.y}
+          fontSize={SVG_TEXT_INFO.style.fontSize}
+          style={SVG_TEXT_INFO.style}
+        >
+          {SVG_TEXT_INFO.content}
+        </text>
       </svg>
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 justify-center">
         {sortedSeatDataForLegend.map(party => (
