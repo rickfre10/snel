@@ -389,6 +389,15 @@ const grandTotalSeats = useMemo(() => {
     </a>
   </Link>
 
+  <Link
+    href={`/nacional/parlamento?time=${currentTime}`}
+    legacyBehavior
+  >
+    <a className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 focus:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 text-sm font-medium shadow-sm transition-colors">
+      Balanço de poder
+    </a>
+  </Link>
+
   {/* Separador Visual Opcional (aparece em telas sm e maiores) */}
   <span className="text-gray-300 hidden sm:inline mx-2">|</span>
 
