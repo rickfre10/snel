@@ -10,34 +10,27 @@ import CoalitionBuilderSimulator from '@/components/CoalitionBuilderSimulator';
 
 import { calculateProportionalSeats } from '@/lib/electionCalculations';
 import { partyData, districtsData } from '@/lib/staticData';
-// Não precisamos de dados de eleições anteriores para este componente específico (a menos que queira mostrar um comparativo de assentos)
 
 import type { ProportionalVote, CandidateVote, DistrictInfoFromData } from '@/types/election';
 
-// Constantes do Parlamento Nacional
-const TOTAL_SEATS_IN_PARLIAMENT = 213; // 120 Distritais + 93 Proporcionais
-const MAJORITY_THRESHOLD = Math.floor(TOTAL_SEATS_IN_PARLIAMENT / 2) + 1; // 107
+const TOTAL_SEATS_IN_PARLIAMENT = 213;
+const MAJORITY_THRESHOLD = Math.floor(TOTAL_SEATS_IN_PARLIAMENT / 2) + 1;
 
-const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4 }; // Soma = 93
+const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4 };
 
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') { const cleanedStr = String(value).replace(/\./g, '').replace(',', '.'); const num = parseFloat(cleanedStr); return isNaN(num) ? 0 : num; }
     return 0;
 };
-
-interface ApiAllVotesData {
-  time: number;
-  proportionalVotes: ProportionalVote[];
-  candidateVotes: CandidateVote[]; // Necessário para cadeiras distritais
-}
+interface ApiAllVotesData { time: number; proportionalVotes: ProportionalVote[]; candidateVotes: CandidateVote[]; }
 
 const buildColorMap = (): Record<string, string> => {
   const map: Record<string, string> = {};
   partyData.forEach(party => { if (party.parl_front_legend && party.parl_front_color) map[party.parl_front_legend] = party.parl_front_color; });
+  partyData.forEach(party => { if (party.party_legend && party.party_color && !map[party.party_legend]) map[party.party_legend] = party.party_color; });
   return map;
 };
-
 const getAllUfInfo = (): { uf: string; stateName: string }[] => {
   const ufMap = new Map<string, string>();
   districtsData.forEach(d => { if (d.uf && d.uf_name && !ufMap.has(d.uf)) ufMap.set(d.uf, d.uf_name); });
@@ -47,9 +40,24 @@ const getAllUfInfo = (): { uf: string; stateName: string }[] => {
 
 interface PartySeatDataForParliament {
     legend: string;
-    seats: number; // Total de assentos (Distrital + Proporcional)
+    seats: number;
     color: string;
 }
+
+const FALLBACK_COLOR_PARLIAMENT = '#CCCCCC';
+
+// Defina a ordem desejada para as legendas no gráfico do parlamento (da esquerda para a direita)
+// Ajuste esta lista conforme a sua necessidade de visualização.
+// As legendas aqui devem corresponder às legendas em `partyData` e nos dados da API.
+const LEGEND_ORDER_FOR_PARLIAMENT_CHART: string[] = [
+    "PSH", // Exemplo: Extrema Esquerda
+    "PSD", // Exemplo: Esquerda
+    "TDS", // Exemplo: Centro-Esquerda / Maior Bloco
+    "UNI", // Exemplo: Centro / Segundo Maior Bloco
+    "NAC", // Exemplo: Direita
+    "CON"  // Exemplo: Extrema Direita
+    // Adicione todas as suas legendas na ordem desejada
+];
 
 export default function ParlamentoNacionalPage() {
   const searchParamsHook = useSearchParams();
@@ -72,33 +80,30 @@ export default function ParlamentoNacionalPage() {
         if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Falha API'); }
         const allVoteData: ApiAllVotesData = await response.json();
 
-        const legends = new Set<string>();
-        partyData.forEach(p => { if (p.parl_front_legend) legends.add(p.parl_front_legend); });
-        allVoteData.proportionalVotes.forEach(v => { if (v.parl_front_legend) legends.add(v.parl_front_legend); });
-        allVoteData.candidateVotes.forEach(v => { if (v.parl_front_legend) legends.add(v.parl_front_legend); });
+        const legendsSet = new Set<string>();
+        partyData.forEach(p => { if (p.parl_front_legend) legendsSet.add(p.parl_front_legend); if (p.party_legend) legendsSet.add(p.party_legend); });
+        allVoteData.proportionalVotes.forEach(v => { if (v.parl_front_legend) legendsSet.add(v.parl_front_legend); });
+        allVoteData.candidateVotes.forEach(v => { if (v.parl_front_legend) legendsSet.add(v.parl_front_legend); if (v.party_legend) legendsSet.add(v.party_legend);});
         
         const nationalTotalSeatsByLegend: Record<string, number> = {};
-        legends.forEach(l => nationalTotalSeatsByLegend[l] = 0); // Inicializa
+        Array.from(legendsSet).forEach(l => nationalTotalSeatsByLegend[l] = 0);
 
-        // 1. Calcular Total de Cadeiras Proporcionais Nacionais por Legenda
         allUfInfos.forEach(({ uf }) => {
           const allProportionalVotesInUfCurrent = allVoteData.proportionalVotes
-            .filter(v => v.uf === uf && v.parl_front_legend)
-            .map(v_1 => ({ legend: v_1.parl_front_legend!, votes: parseNumber(v_1.proportional_votes_qtn) }));
+            .filter(v_1 => v_1.uf === uf && v_1.parl_front_legend)
+            .map(v_2 => ({ legend: v_2.parl_front_legend!, votes: parseNumber(v_2.proportional_votes_qtn) }));
           
           const seatsForStateProportional = totalProportionalSeatsByState[uf] || 0;
           if (seatsForStateProportional > 0 && allProportionalVotesInUfCurrent.length > 0) {
             const calculatedPrSeatsObj = calculateProportionalSeats(allProportionalVotesInUfCurrent, seatsForStateProportional, 5);
-            legends.forEach(legend_1 => {
+            Array.from(legendsSet).forEach(legend_1 => {
               nationalTotalSeatsByLegend[legend_1] += calculatedPrSeatsObj[legend_1] || 0;
             });
           }
         });
 
-        // 2. Calcular Total de Cadeiras Distritais Nacionais por Legenda
-        const allDistrictInfo: DistrictInfoFromData[] = districtsData; // Lista de todos os distritos
-        
-        allDistrictInfo.forEach(district => {
+        const allDistrictEntities: DistrictInfoFromData[] = districtsData;
+        allDistrictEntities.forEach(district => {
           const votesInDistrict = allVoteData.candidateVotes.filter(
             vote => parseNumber(vote.district_id) === district.district_id
           );
@@ -106,40 +111,68 @@ export default function ParlamentoNacionalPage() {
             const winner = votesInDistrict.reduce((prev, current) =>
               parseNumber(prev.votes_qtn) > parseNumber(current.votes_qtn) ? prev : current
             );
-            if (winner.parl_front_legend && legends.has(winner.parl_front_legend)) { // Verifica se a legenda é conhecida
-              nationalTotalSeatsByLegend[winner.parl_front_legend] += 1;
-            } else if (winner.parl_front_legend) {
-                // Legenda do vencedor distrital não estava no set inicial (raro se partyData for completo)
-                // console.warn(`Legenda distrital ${winner.parl_front_legend} não previamente conhecida. Adicionando.`);
-                // legends.add(winner.parl_front_legend); // Não é ideal modificar o set dentro do loop
-                nationalTotalSeatsByLegend[winner.parl_front_legend] = (nationalTotalSeatsByLegend[winner.parl_front_legend] || 0) + 1;
+            const winnerLegend = winner.parl_front_legend || winner.party_legend;
+            if (winnerLegend) {
+                 if (!nationalTotalSeatsByLegend[winnerLegend]) nationalTotalSeatsByLegend[winnerLegend] = 0; // Garante que a legenda existe
+                 nationalTotalSeatsByLegend[winnerLegend] += 1;
             }
           }
         });
 
-        const finalParliamentSeatData: PartySeatDataForParliament[] = [];
+        const processedSeatData: PartySeatDataForParliament[] = [];
         let sumOfCalculatedSeats = 0;
-        // Usar o Set 'legends' original para garantir que todas as legendas potenciais sejam consideradas
-        Array.from(legends).forEach(legend_2 => {
-          const seats = nationalTotalSeatsByLegend[legend_2] || 0;
-          // Incluir no gráfico apenas legendas com assentos para não poluir
-          if (seats > 0) { 
-            finalParliamentSeatData.push({
-              legend: legend_2,
-              seats,
-              color: colorMap[legend_2] || '#808080' // Fallback color
-            });
-          }
-          sumOfCalculatedSeats += seats;
+        
+        // Primeiro, processar as legendas na ordem definida
+        LEGEND_ORDER_FOR_PARLIAMENT_CHART.forEach(orderedLegend => {
+            if (legendsSet.has(orderedLegend)) {
+                const seats = nationalTotalSeatsByLegend[orderedLegend] || 0;
+                // if (seats > 0) { // Incluir mesmo se tiver 0 assentos, para manter a ordem
+                    processedSeatData.push({
+                        legend: orderedLegend,
+                        seats,
+                        color: colorMap[orderedLegend] || FALLBACK_COLOR_PARLIAMENT
+                    });
+                // }
+                sumOfCalculatedSeats += seats;
+            }
+        });
+
+        // Adicionar quaisquer outras legendas que tenham assentos mas não estavam na lista de ordem
+        Array.from(legendsSet).forEach(legend_2 => {
+            if (!LEGEND_ORDER_FOR_PARLIAMENT_CHART.includes(legend_2)) {
+                const seats = nationalTotalSeatsByLegend[legend_2] || 0;
+                if (seats > 0) { 
+                    processedSeatData.push({
+                        legend: legend_2,
+                        seats,
+                        color: colorMap[legend_2] || FALLBACK_COLOR_PARLIAMENT
+                    });
+                    sumOfCalculatedSeats += seats; 
+                    // Nota: a soma pode ser contada duas vezes se a legenda já estava em LEGEND_ORDER_FOR_PARLIAMENT_CHART.
+                    // Corrigindo: a soma deve ser feita apenas uma vez. A lógica acima já garante que
+                    // legendas em LEGEND_ORDER_FOR_PARLIAMENT_CHART sejam processadas.
+                    // Esta parte é para legendas *não* em LEGEND_ORDER_FOR_PARLIAMENT_CHART.
+                } else if (!processedSeatData.find(p => p.legend === legend_2)) {
+                    // Adicionar legendas sem assentos se não estiverem já na lista (para o simulador)
+                     processedSeatData.push({
+                        legend: legend_2,
+                        seats: 0,
+                        color: colorMap[legend_2] || FALLBACK_COLOR_PARLIAMENT
+                    });
+                }
+            }
         });
         
-        console.log("Soma total de assentos calculados (Distrital + Proporcional):", sumOfCalculatedSeats);
+        // Recalcular a soma total de assentos APÓS construir processedSeatData para evitar contagem dupla
+        sumOfCalculatedSeats = processedSeatData.reduce((acc, party) => acc + party.seats, 0);
+
+
+        console.log("Soma total de assentos para o parlamento:", sumOfCalculatedSeats);
         if (sumOfCalculatedSeats !== TOTAL_SEATS_IN_PARLIAMENT) {
-            console.warn(`ALERTA: A soma dos assentos calculados (${sumOfCalculatedSeats}) não é igual ao total esperado de ${TOTAL_SEATS_IN_PARLIAMENT}. Verifique a lógica de contagem de distritos e alocação proporcional.`);
-            // Poderia haver um ajuste aqui se necessário, ou uma mensagem de erro mais proeminente.
+            console.warn(`ALERTA: A soma dos assentos calculados (${sumOfCalculatedSeats}) não é igual ao total esperado de ${TOTAL_SEATS_IN_PARLIAMENT}.`);
         }
         
-        setParliamentSeatData(finalParliamentSeatData.sort((a,b) => b.seats - a.seats));
+        setParliamentSeatData(processedSeatData); // `processedSeatData` agora está na ordem de LEGEND_ORDER_FOR_PARLIAMENT_CHART, seguido por outros.
 
       } catch (e) {
         console.error("Erro ao buscar ou processar dados para o parlamento:", e);
@@ -159,22 +192,23 @@ export default function ParlamentoNacionalPage() {
   if (error) {
     return <div className="container mx-auto p-6 text-center text-red-500">Erro: {error} <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
-  if (parliamentSeatData.length === 0 && !isLoading) {
-    return <div className="container mx-auto p-6 text-center text-gray-500">Não há dados de assentos para exibir o parlamento. Verifique a fonte de dados.</div>;
+  // Modificado para mostrar mesmo se a soma não for 213, mas o gráfico usará o layout de 213.
+  if (parliamentSeatData.length === 0 && !isLoading ) { 
+    return <div className="container mx-auto p-6 text-center text-gray-500">Não há dados de assentos para exibir o parlamento.</div>;
   }
 
   return (
     <div className="bg-slate-50 min-h-screen py-8 antialiased">
       <div className="container mx-auto px-2 sm:px-4 lg:px-6 space-y-10">
         <header className="text-center mb-8">
-          <Link href="/" className="text-sky-600 hover:text-sky-800 hover:underline mb-6 inline-block transition-colors text-sm">
-            &larr; Voltar para Visão Nacional
+          <Link href="/nacional" className="text-sky-600 hover:text-sky-800 hover:underline mb-6 inline-block transition-colors text-sm">
+            &larr; Voltar para Panorama Nacional Proporcional
           </Link>
           <h1 className="text-3xl font-extrabold text-slate-900 sm:text-4xl lg:text-5xl tracking-tight">
-            Parlamento Nacional & Simulador
+            Parlamento Nacional & Simulador de Coalizões
           </h1>
           <p className="mt-4 text-lg text-slate-600">
-            Explore a composição de {TOTAL_SEATS_IN_PARLIAMENT} assentos e forme coalizões para alcançar a maioria de {MAJORITY_THRESHOLD} assentos.
+            Composição de <span className="font-semibold">{TOTAL_SEATS_IN_PARLIAMENT}</span> assentos. Maioria: <span className="font-semibold">{MAJORITY_THRESHOLD}</span> assentos. ({currentTime}% apurados)
           </p>
            <div className="mt-6">
             <label htmlFor="time-select-parl" className="text-sm font-medium mr-2 text-slate-700">Ver Apuração em:</label>
@@ -191,15 +225,16 @@ export default function ParlamentoNacionalPage() {
         </header>
 
         <main className="grid grid-cols-1 lg:grid-cols-7 gap-6 xl:gap-8 items-start">
-          <section className="lg:col-span-4"> {/* Gráfico do Parlamento ocupa mais espaço */}
+          <section className="lg:col-span-4">
             <ParliamentCompositionChart
               seatData={parliamentSeatData}
-              totalSeatsInParliament={TOTAL_SEATS_IN_PARLIAMENT}
+              totalSeatsInLayout={TOTAL_SEATS_IN_PARLIAMENT} // Passa o total esperado pelo layout
+              majorityThreshold={MAJORITY_THRESHOLD}
             />
           </section>
-          <section className="lg:col-span-3"> {/* Simulador ao lado */}
+          <section className="lg:col-span-3">
             <CoalitionBuilderSimulator
-              partySeatData={parliamentSeatData}
+              partySeatData={parliamentSeatData} 
               totalSeatsInParliament={TOTAL_SEATS_IN_PARLIAMENT}
               majorityThreshold={MAJORITY_THRESHOLD}
             />
@@ -207,9 +242,6 @@ export default function ParlamentoNacionalPage() {
         </main>
 
         <footer className="text-center py-10 mt-12 border-t border-slate-200">
-          <p className="text-xs text-slate-500">
-            Total de {TOTAL_SEATS_IN_PARLIAMENT} assentos na simulação (120 distritais + 93 proporcionais).
-          </p>
         </footer>
       </div>
     </div>
