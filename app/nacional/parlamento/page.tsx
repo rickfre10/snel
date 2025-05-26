@@ -46,13 +46,10 @@ interface PartySeatDataForParliament {
 
 const FALLBACK_COLOR_PARLIAMENT = '#CCCCCC';
 
-// Defina a ordem desejada para as legendas no gráfico do parlamento (da esquerda para a direita)
-// Ajuste esta lista conforme a sua necessidade de visualização.
-// As legendas aqui devem corresponder às legendas em `partyData` e nos dados da API.
 const LEGEND_ORDER_FOR_PARLIAMENT_CHART: string[] = [
     "PSH", // Exemplo: Extrema Esquerda
-    "PSD", // Exemplo: Esquerda
-    "TDS", // Exemplo: Centro-Esquerda / Maior Bloco
+    "TDS", // Exemplo: Esquerda
+    "PSD", // Exemplo: Centro-Esquerda / Maior Bloco
     "UNI", // Exemplo: Centro / Segundo Maior Bloco
     "NAC", // Exemplo: Direita
     "CON"  // Exemplo: Extrema Direita
@@ -201,27 +198,12 @@ export default function ParlamentoNacionalPage() {
     <div className="bg-slate-50 min-h-screen py-8 antialiased">
       <div className="container mx-auto px-2 sm:px-4 lg:px-6 space-y-10">
         <header className="text-center mb-8">
-          <Link href="/nacional" className="text-sky-600 hover:text-sky-800 hover:underline mb-6 inline-block transition-colors text-sm">
-            &larr; Voltar para Panorama Nacional Proporcional
+          <Link href="/" className="text-sky-600 hover:text-sky-800 hover:underline mb-6 inline-block transition-colors text-sm">
+            &larr; Voltar para Nacional
           </Link>
-          <h1 className="text-3xl font-extrabold text-slate-900 sm:text-4xl lg:text-5xl tracking-tight">
-            Parlamento Nacional & Simulador de Coalizões
+          <h1 className="text-3xl font-bold text-slate-900 sm:text-3xl lg:text-4xl tracking-tight">
+            Balanço de poder
           </h1>
-          <p className="mt-4 text-lg text-slate-600">
-            Composição de <span className="font-semibold">{TOTAL_SEATS_IN_PARLIAMENT}</span> assentos. Maioria: <span className="font-semibold">{MAJORITY_THRESHOLD}</span> assentos. ({currentTime}% apurados)
-          </p>
-           <div className="mt-6">
-            <label htmlFor="time-select-parl" className="text-sm font-medium mr-2 text-slate-700">Ver Apuração em:</label>
-            <select 
-              id="time-select-parl" 
-              value={currentTime} 
-              onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))} 
-              className="rounded border-gray-300 shadow-sm p-2 text-sm focus:ring-sky-500 focus:border-sky-500"
-            >
-                <option value={50}>50%</option>
-                <option value={100}>100%</option>
-            </select>
-          </div>
         </header>
 
         <main className="grid grid-cols-1 lg:grid-cols-7 gap-6 xl:gap-8 items-start">
