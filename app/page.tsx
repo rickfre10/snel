@@ -34,7 +34,7 @@ const REFRESH_INTERVAL_SECONDS = 60;
 
 // Interface para os dados de VOTOS vindos da API
 interface ApiVotesData {
-  time: number;
+  time: number; // A API ainda pode retornar 'time', mas não vamos usá-lo para atualizar nosso estado 'currentTime'
   candidateVotes: CandidateVote[];
   proportionalVotes: ProportionalVote[];
 }
@@ -68,6 +68,7 @@ type MapDistrictResultInfo = DistrictResultInfo & {
 
 // --- COMPONENTE PRINCIPAL DA HOME ---
 export default function Home() {
+  // currentTime será sempre 100 para a chamada da API
   const [currentTime, setCurrentTime] = useState<number>(100); 
   const [apiVotesData, setApiVotesData] = useState<ApiVotesData | null>(null);
   const [isLoadingVotes, setIsLoadingVotes] = useState<boolean>(true);
@@ -80,6 +81,8 @@ export default function Home() {
   const router = useRouter();
 
   const handleNavigate = () => {
+    // A navegação ainda usa o 'currentTime' do estado, que agora é fixo em 100 para fins de API.
+    // Se a navegação precisar de um 'time' dinâmico real, esta lógica precisaria ser revista.
     if (selectedDistrict && selectedState) {
       router.push(`/distrito/${selectedDistrict}?time=${currentTime}`);
     } else if (selectedState) {
@@ -93,6 +96,9 @@ export default function Home() {
     }
     setErrorVotes(null);
     try {
+        // Usa sempre o valor de 'currentTime' do estado, que agora não é mais atualizado pela API.
+        // Como currentTime é inicializado com 100 e setCurrentTime não é mais chamado com data.time,
+        // a chamada será sempre /api/results?time=100.
         const response = await fetch(`/api/results?time=${currentTime}`);
         if (!response.ok) {
              let errorMsg = 'Erro ao buscar votos';
@@ -106,15 +112,21 @@ export default function Home() {
         }
         const data: ApiVotesData = await response.json();
         setApiVotesData(data);
-        if (data.time) {
-            setCurrentTime(data.time);
-        }
+        // REMOVIDO: Não atualiza mais currentTime com base na resposta da API
+        // if (data.time) {
+        //     setCurrentTime(data.time); 
+        // }
     } catch (err: unknown) {
         console.error("Falha API Votos:", err);
         setErrorVotes(err instanceof Error ? err.message : 'Erro desconhecido ao processar falha da API.');
     } finally {
         setIsLoadingVotes(false);
     }
+  // A dependência de 'currentTime' pode ser removida se ele nunca mudar,
+  // mas mantê-la não prejudica e reflete que a URL ainda o utiliza.
+  // Se currentTime fosse totalmente fixo e nunca mais usado em setCurrentTime,
+  // a useCallback poderia até não precisar dele como dependência se a URL usasse um valor constante.
+  // Por ora, vamos manter, pois 'currentTime' ainda está no escopo.
   }, [currentTime, apiVotesData]); 
 
   useEffect(() => {
@@ -504,7 +516,6 @@ export default function Home() {
 
       <div className="text-center p-4 container mx-auto mb-6">
           {isLoadingVotes && !apiVotesData && <p className="text-sm text-gray-500 mt-2 animate-pulse">Carregando resultados iniciais...</p>}
-          {/* ATUALIZADO: Feedback de erro mais específico para o problema da planilha */}
           {errorVotes && (
             <p className="text-sm text-red-600 mt-2">
                 Erro ao carregar dados: {errorVotes}
@@ -513,7 +524,7 @@ export default function Home() {
                 }
             </p>
           )}
-          {apiVotesData && !isLoadingVotes && !errorVotes && ( // Só mostra esta mensagem se não houver erro
+          {apiVotesData && !isLoadingVotes && !errorVotes && ( 
             <p className="text-sm text-gray-500 mt-2">
                 Dados atualizados. Próxima atualização em {timeLeftForRefresh}s.
             </p>
