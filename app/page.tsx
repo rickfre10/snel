@@ -30,6 +30,8 @@ const totalProportionalSeatsByState: Record<string, number> = {
   "TP": 1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4
 };
 
+const REFRESH_INTERVAL_SECONDS = 60;
+
 // Interface para os dados de VOTOS vindos da API
 interface ApiVotesData {
   time: number;
@@ -52,29 +54,33 @@ const parseNumber = (value: any): number => {
 const checkIfStatusIsFinal = (statusLabel: string | null | undefined): boolean => {
   if (!statusLabel) return false;
   const lowerLabel = statusLabel.toLowerCase();
-  const finalKeywords = ["ganhou", "manteve", "eleito", "definido", "conquistou"]; // Adicione mais palavras-chave se necessário
+  const finalKeywords = ["ganhou", "manteve", "eleito", "definido", "conquistou"]; 
   return finalKeywords.some(keyword => lowerLabel.includes(keyword));
 };
 
-// Tipo para o parâmetro que pode vir do InteractiveMap
-type PossibleMapCallbackParam = string | { district_id?: number | string; id?: number | string; [key: string]: any } | null | undefined;
+// Tipo para a informação detalhada de um distrito vinda do InteractiveMap
+// ATUALIZADO: Adicionado statusLabel
+type MapDistrictResultInfo = DistrictResultInfo & { 
+  isFinal?: boolean; 
+  totalVotesInDistrict?: number; 
+  statusLabel?: string | null; // Adicionado statusLabel
+};
 
 
 // --- COMPONENTE PRINCIPAL DA HOME ---
 export default function Home() {
-  const [currentTime, setCurrentTime] = useState<number>(100); // Padrão, já que os botões de tempo serão removidos
+  const [currentTime, setCurrentTime] = useState<number>(100); 
   const [apiVotesData, setApiVotesData] = useState<ApiVotesData | null>(null);
   const [isLoadingVotes, setIsLoadingVotes] = useState<boolean>(true);
   const [errorVotes, setErrorVotes] = useState<string | null>(null);
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
   const [hoveredDistrictInfo, setHoveredDistrictInfo] = useState<string | null>(null);
+  const [timeLeftForRefresh, setTimeLeftForRefresh] = useState<number>(REFRESH_INTERVAL_SECONDS);
 
   const router = useRouter();
 
   const handleNavigate = () => {
-    // A navegação ainda usa currentTime, que será o valor mais recente após a remoção dos botões de controle.
-    // Se a API sempre fornecer o mais recente, o parâmetro `time` pode se tornar opcional na URL.
     if (selectedDistrict && selectedState) {
       router.push(`/distrito/${selectedDistrict}?time=${currentTime}`);
     } else if (selectedState) {
@@ -82,20 +88,12 @@ export default function Home() {
     }
   };
 
-  // --- Busca de Dados de Votos ---
-  // Envolvemos fetchVoteData em useCallback para evitar recriação desnecessária
-  // se fosse passada como dependência para outro useEffect.
   const fetchVoteData = useCallback(async () => {
-    // Não resetar isLoadingVotes para true a cada atualização automática para evitar piscar de "Carregando..."
-    // A menos que seja a primeira carga.
-    if (!apiVotesData) {
+    if (!apiVotesData) { // Só mostra carregamento total na primeira vez
         setIsLoadingVotes(true);
     }
     setErrorVotes(null);
     try {
-        // `currentTime` aqui pode ser o valor mais recente do estado, ou, se a API
-        // sempre retorna o último, este parâmetro pode não ser necessário.
-        // Por ora, mantemos como está, assumindo que a API pode usar `time`.
         const response = await fetch(`/api/results?time=${currentTime}`);
         if (!response.ok) {
              let errorMsg = 'Erro ao buscar votos';
@@ -104,34 +102,36 @@ export default function Home() {
         }
         const data: ApiVotesData = await response.json();
         setApiVotesData(data);
-        // Atualiza currentTime com o tempo dos dados recebidos, se necessário
-        // Isso garante que `currentTime` reflita o "tempo" dos dados mais recentes.
         if (data.time) {
             setCurrentTime(data.time);
         }
     } catch (err: unknown) {
         console.error("Falha API Votos:", err);
         setErrorVotes(err instanceof Error ? err.message : 'Erro desconhecido');
-        // Não limpar apiVotesData em caso de erro de atualização para manter os dados antigos visíveis
     } finally {
         setIsLoadingVotes(false);
     }
-  }, [currentTime, apiVotesData]); // Adicionado apiVotesData para a lógica de isLoadingVotes
+  }, [currentTime, apiVotesData]); 
 
   useEffect(() => {
     fetchVoteData(); // Busca inicial
+    setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS); // Reseta countdown na busca inicial
 
-    // Configura o intervalo para atualização automática
-    const intervalId = setInterval(() => {
+    const dataRefreshIntervalId = setInterval(() => {
       console.log("Atualizando dados da API automaticamente...");
       fetchVoteData();
-    }, 60000); // 60000 ms = 1 minuto
+      setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS); // Reseta countdown após cada atualização
+    }, REFRESH_INTERVAL_SECONDS * 1000); 
 
-    // Limpa o intervalo quando o componente é desmontado
-    return () => clearInterval(intervalId);
-  }, [fetchVoteData]); // fetchVoteData está agora em useCallback
+    const countdownIntervalId = setInterval(() => {
+        setTimeLeftForRefresh(prevTime => (prevTime > 0 ? prevTime - 1 : 0));
+    }, 1000);
 
-  // --- Cálculos Derivados (useMemo) ---
+    return () => {
+        clearInterval(dataRefreshIntervalId);
+        clearInterval(countdownIntervalId);
+    }
+  }, [fetchVoteData]); 
 
   const states: StateOption[] = useMemo(() => {
     const uniqueStates = new Map<string, string>();
@@ -159,12 +159,9 @@ export default function Home() {
     return map;
   }, []);
 
-  // Sumário de Resultados por Distrito (para o mapa E para o ticker)
-  // Esta estrutura agora também inclui informações de status para cada distrito.
   const districtResultsSummaryAndStatus = useMemo(() => {
-    const summary: Record<string, DistrictResultInfo & { isFinal: boolean; statusLabel: string | null; totalVotesInDistrict: number }> = {};
+    const summary: Record<string, MapDistrictResultInfo> = {}; 
     if (!apiVotesData?.candidateVotes || !districtsData || !coalitionColorMap || !previousDistrictResultsData) {
-        // Preenche com dados básicos se a API ainda não carregou, para que o mapa possa renderizar distritos vazios
         districtsData.forEach(d => {
             const districtIdStr = String(d.district_id);
             summary[districtIdStr] = {
@@ -172,8 +169,8 @@ export default function Home() {
                 winnerName: undefined,
                 districtName: d.district_name,
                 maxVotes: 0,
-                isFinal: false, // Status padrão
-                statusLabel: "Aguardando dados...", // Status padrão
+                isFinal: false, 
+                statusLabel: "Aguardando dados...", 
                 totalVotesInDistrict: 0,
             };
         });
@@ -230,10 +227,10 @@ export default function Home() {
         }
 
         const statusInput: DistrictStatusInput = {
-            isLoading: isLoadingVotes, // Passando o estado de carregamento geral
+            isLoading: isLoadingVotes, 
             leadingCoalition: leadingCoalition,
             runnerUpCoalition: runnerUpCoalition,
-            totalVotesInDistrict: totalVotesInDistrict,
+            totalVotesInDistrict: totalVotesInDistrict, 
             remainingVotesEstimate: remainingVotesEstimate,
             previousSeatHolderCoalitionLegend: previousSeatHolderCoalitionLegend,
             coalitionColorMap: coalitionColorMap,
@@ -241,7 +238,7 @@ export default function Home() {
         const detailedStatus = calculateDistrictDynamicStatus(statusInput);
         const isFinalStatus = checkIfStatusIsFinal(detailedStatus.label);
 
-        const winner = leadingCandidateData; // O líder é o "vencedor" para fins de exibição
+        const winner = leadingCandidateData; 
         const maxVotes = winner ? winner.numericVotes : 0;
 
         summary[districtIdStr] = {
@@ -249,15 +246,14 @@ export default function Home() {
             winnerName: winner?.candidate_name,
             districtName: d.district_name,
             maxVotes: maxVotes,
-            isFinal: isFinalStatus,
-            statusLabel: detailedStatus.label,
+            isFinal: isFinalStatus, 
+            statusLabel: detailedStatus.label, 
             totalVotesInDistrict: totalVotesInDistrict,
         };
     });
     return summary;
   }, [apiVotesData, isLoadingVotes, coalitionColorMap, districtsData, previousDistrictResultsData]);
   
-  // Calcular Assentos Distritais por Frente (para painel)
   const districtSeatsByCoalition = useMemo(() => {
     const seatCounts: Record<string, number> = {};
     if (!districtResultsSummaryAndStatus) return seatCounts;
@@ -290,7 +286,7 @@ export default function Home() {
       const prSeatsThisState = calculateProportionalSeats(
         proportionalVotesInputForState,
         seatsForThisState,
-        5 // Cláusula de barreira de 5%
+        5 
       );
 
       Object.entries(prSeatsThisState).forEach(([legend, seats]) => {
@@ -324,20 +320,17 @@ export default function Home() {
     const totalProportional = Object.values(totalProportionalSeatsByState)
       .reduce((sum: number, seats: number) => sum + seats, 0);
     return totalDistrict + totalProportional;
-  }, []); // districtsData e totalProportionalSeatsByState são estáticos
+  }, []); 
 
-  // Calcular Dados para o Ticker
   const tickerData: TickerEntry[] = useMemo(() => {
     if (isLoadingVotes || !districtResultsSummaryAndStatus || Object.keys(districtResultsSummaryAndStatus).length === 0 || !apiVotesData?.candidateVotes || !districtsData || !previousDistrictResultsData) {
       return [];
     }
-
     const dataForTicker: TickerEntry[] = [];
-
     Object.entries(districtResultsSummaryAndStatus).forEach(([districtIdStr, result]) => {
       const districtNum = parseInt(districtIdStr, 10);
-      const districtInfo = districtsData.find(d => d.district_id === districtNum);
-      if (!districtInfo) return;
+      const districtInfoFromStaticData = districtsData.find(d => d.district_id === districtNum); 
+      if (!districtInfoFromStaticData) return;
 
       const votesInDistrict = apiVotesData.candidateVotes.filter(v => String(v.district_id) === districtIdStr) || [];
       const votesWithNumeric = votesInDistrict.map(v => ({ ...v, numericVotes: parseNumber(v.votes_qtn) }));
@@ -345,18 +338,18 @@ export default function Home() {
       
       const leadingCandidateData = sortedVotes[0] || null;
       const runnerUpCandidateData = sortedVotes[1] || null;
-
-      const totalVotesInDistrict = result.totalVotesInDistrict; 
-
-      const leadingCandidatePercentage = leadingCandidateData && totalVotesInDistrict > 0 ? (leadingCandidateData.numericVotes / totalVotesInDistrict) * 100 : null;
-      const runnerUpPercentage = runnerUpCandidateData && totalVotesInDistrict > 0 ? (runnerUpCandidateData.numericVotes / totalVotesInDistrict) * 100 : null;
+      
+      const currentTotalVotesInDistrict = result.totalVotesInDistrict || 0; 
+      
+      const leadingCandidatePercentage = leadingCandidateData && currentTotalVotesInDistrict > 0 ? (leadingCandidateData.numericVotes / currentTotalVotesInDistrict) * 100 : null;
+      const runnerUpPercentage = runnerUpCandidateData && currentTotalVotesInDistrict > 0 ? (runnerUpCandidateData.numericVotes / currentTotalVotesInDistrict) * 100 : null;
       
        const statusInputForTicker: DistrictStatusInput = {
         isLoading: isLoadingVotes,
         leadingCoalition: leadingCandidateData ? { legend: leadingCandidateData.parl_front_legend || "N/D", votes: leadingCandidateData.numericVotes, name: leadingCandidateData.candidate_name } : undefined,
         runnerUpCoalition: runnerUpCandidateData ? { legend: runnerUpCandidateData.parl_front_legend || "N/D", votes: runnerUpCandidateData.numericVotes, name: runnerUpCandidateData.candidate_name } : undefined,
-        totalVotesInDistrict: totalVotesInDistrict,
-        remainingVotesEstimate: districtInfo.voters_qtn ? Math.max(0, districtInfo.voters_qtn - totalVotesInDistrict) : 0,
+        totalVotesInDistrict: currentTotalVotesInDistrict, 
+        remainingVotesEstimate: districtInfoFromStaticData.voters_qtn ? Math.max(0, districtInfoFromStaticData.voters_qtn - currentTotalVotesInDistrict) : 0, 
         previousSeatHolderCoalitionLegend: previousDistrictResultsData.find(d => d.district_id === districtNum)?.winner_2018_legend || null,
         coalitionColorMap: coalitionColorMap,
       };
@@ -365,13 +358,11 @@ export default function Home() {
       const entry: TickerEntry = {
         district_id: districtNum,
         districtName: result.districtName || "N/D", 
-        stateId: districtInfo.uf,
-        stateName: districtInfo.uf_name,
-        
+        stateId: districtInfoFromStaticData.uf,
+        stateName: districtInfoFromStaticData.uf_name,
         statusLabel: detailedStatusForTicker.label, 
         statusBgColor: detailedStatusForTicker.backgroundColor, 
         statusTextColor: detailedStatusForTicker.textColor, 
-
         winnerName: result.winnerName || null,
         winnerLegend: detailedStatusForTicker.actingCoalitionLegend || result.winnerLegend || null, 
         winnerPercentage: leadingCandidatePercentage,
@@ -381,7 +372,6 @@ export default function Home() {
       };
       dataForTicker.push(entry);
     });
-
     dataForTicker.sort((a, b) => (a.district_id - b.district_id));
     return dataForTicker;
   }, [districtResultsSummaryAndStatus, isLoadingVotes, coalitionColorMap, apiVotesData?.candidateVotes, districtsData, previousDistrictResultsData]);
@@ -390,22 +380,17 @@ export default function Home() {
   const handleStateChange = (event: React.ChangeEvent<HTMLSelectElement>) => { const newState = event.target.value; setSelectedState(newState || null); setSelectedDistrict(null); };
   const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => { const newDistrictId = event.target.value ? parseInt(event.target.value, 10) : null; setSelectedDistrict(newDistrictId); };
   
-  const handleDistrictHover = (districtInfoFromMap: { districtName?: string; winnerName?: string; winnerLegend?: string; districtId?: string } | null) => {
-    if (districtInfoFromMap && districtInfoFromMap.districtId) {
-        const fullDistrictInfo = districtResultsSummaryAndStatus[districtInfoFromMap.districtId];
-        if (fullDistrictInfo) {
-            setHoveredDistrictInfo(
-                `Distrito: ${fullDistrictInfo.districtName || districtInfoFromMap.districtId} | ${fullDistrictInfo.statusLabel} ${fullDistrictInfo.winnerName ? `(${fullDistrictInfo.winnerName} - ${fullDistrictInfo.winnerLegend || 'N/D'})` : ''}`
-            );
-        } else {
-             setHoveredDistrictInfo(`Distrito: ${districtInfoFromMap.districtName || districtInfoFromMap.districtId}`);
-        }
+  const localHandleDistrictHover = (districtInfoForTooltip: { districtName?: string; winnerName?: string; winnerLegend?: string; districtId?: string; statusLabel?: string | null; } | null) => {
+    if (districtInfoForTooltip && districtInfoForTooltip.districtId) {
+        setHoveredDistrictInfo(
+            `Distrito: ${districtInfoForTooltip.districtName || districtInfoForTooltip.districtId} | ${districtInfoForTooltip.statusLabel || "Status indisponível"} ${districtInfoForTooltip.winnerName ? `(${districtInfoForTooltip.winnerName} - ${districtInfoForTooltip.winnerLegend || 'N/D'})` : ''}`
+        );
     } else {
         setHoveredDistrictInfo(null);
     }
   };
 
-  const handleDistrictClick = (districtClickedInfo: { districtId: string }) => {
+  const localHandleDistrictClick = (districtClickedInfo: { districtId: string }) => {
     if (districtClickedInfo.districtId) {
       router.push(`/distrito/${districtClickedInfo.districtId}?time=${currentTime}`);
     }
@@ -453,43 +438,22 @@ export default function Home() {
          <InteractiveMap
              results={districtResultsSummaryAndStatus} 
              colorMap={coalitionColorMap}
-             onDistrictHover={(dataFromMap: PossibleMapCallbackParam) => { 
-                let idToUse: string | undefined = undefined;
-                if (typeof dataFromMap === 'string') {
-                    idToUse = dataFromMap;
-                } else if (dataFromMap && typeof dataFromMap === 'object') {
-                    if (dataFromMap.district_id !== undefined) {
-                        idToUse = String(dataFromMap.district_id);
-                    } else if (dataFromMap.id !== undefined) {
-                        idToUse = String(dataFromMap.id);
-                    }
-                }
-
-                if (idToUse && districtResultsSummaryAndStatus[idToUse]) {
-                    const info = districtResultsSummaryAndStatus[idToUse];
-                    handleDistrictHover({ 
-                        districtId: idToUse,
-                        districtName: info.districtName,
-                        winnerName: info.winnerName,
-                        winnerLegend: info.winnerLegend === null ? undefined : info.winnerLegend // CORRIGIDO AQUI
+             onDistrictHover={(mapDistrictInfo, mapDistrictId) => {
+                if (mapDistrictId && mapDistrictInfo) {
+                    localHandleDistrictHover({
+                        districtId: mapDistrictId,
+                        districtName: mapDistrictInfo.districtName,
+                        winnerName: mapDistrictInfo.winnerName,
+                        winnerLegend: mapDistrictInfo.winnerLegend === null ? undefined : mapDistrictInfo.winnerLegend,
+                        statusLabel: (mapDistrictInfo as MapDistrictResultInfo).statusLabel // CORRIGIDO: Type assertion
                     });
                 } else {
-                    handleDistrictHover(null);
+                    localHandleDistrictHover(null); 
                 }
              }}
-             onDistrictClick={(dataFromMap: PossibleMapCallbackParam) => { 
-                let idToUse: string | undefined = undefined;
-                if (typeof dataFromMap === 'string') {
-                    idToUse = dataFromMap;
-                } else if (dataFromMap && typeof dataFromMap === 'object') {
-                     if (dataFromMap.district_id !== undefined) {
-                        idToUse = String(dataFromMap.district_id);
-                    } else if (dataFromMap.id !== undefined) {
-                        idToUse = String(dataFromMap.id);
-                    }
-                }
-                if (idToUse) {
-                    handleDistrictClick({ districtId: idToUse });
+             onDistrictClick={(mapDistrictInfo, mapDistrictId) => {
+                if (mapDistrictId) {
+                    localHandleDistrictClick({ districtId: mapDistrictId });
                 }
              }}
          />
@@ -537,7 +501,11 @@ export default function Home() {
       <div className="text-center p-4 container mx-auto mb-6">
           {isLoadingVotes && !apiVotesData && <p className="text-sm text-gray-500 mt-2 animate-pulse">Carregando resultados iniciais...</p>}
           {errorVotes && <p className="text-sm text-red-600 mt-2">Erro ao carregar dados: {errorVotes}</p>}
-          {apiVotesData && !isLoadingVotes && <p className="text-sm text-gray-500 mt-2">Dados atualizados. Próxima atualização em breve.</p>}
+          {apiVotesData && !isLoadingVotes && (
+            <p className="text-sm text-gray-500 mt-2">
+                Dados atualizados. Próxima atualização em {timeLeftForRefresh}s.
+            </p>
+          )}
       </div>
     </div>
   );
