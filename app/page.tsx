@@ -59,11 +59,10 @@ const checkIfStatusIsFinal = (statusLabel: string | null | undefined): boolean =
 };
 
 // Tipo para a informação detalhada de um distrito vinda do InteractiveMap
-// ATUALIZADO: Adicionado statusLabel
 type MapDistrictResultInfo = DistrictResultInfo & { 
   isFinal?: boolean; 
   totalVotesInDistrict?: number; 
-  statusLabel?: string | null; // Adicionado statusLabel
+  statusLabel?: string | null; 
 };
 
 
@@ -89,7 +88,7 @@ export default function Home() {
   };
 
   const fetchVoteData = useCallback(async () => {
-    if (!apiVotesData) { // Só mostra carregamento total na primeira vez
+    if (!apiVotesData) { 
         setIsLoadingVotes(true);
     }
     setErrorVotes(null);
@@ -97,7 +96,12 @@ export default function Home() {
         const response = await fetch(`/api/results?time=${currentTime}`);
         if (!response.ok) {
              let errorMsg = 'Erro ao buscar votos';
-             try { errorMsg = (await response.json()).error || errorMsg; } catch (e) {}
+             try { 
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorMsg; 
+             } catch (e) {
+                // Se a resposta não for JSON ou não tiver .error, mantém errorMsg padrão
+             }
              throw new Error(errorMsg);
         }
         const data: ApiVotesData = await response.json();
@@ -107,20 +111,20 @@ export default function Home() {
         }
     } catch (err: unknown) {
         console.error("Falha API Votos:", err);
-        setErrorVotes(err instanceof Error ? err.message : 'Erro desconhecido');
+        setErrorVotes(err instanceof Error ? err.message : 'Erro desconhecido ao processar falha da API.');
     } finally {
         setIsLoadingVotes(false);
     }
   }, [currentTime, apiVotesData]); 
 
   useEffect(() => {
-    fetchVoteData(); // Busca inicial
-    setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS); // Reseta countdown na busca inicial
+    fetchVoteData(); 
+    setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS); 
 
     const dataRefreshIntervalId = setInterval(() => {
       console.log("Atualizando dados da API automaticamente...");
       fetchVoteData();
-      setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS); // Reseta countdown após cada atualização
+      setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS); 
     }, REFRESH_INTERVAL_SECONDS * 1000); 
 
     const countdownIntervalId = setInterval(() => {
@@ -445,7 +449,7 @@ export default function Home() {
                         districtName: mapDistrictInfo.districtName,
                         winnerName: mapDistrictInfo.winnerName,
                         winnerLegend: mapDistrictInfo.winnerLegend === null ? undefined : mapDistrictInfo.winnerLegend,
-                        statusLabel: (mapDistrictInfo as MapDistrictResultInfo).statusLabel // CORRIGIDO: Type assertion
+                        statusLabel: (mapDistrictInfo as MapDistrictResultInfo).statusLabel 
                     });
                 } else {
                     localHandleDistrictHover(null); 
@@ -500,8 +504,16 @@ export default function Home() {
 
       <div className="text-center p-4 container mx-auto mb-6">
           {isLoadingVotes && !apiVotesData && <p className="text-sm text-gray-500 mt-2 animate-pulse">Carregando resultados iniciais...</p>}
-          {errorVotes && <p className="text-sm text-red-600 mt-2">Erro ao carregar dados: {errorVotes}</p>}
-          {apiVotesData && !isLoadingVotes && (
+          {/* ATUALIZADO: Feedback de erro mais específico para o problema da planilha */}
+          {errorVotes && (
+            <p className="text-sm text-red-600 mt-2">
+                Erro ao carregar dados: {errorVotes}
+                {errorVotes.includes("planilha") && 
+                    <span className="block text-xs text-gray-500 mt-1">Isso pode indicar um problema temporário com a fonte de dados (planilha). A aplicação tentará atualizar novamente em {timeLeftForRefresh}s.</span>
+                }
+            </p>
+          )}
+          {apiVotesData && !isLoadingVotes && !errorVotes && ( // Só mostra esta mensagem se não houver erro
             <p className="text-sm text-gray-500 mt-2">
                 Dados atualizados. Próxima atualização em {timeLeftForRefresh}s.
             </p>
