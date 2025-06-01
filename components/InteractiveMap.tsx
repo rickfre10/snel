@@ -3,31 +3,36 @@
 import React from 'react';
 // Importa as dimensões e a interface GeoLayoutInfo
 import { mapDimensions, GeoLayoutInfo, haagarDistrictLayout, haagarStateLayout } from '../lib/mapLayout'; // Ajuste o caminho conforme necessário
-// Importa tipos necessários (mantenha seus imports originais)
-import type { DistrictResultInfo } from '../types/election'; // Exemplo: Ajuste o caminho
+// Importa tipos necessários
+// Presume-se que DistrictResultInfo em types/election.ts foi atualizado para incluir:
+// isFinal: boolean;
+// totalVotesInDistrict: number;
+// (e opcionalmente statusLabel: string | null;)
+import type { DistrictResultInfo } from '../types/election'; 
 
+// Props atualizadas para refletir a estrutura de dados mais rica de 'results'
 interface InteractiveMapProps {
-  results: Record<string, DistrictResultInfo>;
+  results: Record<string, DistrictResultInfo & { 
+    isFinal?: boolean; // Marcado como opcional para compatibilidade se o tipo base não for atualizado
+    totalVotesInDistrict?: number; // Marcado como opcional
+    // statusLabel?: string | null; // Se necessário para o mapa
+  }>;
   colorMap: Record<string, string>;
-  // Não precisamos mais passar o layoutData como prop, vamos importar direto do mapLayout.ts
-  // layoutData: GeoLayoutInfo[];
-  onDistrictHover?: (districtInfo: DistrictResultInfo | null, districtId: string | null) => void;
-  onDistrictClick?: (districtInfo: DistrictResultInfo | null, districtId: string) => void;
+  onDistrictHover?: (districtInfo: (DistrictResultInfo & { isFinal?: boolean; totalVotesInDistrict?: number; }) | null, districtId: string | null) => void;
+  onDistrictClick?: (districtInfo: (DistrictResultInfo & { isFinal?: boolean; totalVotesInDistrict?: number; }) | null, districtId: string) => void;
 }
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
     results,
     colorMap,
-    // Remova layoutData das props
     onDistrictHover = () => {},
     onDistrictClick = () => {}
 }) => {
-    const fallbackColor = '#D9D9D9';
+    const fallbackColor = '#D9D9D9'; // Cor para distritos sem vencedor/votos ou dados ausentes
     const defaultStrokeColor = 'black';
-    const defaultStrokeWidth = '15'; // Borda padrão para os distritos
+    // const defaultStrokeWidth = '15'; // Borda padrão para os distritos (não usada diretamente nos paths dos distritos)
     const stateStrokeColor = '#000000'; // Cor da borda grossa dos estados
-    const stateStrokeWidth = '40'; // Espessura da borda grossa dos estados (ajuste conforme necessário)
-
+    const stateStrokeWidth = '40'; // Espessura da borda grossa dos estados
 
     return (
         <div style={{ width: '100%', aspectRatio: `${mapDimensions.width} / ${mapDimensions.height}` }}>
@@ -35,36 +40,49 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 width="100%"
                 height="100%"
                 viewBox={mapDimensions.viewBox}
-                // fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 preserveAspectRatio="xMidYMid meet"
             >
                 {/* Camada de Distritos Coloridos - Renderizada PRIMEIRO */}
-                {haagarDistrictLayout.map((district) => { // Itera sobre os dados de layout dos distritos
-                    const districtId = district.id; // O ID do distrito
-                    // Busca as informações de resultado usando o ID do distrito
-                    const resultInfo = results[districtId] || { winnerLegend: null, districtName: `Distrito ${districtId}` };
-                    const winnerLegend = resultInfo.winnerLegend;
-                    // Calcula a cor de preenchimento com base no resultado para o distrito
-                    const districtFillColor = winnerLegend ? (colorMap[winnerLegend] ?? fallbackColor) : fallbackColor;
+                {haagarDistrictLayout.map((district) => {
+                    const districtId = district.id;
+                    
+                    // Busca as informações de resultado usando o ID do distrito.
+                    // Fornece defaults para os novos campos se não estiverem presentes.
+                    const resultInfo = results[districtId] || { 
+                        winnerLegend: null, 
+                        districtName: `Distrito ${districtId}`,
+                        maxVotes: 0, // Default do tipo base
+                        // Defaults para os novos campos esperados
+                        totalVotesInDistrict: 0, 
+                        isFinal: true, // Se não há dados, considerar "final" como não apurando (sem transparência) ou false para transparente
+                                       // Vamos usar 'false' para indicar que o estado é incerto/aguardando dados, aplicando transparência.
+                        // statusLabel: "Dados não disponíveis" 
+                    };
+
+                    // Determina se há votos e um vencedor para colorir o distrito.
+                    // winnerLegend já é null se não houver vencedor.
+                    // Adicionar a checagem de totalVotesInDistrict para garantir que só pinta se houver votos.
+                    const hasVotesAndWinner = resultInfo.totalVotesInDistrict && resultInfo.totalVotesInDistrict > 0 && resultInfo.winnerLegend;
+                    const districtFillColor = hasVotesAndWinner ? (colorMap[resultInfo.winnerLegend!] ?? fallbackColor) : fallbackColor;
+
+                    // Determina a opacidade com base no status final.
+                    // Se isFinal for undefined (por exemplo, se o tipo DistrictResultInfo não foi atualizado), assume-se que é final (opacidade 1).
+                    // Se isFinal for explicitamente false, aplica transparência.
+                    const opacity = (resultInfo.isFinal === false) ? 0.6 : 1;
 
                     return (
-                         // Fragmento ou <g> para agrupar logicamente os paths de um distrito, chaveada pelo ID do distrito
                          <React.Fragment key={district.id}>
-                            {/* Mapeia os paths DENTRO deste distrito */}
-                            {district.paths.map((subPath, index) => ( // Itera sobre o array de paths do distrito
-                                <path // Elemento path para cada sub-path do distrito
-                                    key={`district-${district.id}-${index}`} // Chave única
+                            {district.paths.map((subPath, index) => (
+                                <path
+                                    key={`district-${district.id}-${index}`}
                                     id={`map-district-${district.id}-${index}`}
-                                    d={subPath.d} // Usa o 'd' do sub-path do distrito
-                                    // Aplica a cor do resultado do distrito
+                                    d={subPath.d}
                                     fill={districtFillColor}
-                                     // Define uma borda fina ou nenhuma borda para os distritos
-                                    // Podemos até remover o stroke dos distritos aqui se a borda do estado for suficiente
-                                    stroke={subPath.stroke || defaultStrokeColor} // Mantém stroke original ou padrão fino
-                                    strokeWidth="1" // Reduz a espessura da borda do distrito para não cobrir a borda do estado
-                                    className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
-                                    // Eventos no nível de CADA path do distrito
+                                    stroke={subPath.stroke || defaultStrokeColor} 
+                                    strokeWidth="1" 
+                                    className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-80" // Leve ajuste no hover opacity
+                                    style={{ opacity: opacity }} // Aplica a opacidade calculada
                                     onClick={() => onDistrictClick(resultInfo, districtId)}
                                     onMouseEnter={() => onDistrictHover(resultInfo, districtId)}
                                     onMouseLeave={() => onDistrictHover(null, null)}
@@ -75,26 +93,20 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 })}
 
                 {/* Camada de Bordas dos Estados - Renderizada SEGUNDO (agora por cima dos distritos) */}
-                {haagarStateLayout.map((state) => ( // Itera sobre os dados de layout dos estados
-                     // Usar <g> para agrupar logicamente os paths de um estado, chaveada pelo ID do estado
+                {haagarStateLayout.map((state) => ( 
                     <g key={`state-${state.id}`} id={`state-${state.id}`}>
-                        {state.paths.map((subPath, index) => ( // Itera sobre os paths DENTRO deste estado
+                        {state.paths.map((subPath, index) => ( 
                             <path
-                                key={`state-${state.id}-${index}`} // Chave única
-                                // O ID do elemento no DOM pode ser apenas o ID do estado se não precisar de unicidade para cada sub-path no DOM
-                                // Mas para garantir, podemos manter uma combinação
+                                key={`state-${state.id}-${index}`} 
                                 id={`map-state-${state.id}-${index}`}
-                                d={subPath.d} // Usa o 'd' do sub-path do estado
-                                fill="none" // Estados não têm preenchimento nesta camada de borda
-                                stroke={stateStrokeColor} // Aplica a cor da borda do estado (preto)
-                                strokeWidth={stateStrokeWidth} // Aplica a espessura da borda do estado (40)
-                                // Remova eventos de hover/click desta camada para evitar conflito com os distritos
-                                // className="cursor-pointer transition-opacity duration-150 ease-in-out hover:opacity-75"
+                                d={subPath.d} 
+                                fill="none" 
+                                stroke={stateStrokeColor} 
+                                strokeWidth={stateStrokeWidth} 
                             />
                         ))}
                     </g>
                 ))}
-
             </svg>
         </div>
     );
