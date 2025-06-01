@@ -1,7 +1,7 @@
 // app/page.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'; // Adicionado useRef
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'; 
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -79,6 +79,15 @@ export default function Home() {
 
   const router = useRouter();
 
+  useEffect(() => {
+    console.log("[DEBUG Ticker] apiVotesData mudou:", apiVotesData);
+  }, [apiVotesData]);
+
+  useEffect(() => {
+    console.log("[DEBUG Ticker] isLoadingVotes mudou:", isLoadingVotes);
+  }, [isLoadingVotes]);
+
+
   const handleNavigate = () => {
     if (selectedDistrict && selectedState) {
       router.push(`/distrito/${selectedDistrict}?time=${currentTime}`);
@@ -88,14 +97,12 @@ export default function Home() {
   };
 
   const fetchVoteData = useCallback(async () => {
-    // A lógica de isLoadingVotes é para o carregamento inicial.
-    // Se apiVotesData ainda não existe, significa que é o primeiro carregamento.
     if (!apiVotesData) { 
         setIsLoadingVotes(true);
     }
-    setErrorVotes(null); // Limpa erros anteriores antes de uma nova tentativa
+    setErrorVotes(null); 
     try {
-        const response = await fetch(`/api/results?time=${currentTime}`); // currentTime está fixo em 100
+        const response = await fetch(`/api/results?time=${currentTime}`); 
         if (!response.ok) {
              let errorMsg = 'Erro ao buscar votos';
              try { 
@@ -112,48 +119,38 @@ export default function Home() {
         console.error("Falha API Votos:", err);
         setErrorVotes(err instanceof Error ? err.message : 'Erro desconhecido ao processar falha da API.');
     } finally {
-        // Garante que isLoadingVotes seja definido como false após a tentativa,
-        // especialmente se foi o carregamento inicial.
         setIsLoadingVotes(false); 
     }
-  }, [currentTime, apiVotesData, setIsLoadingVotes, setErrorVotes, setApiVotesData]); // Adicionadas todas as dependências de estado que a função usa
+  }, [currentTime, apiVotesData, setIsLoadingVotes, setErrorVotes, setApiVotesData]); 
 
-  // Cria uma ref para armazenar a função fetchVoteData mais recente
   const fetchVoteDataRef = useRef(fetchVoteData);
 
-  // Atualiza a ref sempre que fetchVoteData mudar
   useEffect(() => {
     fetchVoteDataRef.current = fetchVoteData;
   }, [fetchVoteData]);
 
-  // useEffect para o setup inicial dos timers e lógica de refresh
   useEffect(() => {
-    // Função a ser chamada pelo timer de refresh e no carregamento inicial
     const performFetchAndResetCountdown = () => {
         console.log("Timer: Buscando dados e reiniciando contagem regressiva.");
-        fetchVoteDataRef.current(); // Usa a ref para chamar a versão mais recente de fetchVoteData
+        fetchVoteDataRef.current(); 
         setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS);
     };
 
-    // Busca inicial de dados e início da contagem regressiva
     performFetchAndResetCountdown();
 
-    // Intervalo para o refresh automático de dados
     const dataRefreshTimer = setInterval(performFetchAndResetCountdown, REFRESH_INTERVAL_SECONDS * 1000);
 
-    // Intervalo para a contagem regressiva (display)
     const countdownTimer = setInterval(() => {
         setTimeLeftForRefresh(prevTime => (prevTime > 0 ? prevTime - 1 : 0));
     }, 1000);
 
-    // Limpeza dos intervalos quando o componente é desmontado
     return () => {
         console.log("Timer: Limpando intervalos.");
         clearInterval(dataRefreshTimer);
         clearInterval(countdownTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, []); // Array de dependências vazio para executar apenas na montagem e desmontagem
+  }, []); 
 
   const states: StateOption[] = useMemo(() => {
     const uniqueStates = new Map<string, string>();
@@ -288,35 +285,58 @@ export default function Home() {
     return seatCounts;
   }, [districtResultsSummaryAndStatus]);
 
+  // ATUALIZADO: Cálculo de assentos proporcionais com novo limite de votos
   const nationalProportionalSeatsByCoalition = useMemo(() => {
     const nationalPRCounts: Record<string, number> = {};
-    if (!apiVotesData?.proportionalVotes) { return nationalPRCounts; }
-
+    if (!apiVotesData?.proportionalVotes) {
+      return nationalPRCounts;
+    }
+  
     Object.keys(totalProportionalSeatsByState).forEach(uf => {
       const seatsForThisState = totalProportionalSeatsByState[uf];
       if (seatsForThisState === 0) return; 
-
-      const votesInThisState = apiVotesData.proportionalVotes.filter(vote => vote.uf === uf);
-      
-      const proportionalVotesInputForState: ProportionalVotesInput[] = votesInThisState
-        .filter(vote => vote.parl_front_legend) 
+  
+      // 1. Filtra os votos proporcionais para o estado atual
+      const allProportionalVotesInStateForUF = apiVotesData.proportionalVotes.filter(vote => vote.uf === uf);
+  
+      // 2. Determina o limite de votos para o estado atual
+      const voteThreshold = uf === "TP" ? 40000 : 250000;
+  
+      // 3. Filtra partidos/coligações que ATINGIRAM o limite de votos no estado
+      const eligibleVotesInState = allProportionalVotesInStateForUF.filter(vote => {
+          const numericVotes = parseNumber(vote.proportional_votes_qtn);
+          // A condição é "mais de X votos", então >
+          return numericVotes > voteThreshold; 
+      });
+  
+      // 4. Prepara os dados de entrada para a função de cálculo com os partidos elegíveis
+      const proportionalVotesInputForState: ProportionalVotesInput[] = eligibleVotesInState
+        .filter(vote => vote.parl_front_legend) // Garante que a legenda existe
         .map(vote => ({
           legend: vote.parl_front_legend!, 
-          votes: parseNumber(vote.proportional_votes_qtn)
+          votes: parseNumber(vote.proportional_votes_qtn) // Usa os votos do partido elegível
         }));
-
+  
+      // Se nenhum partido atingiu o limite, não há assentos para alocar neste estado
+      if (proportionalVotesInputForState.length === 0) {
+        // console.log(`Nenhum partido atingiu o limite de votos em ${uf}.`);
+        return; 
+      }
+  
+      // Calcula os assentos proporcionais para este estado (D'Hondt com cláusula de barreira de 5%)
       const prSeatsThisState = calculateProportionalSeats(
         proportionalVotesInputForState,
         seatsForThisState,
-        5 
+        5 // Cláusula de barreira de 5% ainda se aplica aos partidos que passaram o limite de votos
       );
-
+  
+      // Soma os assentos ao total nacional de cada frente
       Object.entries(prSeatsThisState).forEach(([legend, seats]) => {
         nationalPRCounts[legend] = (nationalPRCounts[legend] || 0) + seats;
       });
     });
     return nationalPRCounts;
-  }, [apiVotesData?.proportionalVotes]);
+  }, [apiVotesData?.proportionalVotes]); // totalProportionalSeatsByState é constante, não precisa ser dependência
 
   const finalNationalSeatComposition = useMemo(() => {
     const combinedSeats: Record<string, number> = {};
@@ -367,7 +387,7 @@ export default function Home() {
       const runnerUpPercentage = runnerUpCandidateData && currentTotalVotesInDistrict > 0 ? (runnerUpCandidateData.numericVotes / currentTotalVotesInDistrict) * 100 : null;
       
        const statusInputForTicker: DistrictStatusInput = {
-        isLoading: isLoadingVotes,
+        isLoading: isLoadingVotes, 
         leadingCoalition: leadingCandidateData ? { legend: leadingCandidateData.parl_front_legend || "N/D", votes: leadingCandidateData.numericVotes, name: leadingCandidateData.candidate_name } : undefined,
         runnerUpCoalition: runnerUpCandidateData ? { legend: runnerUpCandidateData.parl_front_legend || "N/D", votes: runnerUpCandidateData.numericVotes, name: runnerUpCandidateData.candidate_name } : undefined,
         totalVotesInDistrict: currentTotalVotesInDistrict, 
@@ -394,7 +414,6 @@ export default function Home() {
       };
       dataForTicker.push(entry);
     });
-    dataForTicker.sort((a, b) => (a.district_id - b.district_id));
     return dataForTicker;
   }, [districtResultsSummaryAndStatus, isLoadingVotes, coalitionColorMap, apiVotesData?.candidateVotes, districtsData, previousDistrictResultsData]);
 
