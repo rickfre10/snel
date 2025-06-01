@@ -410,20 +410,6 @@ export default function DistrictDetailPage() {
             )}
         </div>
       </div>
-
-     <div className="text-left p-4 bg-white rounded-lg shadow-md border border-gray-200 mt-8">
-        <label htmlFor="time-select" className="text-sm font-medium mr-2">Ver Apuração em:</label>
-        <select
-           id="time-select"
-           value={currentTime}
-           onChange={(e) => setCurrentTime(parseInt(e.target.value, 10))}
-           disabled={isLoadingVotes}
-           className="rounded border-gray-300 shadow-sm"
-        >
-            <option value={50}>50%</option>
-            <option value={100}>100%</option>
-        </select>
-    </div>
     </div>
   );
 }
