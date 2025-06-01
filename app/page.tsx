@@ -1,7 +1,7 @@
 // app/page.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'; // Adicionado useRef
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -34,7 +34,7 @@ const REFRESH_INTERVAL_SECONDS = 60;
 
 // Interface para os dados de VOTOS vindos da API
 interface ApiVotesData {
-  time: number; // A API ainda pode retornar 'time', mas não vamos usá-lo para atualizar nosso estado 'currentTime'
+  time: number; 
   candidateVotes: CandidateVote[];
   proportionalVotes: ProportionalVote[];
 }
@@ -68,7 +68,6 @@ type MapDistrictResultInfo = DistrictResultInfo & {
 
 // --- COMPONENTE PRINCIPAL DA HOME ---
 export default function Home() {
-  // currentTime será sempre 100 para a chamada da API
   const [currentTime, setCurrentTime] = useState<number>(100); 
   const [apiVotesData, setApiVotesData] = useState<ApiVotesData | null>(null);
   const [isLoadingVotes, setIsLoadingVotes] = useState<boolean>(true);
@@ -81,8 +80,6 @@ export default function Home() {
   const router = useRouter();
 
   const handleNavigate = () => {
-    // A navegação ainda usa o 'currentTime' do estado, que agora é fixo em 100 para fins de API.
-    // Se a navegação precisar de um 'time' dinâmico real, esta lógica precisaria ser revista.
     if (selectedDistrict && selectedState) {
       router.push(`/distrito/${selectedDistrict}?time=${currentTime}`);
     } else if (selectedState) {
@@ -91,63 +88,72 @@ export default function Home() {
   };
 
   const fetchVoteData = useCallback(async () => {
+    // A lógica de isLoadingVotes é para o carregamento inicial.
+    // Se apiVotesData ainda não existe, significa que é o primeiro carregamento.
     if (!apiVotesData) { 
         setIsLoadingVotes(true);
     }
-    setErrorVotes(null);
+    setErrorVotes(null); // Limpa erros anteriores antes de uma nova tentativa
     try {
-        // Usa sempre o valor de 'currentTime' do estado, que agora não é mais atualizado pela API.
-        // Como currentTime é inicializado com 100 e setCurrentTime não é mais chamado com data.time,
-        // a chamada será sempre /api/results?time=100.
-        const response = await fetch(`/api/results?time=${currentTime}`);
+        const response = await fetch(`/api/results?time=${currentTime}`); // currentTime está fixo em 100
         if (!response.ok) {
              let errorMsg = 'Erro ao buscar votos';
              try { 
                 const errorData = await response.json();
                 errorMsg = errorData.error || errorMsg; 
              } catch (e) {
-                // Se a resposta não for JSON ou não tiver .error, mantém errorMsg padrão
+                // Mantém errorMsg padrão
              }
              throw new Error(errorMsg);
         }
         const data: ApiVotesData = await response.json();
         setApiVotesData(data);
-        // REMOVIDO: Não atualiza mais currentTime com base na resposta da API
-        // if (data.time) {
-        //     setCurrentTime(data.time); 
-        // }
     } catch (err: unknown) {
         console.error("Falha API Votos:", err);
         setErrorVotes(err instanceof Error ? err.message : 'Erro desconhecido ao processar falha da API.');
     } finally {
-        setIsLoadingVotes(false);
+        // Garante que isLoadingVotes seja definido como false após a tentativa,
+        // especialmente se foi o carregamento inicial.
+        setIsLoadingVotes(false); 
     }
-  // A dependência de 'currentTime' pode ser removida se ele nunca mudar,
-  // mas mantê-la não prejudica e reflete que a URL ainda o utiliza.
-  // Se currentTime fosse totalmente fixo e nunca mais usado em setCurrentTime,
-  // a useCallback poderia até não precisar dele como dependência se a URL usasse um valor constante.
-  // Por ora, vamos manter, pois 'currentTime' ainda está no escopo.
-  }, [currentTime, apiVotesData]); 
+  }, [currentTime, apiVotesData, setIsLoadingVotes, setErrorVotes, setApiVotesData]); // Adicionadas todas as dependências de estado que a função usa
 
+  // Cria uma ref para armazenar a função fetchVoteData mais recente
+  const fetchVoteDataRef = useRef(fetchVoteData);
+
+  // Atualiza a ref sempre que fetchVoteData mudar
   useEffect(() => {
-    fetchVoteData(); 
-    setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS); 
+    fetchVoteDataRef.current = fetchVoteData;
+  }, [fetchVoteData]);
 
-    const dataRefreshIntervalId = setInterval(() => {
-      console.log("Atualizando dados da API automaticamente...");
-      fetchVoteData();
-      setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS); 
-    }, REFRESH_INTERVAL_SECONDS * 1000); 
+  // useEffect para o setup inicial dos timers e lógica de refresh
+  useEffect(() => {
+    // Função a ser chamada pelo timer de refresh e no carregamento inicial
+    const performFetchAndResetCountdown = () => {
+        console.log("Timer: Buscando dados e reiniciando contagem regressiva.");
+        fetchVoteDataRef.current(); // Usa a ref para chamar a versão mais recente de fetchVoteData
+        setTimeLeftForRefresh(REFRESH_INTERVAL_SECONDS);
+    };
 
-    const countdownIntervalId = setInterval(() => {
+    // Busca inicial de dados e início da contagem regressiva
+    performFetchAndResetCountdown();
+
+    // Intervalo para o refresh automático de dados
+    const dataRefreshTimer = setInterval(performFetchAndResetCountdown, REFRESH_INTERVAL_SECONDS * 1000);
+
+    // Intervalo para a contagem regressiva (display)
+    const countdownTimer = setInterval(() => {
         setTimeLeftForRefresh(prevTime => (prevTime > 0 ? prevTime - 1 : 0));
     }, 1000);
 
+    // Limpeza dos intervalos quando o componente é desmontado
     return () => {
-        clearInterval(dataRefreshIntervalId);
-        clearInterval(countdownIntervalId);
-    }
-  }, [fetchVoteData]); 
+        console.log("Timer: Limpando intervalos.");
+        clearInterval(dataRefreshTimer);
+        clearInterval(countdownTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps 
+  }, []); // Array de dependências vazio para executar apenas na montagem e desmontagem
 
   const states: StateOption[] = useMemo(() => {
     const uniqueStates = new Map<string, string>();
