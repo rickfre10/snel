@@ -45,7 +45,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             >
                 {/* Camada de Distritos Coloridos - Renderizada PRIMEIRO */}
                 {haagarDistrictLayout.map((district) => {
-                    const districtId = district.id;
+                    const districtId = district.id; // Assume-se que district.id é uma string
                     
                     // Busca as informações de resultado usando o ID do distrito.
                     // Fornece defaults para os novos campos se não estiverem presentes.
@@ -55,21 +55,19 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                         maxVotes: 0, // Default do tipo base
                         // Defaults para os novos campos esperados
                         totalVotesInDistrict: 0, 
-                        isFinal: true, // Se não há dados, considerar "final" como não apurando (sem transparência) ou false para transparente
-                                       // Vamos usar 'false' para indicar que o estado é incerto/aguardando dados, aplicando transparência.
+                        isFinal: false, // ALTERADO: Se não há dados, considerar como não final para aplicar transparência
                         // statusLabel: "Dados não disponíveis" 
                     };
 
                     // Determina se há votos e um vencedor para colorir o distrito.
-                    // winnerLegend já é null se não houver vencedor.
-                    // Adicionar a checagem de totalVotesInDistrict para garantir que só pinta se houver votos.
                     const hasVotesAndWinner = resultInfo.totalVotesInDistrict && resultInfo.totalVotesInDistrict > 0 && resultInfo.winnerLegend;
                     const districtFillColor = hasVotesAndWinner ? (colorMap[resultInfo.winnerLegend!] ?? fallbackColor) : fallbackColor;
 
                     // Determina a opacidade com base no status final.
-                    // Se isFinal for undefined (por exemplo, se o tipo DistrictResultInfo não foi atualizado), assume-se que é final (opacidade 1).
+                    // Se isFinal for undefined (por exemplo, se o tipo DistrictResultInfo não foi atualizado), assume-se como não final (opacidade 0.6).
                     // Se isFinal for explicitamente false, aplica transparência.
-                    const opacity = (resultInfo.isFinal === false) ? 0.6 : 1;
+                    const opacity = (resultInfo.isFinal === undefined || resultInfo.isFinal === false) ? 0.6 : 1;
+
 
                     return (
                          <React.Fragment key={district.id}>
