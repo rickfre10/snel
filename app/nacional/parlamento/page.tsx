@@ -8,15 +8,35 @@ import { useSearchParams } from 'next/navigation';
 import ParliamentCompositionChart from '@/components/ParliamentCompositionChart';
 import CoalitionBuilderSimulator from '@/components/CoalitionBuilderSimulator';
 
-import { calculateProportionalSeats } from '@/lib/electionCalculations';
+import { calculateProportionalSeats, ProportionalVotesInput } from '@/lib/electionCalculations'; 
 import { partyData, districtsData } from '@/lib/staticData';
+import { previousDistrictResultsData } from '@/lib/previousElectionData'; // Necessário para status do distrito
 
-import type { ProportionalVote, CandidateVote, DistrictInfoFromData } from '@/types/election';
+// CORRIGIDO: Removida a tentativa de importar CoalitionVoteInfo daqui
+import type { ProportionalVote, CandidateVote, DistrictInfoFromData } from '@/types/election'; 
+
+// Lógica de Status Dinâmico (importações e helper local)
+// CORRIGIDO: Adicionada importação de CoalitionVoteInfo daqui
+import {
+  calculateDistrictDynamicStatus,
+  DistrictStatusInput,
+  CoalitionVoteInfo, 
+} from '@/lib/statusCalculator';
 
 const TOTAL_SEATS_IN_PARLIAMENT = 213;
 const MAJORITY_THRESHOLD = Math.floor(TOTAL_SEATS_IN_PARLIAMENT / 2) + 1;
 
 const totalProportionalSeatsByState: Record<string, number> = { "TP": 1, "MA": 40, "MP": 23, "BA": 16, "PB": 9, "PN": 4 };
+const COALITION_FALLBACK_COLOR = '#6B7280'; // Necessário para statusCalculator
+
+// Helper checkIfStatusIsFinal (definido localmente)
+const checkIfStatusIsFinal = (statusLabel: string | null | undefined): boolean => {
+  if (!statusLabel) return false;
+  const lowerLabel = statusLabel.toLowerCase();
+  const finalKeywords = ["ganhou", "manteve", "eleito", "definido", "conquistou"]; 
+  return finalKeywords.some(keyword => lowerLabel.includes(keyword));
+};
+
 
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
@@ -47,13 +67,12 @@ interface PartySeatDataForParliament {
 const FALLBACK_COLOR_PARLIAMENT = '#CCCCCC';
 
 const LEGEND_ORDER_FOR_PARLIAMENT_CHART: string[] = [
-    "PSH", // Exemplo: Extrema Esquerda
-    "TDS", // Exemplo: Esquerda
-    "PSD", // Exemplo: Centro-Esquerda / Maior Bloco
-    "UNI", // Exemplo: Centro / Segundo Maior Bloco
-    "NAC", // Exemplo: Direita
-    "CON"  // Exemplo: Extrema Direita
-    // Adicione todas as suas legendas na ordem desejada
+    "PSH", 
+    "TDS", 
+    "PSD", 
+    "UNI", 
+    "NAC", 
+    "CON"  
 ];
 
 export default function ParlamentoNacionalPage() {
@@ -61,19 +80,21 @@ export default function ParlamentoNacionalPage() {
   const [parliamentSeatData, setParliamentSeatData] = useState<PartySeatDataForParliament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState<number>(100);
+  // currentTime não é mais usado para a chamada da API, mas pode ser mantido se houver outros usos.
+  // const [currentTime, setCurrentTime] = useState<number>(100); 
 
   const colorMap = useMemo(() => buildColorMap(), []);
   const allUfInfos = useMemo(() => getAllUfInfo(), []);
-  const initialTimeFromQuery = useMemo(() => searchParamsHook.get('time') ? parseInt(searchParamsHook.get('time')!, 10) : 100, [searchParamsHook]);
+  
+  // const initialTimeFromQuery = useMemo(() => searchParamsHook.get('time') ? parseInt(searchParamsHook.get('time')!, 10) : 100, [searchParamsHook]);
+  // useEffect(() => { setCurrentTime(initialTimeFromQuery); }, [initialTimeFromQuery]);
 
-  useEffect(() => { setCurrentTime(initialTimeFromQuery); }, [initialTimeFromQuery]);
 
   useEffect(() => {
     const fetchAndProcessNationalSeatData = async () => {
       setIsLoading(true); setError(null);
       try {
-        const response = await fetch(`/api/results?time=${currentTime}`);
+        const response = await fetch(`/api/results?time=100`); 
         if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Falha API'); }
         const allVoteData: ApiAllVotesData = await response.json();
 
@@ -85,91 +106,132 @@ export default function ParlamentoNacionalPage() {
         const nationalTotalSeatsByLegend: Record<string, number> = {};
         Array.from(legendsSet).forEach(l => nationalTotalSeatsByLegend[l] = 0);
 
+        // --- CÁLCULO DE ASSENTOS PROPORCIONAIS (JÁ ATUALIZADO) ---
         allUfInfos.forEach(({ uf }) => {
-          const allProportionalVotesInUfCurrent = allVoteData.proportionalVotes
-            .filter(v_1 => v_1.uf === uf && v_1.parl_front_legend)
-            .map(v_2 => ({ legend: v_2.parl_front_legend!, votes: parseNumber(v_2.proportional_votes_qtn) }));
-          
           const seatsForStateProportional = totalProportionalSeatsByState[uf] || 0;
-          if (seatsForStateProportional > 0 && allProportionalVotesInUfCurrent.length > 0) {
-            const calculatedPrSeatsObj = calculateProportionalSeats(allProportionalVotesInUfCurrent, seatsForStateProportional, 5);
-            Array.from(legendsSet).forEach(legend_1 => {
-              nationalTotalSeatsByLegend[legend_1] += calculatedPrSeatsObj[legend_1] || 0;
+          if (seatsForStateProportional === 0) return;
+          const allProportionalVotesInUf = allVoteData.proportionalVotes.filter(v => v.uf === uf);
+          const voteThreshold = uf === "TP" ? 40000 : 250000;
+          const eligibleVotesInUf: ProportionalVotesInput[] = allProportionalVotesInUf
+            .filter(vote => {
+                const numericVotes = parseNumber(vote.proportional_votes_qtn);
+                return numericVotes > voteThreshold;
+            })
+            .filter(vote => vote.parl_front_legend) 
+            .map(vote => ({ 
+                legend: vote.parl_front_legend!, 
+                votes: parseNumber(vote.proportional_votes_qtn) 
+            }));
+            
+          if (seatsForStateProportional > 0 && eligibleVotesInUf.length > 0) {
+            const calculatedPrSeatsObj = calculateProportionalSeats(
+              eligibleVotesInUf, 
+              seatsForStateProportional, 
+              5 
+            );
+            Object.keys(calculatedPrSeatsObj).forEach(legend_1 => { 
+              if (!nationalTotalSeatsByLegend[legend_1]) nationalTotalSeatsByLegend[legend_1] = 0;
+              nationalTotalSeatsByLegend[legend_1] += calculatedPrSeatsObj[legend_1];
             });
           }
         });
 
+        // --- CÁLCULO DE ASSENTOS DISTRITAIS (ATUALIZADO COM STATUS FINAL) ---
         const allDistrictEntities: DistrictInfoFromData[] = districtsData;
         allDistrictEntities.forEach(district => {
           const votesInDistrict = allVoteData.candidateVotes.filter(
             vote => parseNumber(vote.district_id) === district.district_id
           );
+
           if (votesInDistrict.length > 0) {
-            const winner = votesInDistrict.reduce((prev, current) =>
-              parseNumber(prev.votes_qtn) > parseNumber(current.votes_qtn) ? prev : current
-            );
-            const winnerLegend = winner.parl_front_legend || winner.party_legend;
-            if (winnerLegend) {
-                 if (!nationalTotalSeatsByLegend[winnerLegend]) nationalTotalSeatsByLegend[winnerLegend] = 0; // Garante que a legenda existe
-                 nationalTotalSeatsByLegend[winnerLegend] += 1;
+            const votesWithNumeric = votesInDistrict.map(v => ({ ...v, numericVotes: parseNumber(v.votes_qtn) }));
+            const totalVotesInThisDistrict = votesWithNumeric.reduce((sum, current) => sum + current.numericVotes, 0);
+            const sortedVotes = [...votesWithNumeric].sort((a, b) => b.numericVotes - a.numericVotes);
+            
+            const leadingCandidateData = sortedVotes[0] || null;
+            const runnerUpCandidateData = sortedVotes[1] || null;
+
+            // CORRIGIDO: Usa CoalitionVoteInfo importado de statusCalculator
+            let leadingCoalitionForStatus: CoalitionVoteInfo | undefined = undefined;
+            if (leadingCandidateData) {
+                leadingCoalitionForStatus = {
+                    legend: leadingCandidateData.parl_front_legend || leadingCandidateData.party_legend || "N/D",
+                    votes: leadingCandidateData.numericVotes, name: leadingCandidateData.candidate_name
+                };
+            }
+            // CORRIGIDO: Usa CoalitionVoteInfo importado de statusCalculator
+            let runnerUpCoalitionForStatus: CoalitionVoteInfo | undefined = undefined;
+            if (runnerUpCandidateData) {
+                runnerUpCoalitionForStatus = {
+                    legend: runnerUpCandidateData.parl_front_legend || runnerUpCandidateData.party_legend || "N/D",
+                    votes: runnerUpCandidateData.numericVotes, name: runnerUpCandidateData.candidate_name
+                };
+            }
+            
+            const previousResultForThisDistrict = previousDistrictResultsData.find(d => d.district_id === district.district_id);
+            const previousSeatHolderLegend = previousResultForThisDistrict?.winner_2018_legend || null;
+            
+            let remainingVotesEst = 0;
+            if (district.voters_qtn && totalVotesInThisDistrict >= 0) { 
+                remainingVotesEst = district.voters_qtn - totalVotesInThisDistrict;
+                if (remainingVotesEst < 0) remainingVotesEst = 0;
+            }
+
+            const statusInputForDistrict: DistrictStatusInput = {
+                isLoading: false, 
+                leadingCoalition: leadingCoalitionForStatus,
+                runnerUpCoalition: runnerUpCoalitionForStatus,
+                totalVotesInDistrict: totalVotesInThisDistrict,
+                remainingVotesEstimate: remainingVotesEst,
+                previousSeatHolderCoalitionLegend: previousSeatHolderLegend,
+                coalitionColorMap: colorMap, 
+                fallbackCoalitionColor: COALITION_FALLBACK_COLOR 
+            };
+            const detailedStatus = calculateDistrictDynamicStatus(statusInputForDistrict);
+            const isDistrictFinal = checkIfStatusIsFinal(detailedStatus.label);
+
+            if (isDistrictFinal && leadingCandidateData) { 
+                const winnerLegend = leadingCandidateData.parl_front_legend || leadingCandidateData.party_legend;
+                if (winnerLegend) {
+                    if (!nationalTotalSeatsByLegend[winnerLegend]) nationalTotalSeatsByLegend[winnerLegend] = 0; 
+                    nationalTotalSeatsByLegend[winnerLegend] += 1;
+                }
             }
           }
         });
 
         const processedSeatData: PartySeatDataForParliament[] = [];
-        let sumOfCalculatedSeats = 0;
         
-        // Primeiro, processar as legendas na ordem definida
         LEGEND_ORDER_FOR_PARLIAMENT_CHART.forEach(orderedLegend => {
-            if (legendsSet.has(orderedLegend)) {
-                const seats = nationalTotalSeatsByLegend[orderedLegend] || 0;
-                // if (seats > 0) { // Incluir mesmo se tiver 0 assentos, para manter a ordem
-                    processedSeatData.push({
-                        legend: orderedLegend,
-                        seats,
-                        color: colorMap[orderedLegend] || FALLBACK_COLOR_PARLIAMENT
-                    });
-                // }
-                sumOfCalculatedSeats += seats;
-            }
+            const seats = nationalTotalSeatsByLegend[orderedLegend] || 0;
+            processedSeatData.push({
+                legend: orderedLegend,
+                seats,
+                color: colorMap[orderedLegend] || FALLBACK_COLOR_PARLIAMENT
+            });
         });
 
-        // Adicionar quaisquer outras legendas que tenham assentos mas não estavam na lista de ordem
-        Array.from(legendsSet).forEach(legend_2 => {
+        Object.keys(nationalTotalSeatsByLegend).forEach(legend_2 => {
             if (!LEGEND_ORDER_FOR_PARLIAMENT_CHART.includes(legend_2)) {
                 const seats = nationalTotalSeatsByLegend[legend_2] || 0;
-                if (seats > 0) { 
+                if (seats > 0 || (legendsSet.has(legend_2) && !processedSeatData.find(p => p.legend === legend_2))) {
                     processedSeatData.push({
                         legend: legend_2,
                         seats,
                         color: colorMap[legend_2] || FALLBACK_COLOR_PARLIAMENT
                     });
-                    sumOfCalculatedSeats += seats; 
-                    // Nota: a soma pode ser contada duas vezes se a legenda já estava em LEGEND_ORDER_FOR_PARLIAMENT_CHART.
-                    // Corrigindo: a soma deve ser feita apenas uma vez. A lógica acima já garante que
-                    // legendas em LEGEND_ORDER_FOR_PARLIAMENT_CHART sejam processadas.
-                    // Esta parte é para legendas *não* em LEGEND_ORDER_FOR_PARLIAMENT_CHART.
-                } else if (!processedSeatData.find(p => p.legend === legend_2)) {
-                    // Adicionar legendas sem assentos se não estiverem já na lista (para o simulador)
-                     processedSeatData.push({
-                        legend: legend_2,
-                        seats: 0,
-                        color: colorMap[legend_2] || FALLBACK_COLOR_PARLIAMENT
-                    });
-                }
+                 }
             }
         });
         
-        // Recalcular a soma total de assentos APÓS construir processedSeatData para evitar contagem dupla
-        sumOfCalculatedSeats = processedSeatData.reduce((acc, party) => acc + party.seats, 0);
-
+        const sumOfCalculatedSeats = processedSeatData.reduce((acc, party) => acc + party.seats, 0);
 
         console.log("Soma total de assentos para o parlamento:", sumOfCalculatedSeats);
         if (sumOfCalculatedSeats !== TOTAL_SEATS_IN_PARLIAMENT) {
             console.warn(`ALERTA: A soma dos assentos calculados (${sumOfCalculatedSeats}) não é igual ao total esperado de ${TOTAL_SEATS_IN_PARLIAMENT}.`);
         }
         
-        setParliamentSeatData(processedSeatData); // `processedSeatData` agora está na ordem de LEGEND_ORDER_FOR_PARLIAMENT_CHART, seguido por outros.
+        setParliamentSeatData(processedSeatData);
 
       } catch (e) {
         console.error("Erro ao buscar ou processar dados para o parlamento:", e);
@@ -181,7 +243,7 @@ export default function ParlamentoNacionalPage() {
 
     if (allUfInfos.length > 0) { fetchAndProcessNationalSeatData(); }
     else { setIsLoading(false); setError("Lista de UFs não pôde ser carregada."); }
-  }, [currentTime, allUfInfos, colorMap]);
+  }, [allUfInfos, colorMap]);
 
   if (isLoading) {
     return <div className="flex justify-center items-center min-h-screen bg-slate-100"><p className="text-xl text-gray-500 animate-pulse">Carregando dados do parlamento...</p></div>;
@@ -189,7 +251,6 @@ export default function ParlamentoNacionalPage() {
   if (error) {
     return <div className="container mx-auto p-6 text-center text-red-500">Erro: {error} <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
-  // Modificado para mostrar mesmo se a soma não for 213, mas o gráfico usará o layout de 213.
   if (parliamentSeatData.length === 0 && !isLoading ) { 
     return <div className="container mx-auto p-6 text-center text-gray-500">Não há dados de assentos para exibir o parlamento.</div>;
   }
@@ -210,7 +271,7 @@ export default function ParlamentoNacionalPage() {
           <section className="lg:col-span-4">
             <ParliamentCompositionChart
               seatData={parliamentSeatData}
-              totalSeatsInLayout={TOTAL_SEATS_IN_PARLIAMENT} // Passa o total esperado pelo layout
+              totalSeatsInLayout={TOTAL_SEATS_IN_PARLIAMENT} 
               majorityThreshold={MAJORITY_THRESHOLD}
             />
           </section>
