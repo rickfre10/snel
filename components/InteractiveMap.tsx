@@ -66,7 +66,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                     // Determina a opacidade com base no status final.
                     // Se isFinal for undefined (por exemplo, se o tipo DistrictResultInfo não foi atualizado), assume-se como não final (opacidade 0.6).
                     // Se isFinal for explicitamente false, aplica transparência.
-                    const opacity = (resultInfo.isFinal === undefined || resultInfo.isFinal === false) ? 0.4 : 1;
+                    const opacity = (resultInfo.isFinal === undefined || resultInfo.isFinal === false) ? 0.3 : 1;
 
 
                     return (
