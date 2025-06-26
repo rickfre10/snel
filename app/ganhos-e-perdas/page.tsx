@@ -409,11 +409,6 @@ export default function GainsLossesPage() {
                 </section>
                 
                 <div className="text-center p-4 bg-white rounded-lg shadow-md border border-gray-200 container mx-auto mt-6 mb-6">
-                  <h3 className="text-lg font-medium mb-2 text-gray-700">Ver Apuração em:</h3>
-                    <div className="inline-flex rounded-md shadow-sm" role="group">
-                        <button onClick={() => setCurrentTime(50)} disabled={isLoading} className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${currentTime === 50 ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'} disabled:opacity-50 transition-colors`}>50%</button>
-                        <button onClick={() => setCurrentTime(100)} disabled={isLoading} className={`px-4 py-2 text-sm font-medium rounded-r-lg border border-l-0 ${currentTime === 100 ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'} disabled:opacity-50 transition-colors`}>100%</button>
-                    </div>
                     {isLoading && <p className="text-sm text-gray-500 mt-2 animate-pulse">Carregando resultados ({currentTime}%)...</p>}
                     {error && <p className="text-sm text-red-600 mt-2">Erro: {error}</p>}
                 </div>
