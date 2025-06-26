@@ -381,7 +381,7 @@ export default function GainsLossesPage() {
                             return (
                                 // MODIFICADO: O contêiner agora é um Link
                                 <Link
-                                    href={`/app/distrito/${item.districtId}`}
+                                    href={`distrito/${item.districtId}`}
                                     key={item.districtId}
                                     className={`block p-3 bg-white rounded-md shadow border border-l-4 transition-all duration-200 ease-in-out hover:shadow-lg hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 ${isTurnover ? 'ring-2 ring-offset-1 ring-amber-400' : 'border-gray-200'}`} 
                                     style={{ borderLeftColor: leftBorderColor }}
