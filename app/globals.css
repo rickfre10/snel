@@ -3,22 +3,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Define estilos base para o body usando diretivas @apply do Tailwind (preferido) */
-/* Ou use CSS normal se preferir */
-@layer base {
-  body {
-    @apply bg-gray-100 text-gray-900; /* Fundo cinza claro, texto cinza escuro */
-    /* Alternativa com CSS puro: */
-    /* background-color: #f3f4f6; */
-    /* color: #111827; */
-  }
-  /* Você pode adicionar outros estilos base aqui, como fontes */
-}
-
-/* Estilização específica para dropdowns (exemplo) - ajuste conforme necessário */
-select {
+/* Estilização dos dropdowns do painel 2022 */
+.font-sans select {
   @apply bg-white border border-gray-300 text-gray-900 rounded p-2;
-   /* Garante fundo branco e texto escuro no dropdown */
 }
 
-/* Outros estilos globais que você possa precisar */
+/*
+ * Posterama — fonte das marcas Smartv / SmartvNews (licença comercial).
+ * Coloque os arquivos em public/fonts/posterama/ com estes nomes. Enquanto
+ * não existirem, o telão usa a Outfit automaticamente.
+ */
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Light.woff2') format('woff2'); font-weight: 300; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Medium.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-ExtraBold.woff2') format('woff2'); font-weight: 800; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Black.woff2') format('woff2'); font-weight: 900; font-display: swap; }
+
+/* Telão: oculta barras de rolagem */
+.tv-stage ::-webkit-scrollbar { display: none; }
+
+@keyframes tv-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.tv-marquee { animation: tv-marquee var(--tv-marquee-duration, 60s) linear infinite; }
+@keyframes tv-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.tv-pulse { animation: tv-pulse 1.4s ease-in-out infinite; }
+@keyframes tv-scene-in { from { opacity: 0; transform: translateY(14px) scale(0.995); } to { opacity: 1; transform: none; } }
+.tv-scene-in { animation: tv-scene-in 450ms cubic-bezier(.2,.7,.2,1) both; }

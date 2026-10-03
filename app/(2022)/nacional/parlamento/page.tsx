@@ -249,7 +249,7 @@ export default function ParlamentoNacionalPage() {
     return <div className="flex justify-center items-center min-h-screen bg-slate-100"><p className="text-xl text-gray-500 animate-pulse">Carregando dados do parlamento...</p></div>;
   }
   if (error) {
-    return <div className="container mx-auto p-6 text-center text-red-500">Erro: {error} <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
+    return <div className="container mx-auto p-6 text-center text-red-500">Erro: {error} <Link href="/2022" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
   if (parliamentSeatData.length === 0 && !isLoading ) { 
     return <div className="container mx-auto p-6 text-center text-gray-500">Não há dados de assentos para exibir o parlamento.</div>;
@@ -259,7 +259,7 @@ export default function ParlamentoNacionalPage() {
     <div className="bg-slate-50 min-h-screen py-8 antialiased">
       <div className="container mx-auto px-2 sm:px-4 lg:px-6 space-y-10">
         <header className="text-center mb-8">
-          <Link href="/" className="text-sky-600 hover:text-sky-800 hover:underline mb-6 inline-block transition-colors text-sm">
+          <Link href="/2022" className="text-sky-600 hover:text-sky-800 hover:underline mb-6 inline-block transition-colors text-sm">
             &larr; Voltar para Nacional
           </Link>
           <h1 className="text-3xl font-bold text-slate-900 sm:text-3xl lg:text-4xl tracking-tight">

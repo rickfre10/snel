@@ -9,7 +9,7 @@ const Header: React.FC = () => {
     // Estilos Tailwind como definidos antes
     <header className="bg-highlight text-white p-3 sm:p-4 rounded-b-lg shadow-md flex items-center justify-between text-sm">
       {/* Lado Esquerdo: Logo */}
-      <Link href="/" className="flex items-center space-x-3 cursor-pointer group"> {/* Adicionado cursor-pointer e group para possíveis estilos de hover nos filhos */}
+      <Link href="/2022" className="flex items-center space-x-3 cursor-pointer group"> {/* Adicionado cursor-pointer e group para possíveis estilos de hover nos filhos */}
     {/* Logo Atualizado */}
       <Image
       src="/smartv_logo.png"
@@ -25,7 +25,8 @@ const Header: React.FC = () => {
       </Link>
 
       {/* Lado Direito: Ano da Eleição */}
-      <div>
+      <div className="flex items-center gap-3">
+        <Link href="/" className="text-xs opacity-80 hover:opacity-100 underline-offset-2 hover:underline">Trocar eleição</Link>
         <span className="font-semibold">2022</span>
       </div>
     </header>

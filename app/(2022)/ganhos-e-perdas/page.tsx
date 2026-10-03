@@ -309,7 +309,7 @@ export default function GainsLossesPage() {
             <main className="container mx-auto p-4 lg:p-6 space-y-6">
                 <div className="container mx-auto p-4 lg:p-6 space-y-8">
                     <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-                        <Link href="/" className="text-blue-600 hover:underline">&larr; Visão Nacional</Link>
+                        <Link href="/2022" className="text-blue-600 hover:underline">&larr; Visão Nacional</Link>
                     </div>
                 </div>
                 <header className="text-center mb-6">
@@ -381,7 +381,7 @@ export default function GainsLossesPage() {
                             return (
                                 // MODIFICADO: O contêiner agora é um Link
                                 <Link
-                                    href={`distrito/${item.districtId}`}
+                                    href={`/distrito/${item.districtId}`}
                                     key={item.districtId}
                                     className={`block p-3 bg-white rounded-md shadow border border-l-4 transition-all duration-200 ease-in-out hover:shadow-lg hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 ${isTurnover ? 'ring-2 ring-offset-1 ring-amber-400' : 'border-gray-200'}`} 
                                     style={{ borderLeftColor: leftBorderColor }}
