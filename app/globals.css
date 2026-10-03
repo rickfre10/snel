@@ -30,3 +30,11 @@
 .tv-pulse { animation: tv-pulse 1.4s ease-in-out infinite; }
 @keyframes tv-scene-in { from { opacity: 0; transform: translateY(14px) scale(0.995); } to { opacity: 1; transform: none; } }
 .tv-scene-in { animation: tv-scene-in 450ms cubic-bezier(.2,.7,.2,1) both; }
+
+/* Idle SmartvNews: gradientes que passeiam lentamente */
+@keyframes tv-idle-drift { 0% { transform: translate(-8%, -6%) rotate(0deg); } 50% { transform: translate(8%, 6%) rotate(8deg); } 100% { transform: translate(-8%, -6%) rotate(0deg); } }
+@keyframes tv-idle-drift-2 { 0% { transform: translate(6%, 4%) scale(1); } 50% { transform: translate(-6%, -8%) scale(1.15); } 100% { transform: translate(6%, 4%) scale(1); } }
+.tv-idle-drift { animation: tv-idle-drift 28s ease-in-out infinite; }
+.tv-idle-drift-2 { animation: tv-idle-drift-2 22s ease-in-out infinite; }
+.tv-idle-drift-3 { animation: tv-idle-drift 34s ease-in-out infinite reverse; }
+@media (prefers-reduced-motion: reduce) { .tv-idle-drift, .tv-idle-drift-2, .tv-idle-drift-3 { animation: none; } }

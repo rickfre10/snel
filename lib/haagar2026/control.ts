@@ -5,7 +5,7 @@
 
 import type { BrandId } from '@/lib/brand';
 
-export type SceneId = 'geral' | 'parlamento' | 'estado' | 'distrito' | 'viradas' | 'comparativo';
+export type SceneId = 'geral' | 'parlamento' | 'estado' | 'distrito' | 'viradas' | 'comparativo' | 'idle';
 
 export interface ControlFocus {
   scene: SceneId;
@@ -26,7 +26,17 @@ export interface ControlState {
   brand: BrandId;
   focus: ControlFocus | null;     // cena enviada pelo operador para o telão
   autoRotate: boolean;            // telão alterna cenas sozinho
+  cg?: CgVisibility;              // o que o CG (/2026/cg) mostra no ar
 }
+
+export interface CgVisibility {
+  seats: boolean;    // caixas de cadeiras por frente
+  ticker: boolean;   // faixa de distritos
+  bug: boolean;      // selo de local/ao vivo e logo no topo
+  count: 'confirmadas' | 'projecao';
+}
+
+export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas' };
 
 export type ControlAction =
   | { type: 'play' }
@@ -40,7 +50,8 @@ export type ControlAction =
   | { type: 'clearHolds' }
   | { type: 'setBrand'; brand: BrandId }
   | { type: 'focus'; scene: SceneId; uf?: string; districtId?: number }
-  | { type: 'setAutoRotate'; value: boolean };
+  | { type: 'setAutoRotate'; value: boolean }
+  | { type: 'setCg'; patch: Partial<CgVisibility> };
 
 export const SPEED_PRESETS = [
   { label: 'Lento', speed: 1 },      // ~1h40 até 100%
@@ -63,6 +74,7 @@ export function initialControlState(now = Date.now()): ControlState {
     brand: 'smartv',
     focus: null,
     autoRotate: false,
+    cg: DEFAULT_CG,
   };
 }
 
@@ -118,6 +130,9 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
       break;
     case 'setAutoRotate':
       next = { ...prev, autoRotate: action.value };
+      break;
+    case 'setCg':
+      next = { ...prev, cg: { ...DEFAULT_CG, ...prev.cg, ...action.patch } };
       break;
     default:
       next = prev;

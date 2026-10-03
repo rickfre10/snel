@@ -4,7 +4,7 @@
 // cenário (semente), cena do telão e marca.
 import React, { useState } from 'react';
 import { BRANDS, BrandId } from '@/lib/brand';
-import { ControlAction, ControlState, SceneId, SPEED_PRESETS } from '@/lib/haagar2026/control';
+import { ControlAction, ControlState, DEFAULT_CG, SceneId, SPEED_PRESETS } from '@/lib/haagar2026/control';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER, frontColor } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
@@ -16,6 +16,7 @@ const SCENES: { id: SceneId; label: string }[] = [
   { id: 'distrito', label: 'Distrito' },
   { id: 'viradas', label: 'Viradas' },
   { id: 'comparativo', label: '22 × 26' },
+  { id: 'idle', label: 'Vinheta (idle)' },
 ];
 
 const Btn = ({ children, onClick, active, danger, className = '' }: { children: React.ReactNode; onClick: () => void; active?: boolean; danger?: boolean; className?: string }) => (
@@ -151,6 +152,26 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
             <Btn key={b} active={state.brand === b} onClick={() => dispatch({ type: 'setBrand', brand: b })}>{BRANDS[b].name}</Btn>
           ))}
         </div>
+      </Section>
+
+      <Section title="CG (sobre o vídeo)" right={<a href="/2026/cg?fundo=cena" target="_blank" rel="noreferrer" className="text-xs underline text-white/70">abrir CG ↗</a>}>
+        {(() => {
+          const cg = { ...DEFAULT_CG, ...state.cg };
+          return (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                <Btn active={cg.seats} onClick={() => dispatch({ type: 'setCg', patch: { seats: !cg.seats } })}>Cadeiras</Btn>
+                <Btn active={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa distritos</Btn>
+                <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Selo + logo</Btn>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Btn active={cg.count === 'confirmadas'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'confirmadas' } })}>Contar eleitos</Btn>
+                <Btn active={cg.count === 'projecao'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'projecao' } })}>Contar projeção</Btn>
+              </div>
+              <p className="text-[11px] text-white/50 mt-2">Fundo transparente em /2026/cg (OBS/vMix). Para chroma: ?fundo=verde, azul ou preto.</p>
+            </>
+          );
+        })()}
       </Section>
 
       <Section title="Cenário">

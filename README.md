@@ -8,6 +8,8 @@ Painéis de apuração das eleições legislativas (fictícias) de **Haagar**, c
 | `/2022` (+ `/estado/[uf]`, `/distrito/[id]`, `/nacional`, `/nacional/parlamento`, `/ganhos-e-perdas`) | Painel 2022 — dados do Google Sheets (visual original) |
 | `/2026` | **Telão interativo 2026** (16:9, pensado para TV/touch) |
 | `/2026/controle` | Controle do ritmo da apuração (operador; não é linkado no telão) |
+| `/2026/cg` | **CG** para sobrepor ao vídeo: cadeiras por frente + faixa de distritos (fundo transparente; `?fundo=verde`/`azul`/`preto`/`cena`) |
+| `/2026/idle` | Vinheta de espera em tela cheia |
 
 ## Rodando
 
@@ -39,6 +41,12 @@ Cenas (navegação no topo, tudo clicável/tocável):
 - **2022 × 2026** — dispersão distrito a distrito (votação da frente, comparecimento, margem) e maiores avanços/quedas.
 
 Extras: tarja inferior com hora e feed, plantão de **última hora** automático (cadeira que vira, maioria atingida) e rotação automática de cenas.
+
+Vinheta de espera (idle): Smartv com a grade de pílulas deslizando; SmartvNews com os três cartões e gradientes em movimento lento. Abre pela cena "Vinheta (idle)" no controle, pela tecla **I** ou em `/2026/idle`; tocar na tela volta à visão geral.
+
+### CG
+
+`/2026/cg` segue a marca escolhida no controle. Pelo controle (seção "CG") o operador liga/desliga as caixas de cadeiras, a faixa de distritos e o selo/logo, e escolhe contar **eleitos** ou **projeção**. Use como fonte de navegador no OBS/vMix (fundo transparente) ou com chroma (`?fundo=verde`).
 
 Atalhos discretos: **C** (ou segurar o logo por 1 s) abre o controle; **F** tela cheia; **Esc** fecha. O botão de dois pontinhos no canto inferior direito alterna Smartv ⇄ SmartvNews.
 

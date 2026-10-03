@@ -15,6 +15,7 @@ import { MAJORITY, STATE_ORDER, frontName } from '@/lib/haagar/rules';
 import { Stage, TopBar, Ticker, LowerThird, Breaking, caseOf } from '@/components/tv/TvChrome';
 import { BrandLogo, fmtPct } from '@/components/tv/ui';
 import ControlPanel from '@/components/tv/ControlPanel';
+import IdleScreen from '@/components/tv/IdleScreen';
 import SceneGeral from '@/components/tv/scenes/SceneGeral';
 import SceneParlamento from '@/components/tv/scenes/SceneParlamento';
 import SceneEstado from '@/components/tv/scenes/SceneEstado';
@@ -72,6 +73,7 @@ export default function Telao2026() {
       const t = e.target as HTMLElement;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
       if (e.key === 'c' || e.key === 'C') setDrawer(d => !d);
+      else if (e.key === 'i' || e.key === 'I') setScene(s => (s === 'idle' ? 'geral' : 'idle'));
       else if (e.key === 'Escape') setDrawer(false);
       else if (e.key === 'f' || e.key === 'F') {
         if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {});
@@ -122,7 +124,7 @@ export default function Telao2026() {
           )}
         </main>
 
-        <LowerThird brand={brand} item={breaking} />
+        <LowerThird brand={brand} item={scene === 'idle' ? null : breaking} />
         <Ticker brand={brand} items={tickerItems} right={
           <button onClick={toggleBrand} title={`Visual: ${brand.name} (trocar)`}
             className="w-[56px] rounded-[14px] bg-tv-text/[0.08] hover:bg-tv-text/20 flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
@@ -130,6 +132,10 @@ export default function Telao2026() {
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: BRANDS.smartvnews.colors.accent2, opacity: state.brand === 'smartvnews' ? 1 : 0.35 }} />
           </button>
         } />
+        {scene === 'idle' && (
+          <IdleScreen brand={brand} onExit={() => setScene('geral')}
+            info={snap && snap.reported > 0 ? `${fmtPct(snap.reported)} dos votos apurados` : 'Acompanhe a apuração ao vivo'} />
+        )}
       </Stage>
 
       {/* Gaveta discreta de controle (fora do palco, sem escala) */}

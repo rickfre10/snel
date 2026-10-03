@@ -35,6 +35,7 @@ const config: Config = {
           'accent-text': 'rgb(var(--tv-accent-text) / <alpha-value>)',
           accent2: 'rgb(var(--tv-accent2) / <alpha-value>)',
           kicker: 'rgb(var(--tv-kicker) / <alpha-value>)',
+          tarja: 'rgb(var(--tv-tarja) / <alpha-value>)',
           live: 'rgb(var(--tv-live) / <alpha-value>)',
           paper: 'rgb(var(--tv-paper) / <alpha-value>)',
           ink: 'rgb(var(--tv-ink) / <alpha-value>)',

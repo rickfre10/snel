@@ -42,6 +42,7 @@ export interface BrandTheme {
     accentText: string;    // Texto sobre a cor da marca
     accent2: string;       // Cor secundária (gradientes, selos, pílula de local)
     kicker: string;        // Destaque em texto sobre fundo escuro (rótulos pequenos)
+    tarja: string;         // Fundo das tarjas do CG (sobre vídeo)
     live: string;          // Indicador "AO VIVO"
     paper: string;         // Fundo claro (painéis claros, seleção de eleição)
     ink: string;           // Texto sobre fundo claro
@@ -61,8 +62,9 @@ const SMARTV_COLORS: BrandTheme['colors'] = {
   muted: '#b8a8a5',
   accent: '#ff1a1a',
   accentText: '#ffffff',
-  accent2: '#ff6a3d',
+  accent2: '#b0001c',
   kicker: '#ff3d3d',
+  tarja: '#3b2a2b',
   live: '#ff1a1a',
   paper: '#f6f4ef',
   ink: '#311f20',
@@ -102,6 +104,7 @@ export const BRANDS: Record<BrandId, BrandTheme> = {
       accentText: '#ffffff',
       accent2: '#1a9be8',
       kicker: '#4cc0ff',
+      tarja: '#5f5b63',
       live: '#1a9be8',
       paper: '#e1e2e6',
       ink: '#10106b',

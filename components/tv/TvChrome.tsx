@@ -16,7 +16,7 @@ export const caseOf = (brand: BrandTheme, text: string) =>
   brand.titleCase === 'upper' ? text.toLocaleUpperCase('pt-BR') : brand.titleCase === 'lower' ? text.toLocaleLowerCase('pt-BR') : text;
 
 // --------------------------------------------------------------- Palco ----
-export function Stage({ brand, children }: { brand: BrandTheme; children: React.ReactNode }) {
+export function Stage({ brand, children, background }: { brand: BrandTheme; children: React.ReactNode; background?: string }) {
   const [scale, setScale] = useState(1);
   useEffect(() => {
     const fit = () => setScale(Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H));
@@ -25,9 +25,10 @@ export function Stage({ brand, children }: { brand: BrandTheme; children: React.
     return () => window.removeEventListener('resize', fit);
   }, []);
   return (
-    <div className="tv-stage fixed inset-0 overflow-hidden bg-tv-bg font-tv text-tv-text" style={brandCssVars(brand) as React.CSSProperties}>
+    <div className={`tv-stage fixed inset-0 overflow-hidden font-tv text-tv-text ${background === undefined ? 'bg-tv-bg' : ''}`}
+      style={{ ...(brandCssVars(brand) as React.CSSProperties), ...(background !== undefined ? { background } : {}) }}>
       <div className="absolute left-1/2 top-1/2" style={{ width: STAGE_W, height: STAGE_H, transform: `translate(-50%, -50%) scale(${scale})` }}>
-        <Backdrop brand={brand} />
+        {background === undefined && <Backdrop brand={brand} />}
         <div className="relative w-full h-full">{children}</div>
       </div>
     </div>
