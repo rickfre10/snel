@@ -84,16 +84,16 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
   const value = (f: (typeof fronts)[number]) => (count === 'projecao' ? f.projected : f.confirmed);
   const leader = [...fronts].sort((a, b) => value(b) - value(a))[0];
   const majorityReached = leader && value(leader) >= MAJORITY;
-  const label = count === 'projecao' ? ['câmara', 'projeção'] : ['câmara', 'eleitos'];
+  const label = count === 'projecao' ? ['parlamento', 'projeção'] : ['parlamento', 'eleitos'];
 
   return (
     <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
       style={{ bottom: raised ? 138 : 68, background: 'rgb(var(--tv-tarja) / 0.94)', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
       {/* Bloco de abertura em gradiente (como "edição das 19h") */}
-      <div className="w-[270px] shrink-0 flex flex-col justify-center pl-8 text-white leading-[1.05]"
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 text-white leading-[1.05]"
         style={{ background: 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)' }}>
-        <span className="text-[44px] font-normal">{caseOf(brand, label[0])}</span>
-        <span className="text-[44px] font-normal">{caseOf(brand, label[1])}</span>
+        <span className="text-[40px] font-normal">{caseOf(brand, label[0])}</span>
+        <span className="text-[40px] font-normal">{caseOf(brand, label[1])}</span>
       </div>
 
       <div className="flex-1 flex items-center gap-3 py-4 pr-4">

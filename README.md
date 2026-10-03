@@ -34,7 +34,7 @@ NEXT_PUBLIC_CONTROL_MODE=local   # opcional: ver "Sincronização"
 Cenas (navegação no topo, tudo clicável/tocável):
 
 - **Visão geral** — mapa hexagonal (modos 2026, 2022, viradas, swing por frente e % apurado), corrida pela maioria e projeção de cadeiras por frente com saldo vs 2022.
-- **Parlamento** — hemiciclo 2026 (confirmadas × projeção), simulador de coalizão e câmara de 2022.
+- **Parlamento** — hemiciclo 2026 (confirmadas × projeção), simulador de coalizão e parlamento de 2022.
 - **Estados** — mapa do estado, voto proporcional 2026 × 2022, bancada distrital + proporcional.
 - **Distrito** — candidatos, status (manteve / ganhou / liderando), variação de cada frente vs 2022, margem, comparecimento, swing.
 - **Viradas** — matriz "de quem para quem", saldo por frente, viradas confirmadas e em andamento.

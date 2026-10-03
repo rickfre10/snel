@@ -25,7 +25,7 @@ export default function SceneGeral({ snap, onDistrict }: { snap: ElectionSnapsho
   return (
     <div className="h-full grid grid-cols-[1fr_600px] gap-6">
       <div className="flex flex-col gap-6 min-h-0 min-w-0">
-        <Panel kicker="Câmara de Haagar" title="Mapa dos distritos"
+        <Panel kicker="Parlamento de Haagar" title="Mapa dos distritos"
           right={<div className="flex gap-2">{MODES.map(m => <Chip key={m.id} active={mode === m.id} onClick={() => setMode(m.id)}>{m.label}</Chip>)}</div>}
           className="flex-1" bodyClassName="flex flex-col gap-3">
           {mode === 'swing' && (

@@ -215,7 +215,7 @@ function useBreaking(snap: ElectionSnapshot | null, seed: number): Breaking | nu
 function buildTicker(snap: ElectionSnapshot): string[] {
   const items: string[] = [];
   const leader = snap.fronts[0];
-  if (snap.reported <= 0) return ['Urnas fechadas em Haagar · a apuração começa em instantes', `São ${MAJORITY} cadeiras para a maioria na Câmara`];
+  if (snap.reported <= 0) return ['Urnas fechadas em Haagar · a apuração começa em instantes', `São ${MAJORITY} cadeiras para a maioria no Parlamento`];
   if (leader) items.push(`${leader.legend} projeta ${leader.projected} cadeiras · ${leader.confirmed} confirmadas · maioria: ${MAJORITY}`);
   items.push(`${fmtPct(snap.reported)} dos votos apurados · ${snap.calledCount} distritos definidos`);
   [...snap.flips].slice(-6).forEach(d => items.push(`${d.leader!.front} toma ${d.name} (${d.uf}) da ${d.prev.front}`));

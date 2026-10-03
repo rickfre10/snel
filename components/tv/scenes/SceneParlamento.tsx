@@ -31,7 +31,7 @@ export default function SceneParlamento({ snap }: { snap: ElectionSnapshot }) {
 
   return (
     <div className="h-full grid grid-cols-[1fr_560px] gap-6">
-      <Panel kicker="Balanço de poder" title={`Câmara · ${TOTAL_SEATS} cadeiras`}
+      <Panel kicker="Balanço de poder" title={`Parlamento · ${TOTAL_SEATS} cadeiras`}
         right={<div className="text-[15px] text-tv-muted">Toque nas frentes para montar uma coalizão</div>}
         bodyClassName="flex flex-col">
         <div className="relative flex-1 min-h-0 flex items-end justify-center px-10">
@@ -75,7 +75,7 @@ export default function SceneParlamento({ snap }: { snap: ElectionSnapshot }) {
       </Panel>
 
       <div className="flex flex-col gap-6 min-h-0">
-        <Panel kicker="Como era" title="Câmara eleita em 2022">
+        <Panel kicker="Como era" title="Parlamento eleito em 2022">
           <div className="px-6">
             <Hemicycle width={480} majorityLine assignment={ordered.map(f => ({ legend: f.legend, confirmed: f.prev.total, projected: f.prev.total }))} />
           </div>
