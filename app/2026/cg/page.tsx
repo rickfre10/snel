@@ -11,10 +11,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
-import type { DistrictSnapshot, ElectionSnapshot } from '@/lib/haagar2026/model';
+import type { DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
 import { Stage, caseOf } from '@/components/tv/TvChrome';
-import { AnimatedNumber, BrandLogo, N8Seal, fmtPct } from '@/components/tv/ui';
+import { AnimatedNumber, BrandLogo, N8Seal, TargetMark, fmtPct } from '@/components/tv/ui';
 
 const TICKER_MS = 6000;
 const BACKGROUNDS: Record<string, string> = {
@@ -45,8 +45,17 @@ export default function Cg2026() {
     <Stage brand={brand} background={BACKGROUNDS[fundo]}>
       {/* Logo da emissora no canto superior direito */}
       <Slide show={cg.bug} from="top">
-        <div className="absolute right-[104px] top-[72px] opacity-90" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}>
-          <BrandLogo brand={brand} size={52} color="#ffffff" />
+        <div className="absolute right-[104px] top-[72px]" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}>
+          {brand.logo.kind === 'target' ? (
+            <div className="flex flex-col items-center gap-2 text-white">
+              <TargetMark size={72} />
+              <span className="rounded-[8px] bg-tv-tarja/90 px-2.5 py-0.5 text-[18px] font-extrabold inline-flex items-center gap-1.5 leading-tight">
+                <span className="w-2 h-2 rounded-full bg-tv-live tv-pulse" />{caseOf(brand, 'Ao vivo')}
+              </span>
+            </div>
+          ) : (
+            <div className="opacity-90"><BrandLogo brand={brand} size={52} color="#ffffff" /></div>
+          )}
         </div>
       </Slide>
 
@@ -77,22 +86,48 @@ function Slide({ show, from, children }: { show: boolean; from: 'top' | 'bottom'
 }
 
 // -------------------------------------------------- Tarja de cadeiras -----
+const ALTERNATE_MS = 5000;
+
+function AlternatingBlock({ brand, subject }: { brand: typeof BRANDS.smartv; subject: string }) {
+  const [showLogo, setShowLogo] = useState(false);
+  useEffect(() => {
+    const id = setInterval(() => setShowLogo(v => !v), ALTERNATE_MS);
+    return () => clearInterval(id);
+  }, []);
+  const layer = 'absolute inset-0 flex flex-col justify-center pl-8 transition-all duration-700 ease-out';
+  return (
+    <div className="relative w-[310px] shrink-0 text-white overflow-hidden"
+      style={{ background: 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)' }}>
+      <div className={layer} style={{ opacity: showLogo ? 0 : 1, transform: showLogo ? 'translateY(-24px)' : 'none' }}>
+        <span className="text-[24px] font-semibold leading-none opacity-85">{caseOf(brand, 'Parlamento')}</span>
+        <span className="text-[50px] font-extrabold leading-[1.05] mt-1">{caseOf(brand, subject)}</span>
+      </div>
+      <div className={layer} style={{ opacity: showLogo ? 1 : 0, transform: showLogo ? 'none' : 'translateY(24px)' }}>
+        {brand.logo.kind === 'target' ? (
+          <span className="inline-flex items-center gap-2.5 text-[36px] font-black leading-none">
+            <TargetMark size={40} />{caseOf(brand, 'Eleições')}
+          </span>
+        ) : (
+          <span className="text-[56px] font-light leading-none tracking-tight">{caseOf(brand, 'Eleições')}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; brand: typeof BRANDS.smartv; count: 'confirmadas' | 'projecao'; raised: boolean }) {
-  const fronts = FRONT_ORDER.map(f => snap.frontByLegend[f]).filter(Boolean);
-  const value = (f: (typeof fronts)[number]) => (count === 'projecao' ? f.projected : f.confirmed);
-  const leader = [...fronts].sort((a, b) => value(b) - value(a))[0];
+  const value = (f: FrontTotals) => (count === 'projecao' ? f.projected : f.confirmed);
+  // Ordem por cadeiras (maior primeiro); empate segue a ordem fixa das frentes.
+  const fronts = FRONT_ORDER.map(f => snap.frontByLegend[f]).filter(Boolean)
+    .sort((a, b) => value(b) - value(a) || FRONT_ORDER.indexOf(a.legend) - FRONT_ORDER.indexOf(b.legend));
+  const leader = fronts[0];
   const majorityReached = leader && value(leader) >= MAJORITY;
-  const label = count === 'projecao' ? ['parlamento', 'projeção'] : ['parlamento', 'eleitos'];
 
   return (
     <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
       style={{ bottom: raised ? 138 : 68, background: 'rgb(var(--tv-tarja) / 0.94)', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
-      {/* Bloco de abertura em gradiente (como "edição das 19h") */}
-      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 text-white leading-[1.05]"
-        style={{ background: 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)' }}>
-        <span className="text-[40px] font-normal">{caseOf(brand, label[0])}</span>
-        <span className="text-[40px] font-normal">{caseOf(brand, label[1])}</span>
-      </div>
+      {/* Bloco de abertura em gradiente: alterna logo "eleições" e o assunto */}
+      <AlternatingBlock brand={brand} subject={count === 'projecao' ? 'Projeção' : 'Resultados'} />
 
       <div className="flex-1 flex items-center gap-3 py-4 pr-4">
         {fronts.map(f => {
@@ -147,9 +182,9 @@ function TickerBar({ snap, brand }: { snap: ElectionSnapshot; brand: typeof BRAN
 
   return (
     <div className="absolute left-[104px] right-[104px] bottom-[68px] h-[56px] flex gap-3">
-      <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[32px] font-extrabold tabular-nums">{clock}</div>
+      <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[28px] font-extrabold tabular-nums">{clock}</div>
       <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: 'rgb(var(--tv-tarja) / 0.94)' }}>
-        <N8Seal size={32} />
+        <N8Seal size={28} />
         {d ? <DistrictLine key={d.id} d={d} brand={brand} /> : (
           <div className="px-6 text-[26px] font-bold text-white">{caseOf(brand, 'Aguardando as primeiras urnas')}</div>
         )}
@@ -162,25 +197,30 @@ function DistrictLine({ d, brand }: { d: DistrictSnapshot; brand: typeof BRANDS.
   const lead = d.leader!;
   return (
     <div className="flex-1 min-w-0 flex items-center gap-5 px-5 text-white tv-scene-in">
-      <span className="shrink-0 text-[22px] font-black opacity-80">{d.uf}</span>
-      <span className="text-[28px] font-extrabold uppercase truncate max-w-[400px]">{d.name}</span>
-      <span className="shrink-0 rounded-[8px] px-3 py-0.5 text-[20px] font-extrabold uppercase" style={{ background: d.status.backgroundColor, color: d.status.textColor }}>
+      <span className="shrink-0 text-[19px] font-black opacity-80">{d.uf}</span>
+      <span className="text-[24px] font-extrabold uppercase truncate max-w-[380px]">{d.name}</span>
+      <span className="shrink-0 rounded-[8px] px-2.5 py-0.5 text-[17px] font-extrabold uppercase" style={{ background: d.status.backgroundColor, color: d.status.textColor }}>
         {d.status.label}
       </span>
       <span className="flex-1 min-w-0 flex items-baseline justify-center gap-2 truncate">
-        <span className="shrink-0 self-center rounded-[6px] px-1.5 font-extrabold text-[18px]" style={{ background: frontColor(lead.front), color: textOn(frontColor(lead.front)) }}>{lead.front}</span>
-        <span className="text-[26px] font-extrabold uppercase truncate">{lead.name}</span>
-        <span className="text-[24px] font-bold opacity-90 tabular-nums">{fmtPct(lead.pct)}</span>
+        <span className="shrink-0 self-center rounded-[6px] px-1.5 font-extrabold text-[15px]" style={{ background: frontColor(lead.front), color: textOn(frontColor(lead.front)) }}>{lead.front}</span>
+        <span className="text-[22px] font-extrabold uppercase truncate">{lead.name}</span>
+        {(lead.incumbent || lead.incumbentParty) && (
+          <span className="shrink-0 self-center rounded-[6px] border border-white/60 px-1.5 text-[13px] font-extrabold uppercase leading-[1.4]">
+            {lead.incumbent ? caseOf(brand, 'Deputado atual') : caseOf(brand, 'Incumbente')}
+          </span>
+        )}
+        <span className="text-[20px] font-bold opacity-90 tabular-nums">{fmtPct(lead.pct)}</span>
       </span>
       {d.runnerUp && (
-        <span className="shrink-0 flex items-baseline gap-2 text-[22px] opacity-90">
+        <span className="shrink-0 flex items-baseline gap-2 text-[19px] opacity-90">
           <span className="font-semibold">2º</span>
-          <span className="rounded-[6px] px-1.5 font-extrabold text-[18px]" style={{ background: frontColor(d.runnerUp.front), color: textOn(frontColor(d.runnerUp.front)) }}>{d.runnerUp.front}</span>
-          <span className="font-bold uppercase truncate max-w-[260px]">{d.runnerUp.name}</span>
+          <span className="rounded-[6px] px-1.5 font-extrabold text-[15px]" style={{ background: frontColor(d.runnerUp.front), color: textOn(frontColor(d.runnerUp.front)) }}>{d.runnerUp.front}</span>
+          <span className="font-bold uppercase truncate max-w-[200px]">{d.runnerUp.name}</span>
           <span className="tabular-nums">{fmtPct(d.runnerUp.pct)}</span>
         </span>
       )}
-      <span className="shrink-0 text-[18px] font-semibold opacity-70 tabular-nums">{caseOf(brand, `${fmtPct(d.reported)} apur.`)}</span>
+      <span className="shrink-0 text-[15px] font-semibold opacity-70 tabular-nums">{caseOf(brand, `${fmtPct(d.reported)} apur.`)}</span>
     </div>
   );
 }

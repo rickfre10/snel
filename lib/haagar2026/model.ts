@@ -10,6 +10,7 @@
 
 import { districtsData, partyData } from '@/lib/staticData';
 import type { Baseline2022 } from '@/lib/haagar/baseline';
+import { previousDistrictResultsData } from '@/lib/previousElectionData';
 import { FRONT_ORDER, STATE_ORDER, PR_SEATS_BY_STATE, allocateStatePR, frontColor } from '@/lib/haagar/rules';
 import { calculateDistrictDynamicStatus, DistrictStatusOutput } from '@/lib/statusCalculator';
 import { rngFor, gauss, pick } from './random';
@@ -22,7 +23,8 @@ export interface ModelCandidate {
   party: string | null;
   name: string;
   photo: string | null;
-  incumbent: boolean;      // venceu este distrito em 2022
+  incumbent: boolean;      // deputado atual (venceu este distrito em 2022) e concorre de novo
+  incumbentParty: boolean; // frente que venceu em 2022, com outro candidato (deputado não concorre)
   rerun: boolean;          // disputou este distrito em 2022
   finalVotes: number;
   bias: number;            // viés (p.p.) dos votos apurados primeiro
@@ -63,6 +65,7 @@ export interface CandidateResult {
   name: string;
   photo: string | null;
   incumbent: boolean;
+  incumbentParty: boolean;
   rerun: boolean;
   votes: number;
   pct: number;
@@ -98,7 +101,12 @@ export interface DistrictSnapshot {
     total: number;
     turnout: number;
     marginPct: number;
+    pct: number;                 // % do deputado eleito em 2022
+    deputyRunning: boolean;      // o deputado atual disputa 2026
+    candidates: { name: string; front: string; party: string | null; votes: number; pct: number }[];
   };
+  // ---- 2018 (vencedor e %)
+  y2018: { front: string; pct: number } | null;
   flipped: boolean;        // final e com frente diferente de 2022
   leadingFlip: boolean;    // liderança (ainda não final) diferente de 2022
 }
@@ -253,6 +261,7 @@ export function buildModel(baseline: Baseline2022, seed: number): ElectionModel 
         name: rerun && prevCand ? prevCand.name : fictionalName(cr),
         photo: rerun && prevCand ? prevCand.photo : null,
         incumbent: rerun && wasWinner,
+        incumbentParty: f === base?.winnerFront && !(rerun && wasWinner),
         rerun,
         finalVotes: votes[i],
         bias: gauss(cr) * 5.5,
@@ -336,7 +345,7 @@ export function snapshotAt(
     const candidates: CandidateResult[] = d.candidates
       .map(c => ({
         front: c.front, party: c.party, name: c.name, photo: c.photo,
-        incumbent: c.incumbent, rerun: c.rerun,
+        incumbent: c.incumbent, incumbentParty: c.incumbentParty, rerun: c.rerun,
         votes: votes[c.front] ?? 0,
         pct: counted > 0 ? ((votes[c.front] ?? 0) / counted) * 100 : 0,
       }))
@@ -388,7 +397,17 @@ export function snapshotAt(
         total: base?.total ?? 0,
         turnout: base && base.total > 0 ? (base.total / d.voters) * 100 : 0,
         marginPct: prevSorted.length > 1 ? prevSorted[0][1] - prevSorted[1][1] : prevSorted[0]?.[1] ?? 0,
+        pct: prevFront ? prevShares[prevFront] ?? 0 : 0,
+        deputyRunning: d.candidates.some(c => c.incumbent),
+        candidates: (base?.candidates ?? []).slice(0, 5).map(c => ({
+          name: c.name, front: c.front, party: c.party, votes: c.votes,
+          pct: base && base.total > 0 ? (c.votes / base.total) * 100 : 0,
+        })),
       },
+      y2018: (() => {
+        const r = previousDistrictResultsData.find(x => x.district_id === d.id);
+        return r ? { front: r.winner_2018_legend, pct: r.winner_2018_percentage } : null;
+      })(),
       flipped: isFinal && !!leader && !!prevFront && leader.front !== prevFront,
       leadingFlip: !isFinal && !!leader && !!prevFront && leader.front !== prevFront,
     };

@@ -8,6 +8,8 @@ import {
   previousStateProportionalPercentagesData,
 } from '@/lib/previousElectionData';
 import { allocateStatePR } from './rules';
+import { rngFor, pick } from '@/lib/haagar2026/random';
+import { fictionalName } from '@/lib/haagar2026/names';
 
 export interface BaselineCandidate {
   name: string;
@@ -119,14 +121,23 @@ export function buildFallbackBaseline(): Baseline2022 {
     const total = Math.round(d.voters_qtn * 0.72);
     const votes: Record<string, number> = {};
     Object.entries(shares).forEach(([f, v]) => { votes[f] = Math.round((v / sum) * total); });
+    // Candidatos fictícios (sempre os mesmos) para a estimativa de 2022
+    const candidates: BaselineCandidate[] = Object.entries(votes)
+      .map(([front, v]) => {
+        const r = rngFor('baseline2022', d.district_id, front);
+        const parties = partyData.filter(p => p.parl_front_legend === front && p.party_legend);
+        return { name: fictionalName(r), party: parties.length ? pick(r, parties).party_legend : front, front, votes: v, photo: null };
+      })
+      .sort((a, b) => b.votes - a.votes);
+    const w = candidates.find(c => c.front === winner) ?? candidates[0];
     districts[d.district_id] = {
       id: d.district_id,
       total: Object.values(votes).reduce((a, b) => a + b, 0),
       votes,
-      candidates: [],
+      candidates,
       winnerFront: winner,
-      winnerName: null,
-      winnerParty: null,
+      winnerName: w?.name ?? null,
+      winnerParty: w?.party ?? null,
     };
     if (!states[d.uf]) states[d.uf] = { uf: d.uf, total: 0, votes: {}, seats: {} };
     states[d.uf].total += total;
