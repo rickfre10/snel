@@ -195,7 +195,7 @@ export default function NacionalOverviewPage() {
     return <div className="flex justify-center items-center min-h-screen bg-slate-100"><p className="text-xl text-gray-500 animate-pulse">Carregando dados nacionais...</p></div>;
   }
   if (error) {
-    return <div className="container mx-auto p-6 text-center text-red-500">Erro: {error} <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
+    return <div className="container mx-auto p-6 text-center text-red-500">Erro: {error} <Link href="/2022" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
   if (comparisonData.length === 0 && !isLoading) {
     return <div className="container mx-auto p-6 text-center text-gray-500">Não há dados nacionais para exibir. Verifique a fonte de dados e os filtros.</div>;

@@ -1,0 +1,12 @@
+Coloque aqui os arquivos da fonte Posterama (licença comercial) em .woff2:
+
+  Posterama-Light.woff2      (300)
+  Posterama-Regular.woff2    (400)
+  Posterama-Medium.woff2     (500)
+  Posterama-SemiBold.woff2   (600)
+  Posterama-Bold.woff2       (700)
+  Posterama-ExtraBold.woff2  (800)
+  Posterama-Black.woff2      (900)
+
+Os nomes estão declarados em app/globals.css (@font-face). Pesos ausentes
+são simulados pelo navegador; sem nenhum arquivo, o telão usa a Outfit.

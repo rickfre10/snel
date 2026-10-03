@@ -322,13 +322,13 @@ export default function DistrictDetailPage() {
     };
   }, [districtId, currentDistrictInfo, districtResults, previousResultForThisDistrict, coalitionColorMap]);
 
-  if (!districtId) { return <div className="container mx-auto p-6 text-center text-red-600">ID do Distrito inválido na URL. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div> }
-  if (!currentDistrictInfo) { return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div> }
+  if (!districtId) { return <div className="container mx-auto p-6 text-center text-red-600">ID do Distrito inválido na URL. <Link href="/2022" className="text-blue-600 hover:underline">Voltar</Link></div> }
+  if (!currentDistrictInfo) { return <div className="container mx-auto p-6 text-center text-red-600">Informações do distrito ID {districtId} não encontradas. <Link href="/2022" className="text-blue-600 hover:underline">Voltar</Link></div> }
 
   return (
     <div className="container mx-auto p-4 lg:p-6 space-y-6">
       <div className="mb-4">
-        <Link href="/" className="text-blue-600 hover:underline inline-block">&larr; Voltar para Visão Nacional</Link>
+        <Link href="/2022" className="text-blue-600 hover:underline inline-block">&larr; Voltar para Visão Nacional</Link>
       </div>
 
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">

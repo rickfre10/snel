@@ -433,7 +433,7 @@ export default function StatePage() {
 
   if (!stateId || !stateInfo ) {
     const message = !stateId ? "ID do Estado não fornecido." : `Estado ${params.uf} não encontrado.`;
-    return <div className="container mx-auto p-6 text-center text-red-500">{message} <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>;
+    return <div className="container mx-auto p-6 text-center text-red-500">{message} <Link href="/2022" className="text-blue-600 hover:underline">Voltar</Link></div>;
   }
   const stateName = stateInfo.uf_name; 
   const totalDistrictSeatsInState = districtsData.filter(d => d.uf === stateId).length;
@@ -442,13 +442,13 @@ export default function StatePage() {
   const majorityThresholdPR = totalPRSeatsForThisState > 0 ? Math.floor(totalPRSeatsForThisState / 2) + 1 : 0;
 
   if (isLoading && !pageData) { return <div className="container mx-auto p-6 text-center text-gray-500 animate-pulse">Carregando dados para {stateName}...</div>; }
-  if (error) { return <div className="container mx-auto p-6 text-center text-red-500">Erro ao carregar dados: {error}. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>; }
-  if (!pageData && !isLoading) { return <div className="container mx-auto p-6 text-center text-gray-500">Dados de votos não disponíveis para {stateName} no momento {currentTime}%. <Link href="/" className="text-blue-600 hover:underline">Voltar</Link></div>; }
+  if (error) { return <div className="container mx-auto p-6 text-center text-red-500">Erro ao carregar dados: {error}. <Link href="/2022" className="text-blue-600 hover:underline">Voltar</Link></div>; }
+  if (!pageData && !isLoading) { return <div className="container mx-auto p-6 text-center text-gray-500">Dados de votos não disponíveis para {stateName} no momento {currentTime}%. <Link href="/2022" className="text-blue-600 hover:underline">Voltar</Link></div>; }
 
   return (
     <div className="container mx-auto p-4 lg:p-6 space-y-8">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <Link href="/" className="text-blue-600 hover:underline">&larr; Visão Nacional</Link>
+        <Link href="/2022" className="text-blue-600 hover:underline">&larr; Visão Nacional</Link>
         <div className="flex space-x-1 sm:space-x-2 flex-wrap gap-y-1 justify-end">
           {allPossibleStates.map(s => (
             s.id !== stateId && (

@@ -1,0 +1,107 @@
+// components/tv/scenes/SceneDistrito.tsx
+"use client";
+import React from 'react';
+import type { ElectionSnapshot } from '@/lib/haagar2026/model';
+import { FRONT_ORDER, frontColor, frontName } from '@/lib/haagar/rules';
+import { Dumbbells } from '../charts';
+import { AnimatedNumber, Avatar, Delta, FrontPill, Panel, ProgressBar, StatusChip, fmtInt, fmtPct } from '../ui';
+
+export default function SceneDistrito({ snap, districtId, onDistrict, onUf }: { snap: ElectionSnapshot; districtId: number; onDistrict: (id: number) => void; onUf: (uf: string) => void }) {
+  const d = snap.districtById[districtId];
+  if (!d) return null;
+  const st = snap.states[d.uf];
+  const idx = st.districtIds.indexOf(d.id);
+  const prevId = st.districtIds[(idx - 1 + st.districtIds.length) % st.districtIds.length];
+  const nextId = st.districtIds[(idx + 1) % st.districtIds.length];
+
+  const top = d.candidates.slice(0, 5);
+  const maxPct = Math.max(50, ...top.map(c => c.pct));
+  const fronts = FRONT_ORDER.filter(f => (d.shares[f] ?? 0) > 0 || (d.prev.shares[f] ?? 0) > 0);
+  const hasData = d.counted > 0;
+
+  // Swing entre as duas maiores frentes de 2022 (convenção de "swing de Butler")
+  const prevTop = Object.entries(d.prev.shares).sort((a, b) => b[1] - a[1]).slice(0, 2).map(e => e[0]);
+  const swing = prevTop.length === 2 && hasData
+    ? (((d.shares[prevTop[1]] ?? 0) - (d.prev.shares[prevTop[1]] ?? 0)) - ((d.shares[prevTop[0]] ?? 0) - (d.prev.shares[prevTop[0]] ?? 0))) / 2
+    : null;
+
+  return (
+    <div className="h-full flex flex-col gap-5">
+      {/* Cabeçalho do distrito */}
+      <div className="rounded-[28px] bg-tv-surface/90 border border-tv-border/70 px-8 py-5 flex items-center gap-8">
+        <div className="flex gap-2">
+          <button onClick={() => onDistrict(prevId)} className="w-12 h-12 rounded-full bg-tv-surface2 text-[22px] font-black hover:bg-tv-border" aria-label="Distrito anterior">‹</button>
+          <button onClick={() => onDistrict(nextId)} className="w-12 h-12 rounded-full bg-tv-surface2 text-[22px] font-black hover:bg-tv-border" aria-label="Próximo distrito">›</button>
+        </div>
+        <div className="min-w-0 flex-1">
+          <button onClick={() => onUf(d.uf)} className="text-[14px] uppercase tracking-[0.2em] text-tv-kicker font-bold hover:underline">{d.ufName} · {d.region} · Distrito {d.id}</button>
+          <h1 className="text-[52px] font-black leading-none truncate mt-1">{d.name}</h1>
+        </div>
+        <div className="w-[380px]">
+          <div className="flex justify-between text-[15px] mb-2"><span className="text-tv-muted">Urnas apuradas</span><span className="font-bold tabular-nums">{fmtInt(d.pollsCounted)}/{fmtInt(d.polls)} · {fmtPct(d.reported)}</span></div>
+          <ProgressBar value={d.reported} height={12} />
+        </div>
+        <StatusChip label={d.status.label} bg={d.status.backgroundColor} fg={d.status.textColor} final={d.isFinal} size="lg" />
+      </div>
+
+      <div className="flex-1 min-h-0 grid grid-cols-[1fr_620px] gap-6">
+        <Panel kicker="Candidatos 2026" title={hasData && d.leader ? `${d.leader.name} ${d.isFinal ? 'eleito' : 'à frente'}` : 'Aguardando primeiras urnas'}
+          bodyClassName="flex flex-col gap-3">
+          {top.map((c, i) => {
+            const col = frontColor(c.front);
+            const elected = d.isFinal && i === 0;
+            return (
+              <div key={c.front} className={`relative rounded-[24px] border flex items-center gap-5 px-5 overflow-hidden ${i === 0 ? 'py-5 bg-tv-surface2/80 border-tv-border' : 'py-3 bg-tv-surface2/40 border-tv-border/50'}`}>
+                <Avatar name={c.name} legend={c.front} photo={c.photo} size={i === 0 ? 92 : 64} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className={`${i === 0 ? 'text-[32px]' : 'text-[24px]'} font-black leading-tight truncate`}>{c.name}</span>
+                    {elected && <span className="rounded-full bg-[#3fd0b8] text-[#06231e] px-3 py-0.5 text-[14px] font-black uppercase">Eleito</span>}
+                    {c.incumbent && <span className="rounded-full border border-tv-text/60 px-2.5 py-0.5 text-[12px] font-bold uppercase tracking-wider">Deputado em 2022</span>}
+                    {!c.incumbent && c.rerun && <span className="rounded-full border border-tv-border px-2.5 py-0.5 text-[12px] font-bold uppercase tracking-wider text-tv-muted">Também disputou 2022</span>}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 text-[15px] text-tv-muted">
+                    <FrontPill legend={c.front} size="sm" />
+                    <span className="truncate">{c.party ?? ''} · {frontName(c.front)}</span>
+                  </div>
+                  <div className="mt-3 h-3 rounded-full bg-tv-border/60 overflow-hidden">
+                    <div className="h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${(c.pct / maxPct) * 100}%`, background: col }} />
+                  </div>
+                </div>
+                <div className="text-right w-[190px]">
+                  <div className={`${i === 0 ? 'text-[54px]' : 'text-[38px]'} font-black leading-none tabular-nums`}><AnimatedNumber value={c.pct} format={n => fmtPct(n)} /></div>
+                  <div className="text-[16px] text-tv-muted tabular-nums mt-1"><AnimatedNumber value={c.votes} /> votos</div>
+                  {hasData && (d.prev.shares[c.front] ?? 0) > 0 && <div className="text-[15px]"><span className="text-tv-muted">vs 2022 </span><Delta value={c.pct - (d.prev.shares[c.front] ?? 0)} /></div>}
+                </div>
+              </div>
+            );
+          })}
+        </Panel>
+
+        <div className="grid grid-rows-[auto_1fr] gap-6 min-h-0 min-w-0">
+          <Panel kicker="2022 × 2026" title="Quanto cada frente mudou">
+            <Dumbbells rows={fronts.map(f => ({ legend: f, now: hasData ? d.shares[f] ?? 0 : 0, prev: d.prev.shares[f] ?? 0 }))} />
+          </Panel>
+          <Panel kicker="Raio-x" title="Comparação com 2022" bodyClassName="grid grid-cols-3 gap-2.5 content-start">
+            <Fact label="Eleito em 2022" value={<span className="flex items-center gap-2"><FrontPill legend={d.prev.front} size="sm" /><span className="truncate text-[17px]">{d.prev.name ?? frontName(d.prev.front)}</span></span>} />
+            <Fact label="Margem 2022 → 2026" value={<span>{fmtPct(d.prev.marginPct)} → {hasData ? fmtPct(d.marginPct) : '—'}</span>} />
+            <Fact label="Comparecimento" value={<span>{fmtPct(d.prev.turnout)} → {fmtPct(d.turnout)}</span>} sub={<Delta value={d.turnout - d.prev.turnout} />} />
+            <Fact label={swing !== null ? `Swing ${prevTop[0]} → ${prevTop[1]}` : 'Swing'} value={swing !== null ? <Delta value={swing} /> : '—'} sub="troca de votos entre as 2 maiores" />
+            <Fact label="Votos válidos 2022" value={fmtInt(d.prev.total)} />
+            <Fact label="Diferença hoje" value={hasData ? `${fmtInt(d.marginVotes)} votos` : '—'} sub={hasData && !d.isFinal ? `Restam ~${fmtInt(d.expectedTotal - d.counted)} votos` : undefined} />
+          </Panel>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Fact({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {
+  return (
+    <div className="rounded-[18px] bg-tv-surface2/50 border border-tv-border/50 px-3.5 py-2.5 min-w-0">
+      <div className="text-[11px] uppercase tracking-[0.12em] text-tv-muted font-bold truncate">{label}</div>
+      <div className="text-[20px] font-black mt-1 tabular-nums truncate">{value}</div>
+      {sub && <div className="text-[13px] text-tv-muted mt-0.5 truncate">{sub}</div>}
+    </div>
+  );
+}
