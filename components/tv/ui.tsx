@@ -191,3 +191,16 @@ export function StatusChip({ label, bg, fg, final, size = 'md' }: { label: strin
     </span>
   );
 }
+
+// ------------------------------------------------------------- Selo n8 ---
+/** Gradiente roxo do n8 (portal de notícias), usado nas duas marcas. */
+export const N8_GRADIENT = 'linear-gradient(90deg, #8f00ff 0%, #6a1bff 45%, rgba(106, 27, 255, 0) 100%)';
+
+/** Selo "n⁸" no início das faixas de notícias. */
+export function N8Seal({ size = 30, className = '' }: { size?: number; className?: string }) {
+  return (
+    <div className={`h-full shrink-0 flex items-center pl-4 pr-10 text-white font-black leading-none ${className}`} style={{ background: N8_GRADIENT, fontSize: size }}>
+      n<sup className="text-[0.55em] -translate-y-[0.15em]">8</sup>
+    </div>
+  );
+}

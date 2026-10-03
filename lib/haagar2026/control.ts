@@ -32,7 +32,7 @@ export interface ControlState {
 export interface CgVisibility {
   seats: boolean;    // caixas de cadeiras por frente
   ticker: boolean;   // faixa de distritos
-  bug: boolean;      // selo de local/ao vivo e logo no topo
+  bug: boolean;      // logo da emissora no topo
   count: 'confirmadas' | 'projecao';
 }
 

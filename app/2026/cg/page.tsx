@@ -14,7 +14,7 @@ import { DEFAULT_CG } from '@/lib/haagar2026/control';
 import type { DistrictSnapshot, ElectionSnapshot } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
 import { Stage, caseOf } from '@/components/tv/TvChrome';
-import { AnimatedNumber, BrandLogo, fmtPct } from '@/components/tv/ui';
+import { AnimatedNumber, BrandLogo, N8Seal, fmtPct } from '@/components/tv/ui';
 
 const TICKER_MS = 6000;
 const BACKGROUNDS: Record<string, string> = {
@@ -42,14 +42,8 @@ export default function Cg2026() {
 
   return (
     <Stage brand={brand} background={BACKGROUNDS[fundo]}>
-      {/* Selo de local + logo (como nas tarjas da News) */}
+      {/* Logo da emissora no canto superior direito */}
       <Slide show={cg.bug} from="top">
-        <div className="absolute left-[104px] top-[84px] flex flex-col items-start gap-1.5">
-          <span className="rounded-[10px] bg-tv-accent2 text-white px-3 py-1 text-[30px] font-extrabold leading-tight">{caseOf(brand, 'Haagar · eleições 2026')}</span>
-          <span className="rounded-[10px] bg-tv-tarja/90 text-white px-3 py-0.5 text-[20px] font-extrabold leading-tight inline-flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-tv-live tv-pulse" />{caseOf(brand, 'Ao vivo')}
-          </span>
-        </div>
         <div className="absolute right-[104px] top-[72px] opacity-90" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}>
           <BrandLogo brand={brand} size={52} color="#ffffff" />
         </div>
@@ -151,10 +145,7 @@ function TickerBar({ snap, brand }: { snap: ElectionSnapshot; brand: typeof BRAN
     <div className="absolute left-[104px] right-[104px] bottom-[68px] h-[56px] flex gap-3">
       <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[32px] font-extrabold tabular-nums">{clock}</div>
       <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: 'rgb(var(--tv-tarja) / 0.94)' }}>
-        <div className="h-full w-[110px] shrink-0 flex items-center pl-4 text-[30px] font-black text-white"
-          style={{ background: 'linear-gradient(90deg, rgb(var(--tv-accent2)), rgb(var(--tv-accent)) 60%, rgb(var(--tv-tarja) / 0))' }}>
-          {d?.uf ?? '—'}
-        </div>
+        <N8Seal size={32} />
         {d ? <DistrictLine key={d.id} d={d} brand={brand} /> : (
           <div className="px-6 text-[26px] font-bold text-white">{caseOf(brand, 'Aguardando as primeiras urnas')}</div>
         )}
@@ -167,7 +158,8 @@ function DistrictLine({ d, brand }: { d: DistrictSnapshot; brand: typeof BRANDS.
   const lead = d.leader!;
   return (
     <div className="flex-1 min-w-0 flex items-center gap-5 px-5 text-white tv-scene-in">
-      <span className="text-[28px] font-extrabold uppercase truncate max-w-[420px]">{d.name}</span>
+      <span className="shrink-0 text-[22px] font-black opacity-80">{d.uf}</span>
+      <span className="text-[28px] font-extrabold uppercase truncate max-w-[400px]">{d.name}</span>
       <span className="shrink-0 rounded-[8px] px-3 py-0.5 text-[20px] font-extrabold uppercase" style={{ background: d.status.backgroundColor, color: d.status.textColor }}>
         {d.status.label}
       </span>

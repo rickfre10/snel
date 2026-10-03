@@ -162,7 +162,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
               <div className="grid grid-cols-3 gap-2">
                 <Btn active={cg.seats} onClick={() => dispatch({ type: 'setCg', patch: { seats: !cg.seats } })}>Cadeiras</Btn>
                 <Btn active={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa distritos</Btn>
-                <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Selo + logo</Btn>
+                <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Logo</Btn>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <Btn active={cg.count === 'confirmadas'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'confirmadas' } })}>Contar eleitos</Btn>

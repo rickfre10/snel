@@ -7,7 +7,7 @@ import type { BrandTheme } from '@/lib/brand';
 import { brandCssVars } from '@/lib/brand';
 import { frontColor, textOn } from '@/lib/haagar/rules';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
-import { BrandLogo, fmtPct } from './ui';
+import { BrandLogo, N8Seal, fmtPct } from './ui';
 
 export const STAGE_W = 1920;
 export const STAGE_H = 1080;
@@ -125,9 +125,7 @@ export function Ticker({ brand, items, right }: { brand: BrandTheme; items: stri
     <footer className="absolute left-10 right-10 bottom-6 h-[56px] flex gap-3">
       <div className="w-[150px] rounded-[14px] bg-tv-accent text-tv-accent-text flex items-center justify-center text-[26px] font-black tabular-nums">{clock}</div>
       <div className="flex-1 rounded-[14px] bg-tv-text/[0.14] backdrop-blur overflow-hidden flex items-center">
-        <div className="h-full px-5 flex items-center text-[24px] font-black text-white shrink-0" style={{ background: 'linear-gradient(90deg, rgb(var(--tv-accent)), rgb(var(--tv-accent2)) 85%, transparent)' }}>
-          {caseOf(brand, 'Apuração')}
-        </div>
+        <N8Seal size={30} />
         <div className="relative flex-1 overflow-hidden h-full">
           <div className="tv-marquee absolute inset-y-0 left-0 flex items-center whitespace-nowrap" style={{ ['--tv-marquee-duration' as string]: `${duration}s` }}>
             {[0, 1].map(k => (
