@@ -34,9 +34,20 @@ export interface CgVisibility {
   ticker: boolean;   // faixa de distritos
   bug: boolean;      // logo da emissora no topo
   count: 'confirmadas' | 'projecao';
+  text?: CgText;     // tarja de texto livre (manchete)
 }
 
-export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas' };
+/** Tarja de texto escrita pelo operador (formato "manchete" da News). */
+export interface CgText {
+  show: boolean;
+  label1: string;    // bloco em gradiente, linha 1 (ex.: "edição")
+  label2: string;    // bloco em gradiente, linha 2 (ex.: "das 19h")
+  headline: string;  // manchete (até 2 linhas)
+  sub: string;       // subtítulo (opcional)
+}
+
+export const DEFAULT_CG_TEXT: CgText = { show: false, label1: 'eleições', label2: '2026', headline: '', sub: '' };
+export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas', text: DEFAULT_CG_TEXT };
 
 export type ControlAction =
   | { type: 'play' }
@@ -51,7 +62,8 @@ export type ControlAction =
   | { type: 'setBrand'; brand: BrandId }
   | { type: 'focus'; scene: SceneId; uf?: string; districtId?: number }
   | { type: 'setAutoRotate'; value: boolean }
-  | { type: 'setCg'; patch: Partial<CgVisibility> };
+  | { type: 'setCg'; patch: Partial<CgVisibility> }
+  | { type: 'setCgText'; patch: Partial<CgText> };
 
 export const SPEED_PRESETS = [
   { label: 'Lento', speed: 1 },      // ~1h40 até 100%
@@ -134,6 +146,11 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
     case 'setCg':
       next = { ...prev, cg: { ...DEFAULT_CG, ...prev.cg, ...action.patch } };
       break;
+    case 'setCgText': {
+      const cg = { ...DEFAULT_CG, ...prev.cg };
+      next = { ...prev, cg: { ...cg, text: { ...DEFAULT_CG_TEXT, ...cg.text, ...action.patch } } };
+      break;
+    }
     default:
       next = prev;
   }

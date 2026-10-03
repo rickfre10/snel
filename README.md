@@ -26,6 +26,8 @@ GOOGLE_SHEETS_CLIENT_EMAIL=...
 GOOGLE_SHEETS_PRIVATE_KEY=...
 GOOGLE_SHEET_ID=...
 CONTROL_PIN=1234                 # opcional: exige PIN para comandar a apuração
+UPSTASH_REDIS_REST_URL=...       # obrigatório em hospedagem serverless (Vercel): ver "Sincronização"
+UPSTASH_REDIS_REST_TOKEN=...     #   (ou KV_REST_API_URL / KV_REST_API_TOKEN do Vercel KV)
 NEXT_PUBLIC_CONTROL_MODE=local   # opcional: ver "Sincronização"
 ```
 
@@ -46,7 +48,7 @@ Vinheta de espera (idle): Smartv com a grade de pílulas deslizando; SmartvNews 
 
 ### CG
 
-`/2026/cg` segue a marca escolhida no controle. Pelo controle (seção "CG") o operador liga/desliga as caixas de cadeiras, a faixa de distritos e o selo/logo, e escolhe contar **eleitos** ou **projeção**. Use como fonte de navegador no OBS/vMix (fundo transparente) ou com chroma (`?fundo=verde`).
+`/2026/cg` segue a marca escolhida no controle. Na seção **"CG · texto livre"** o operador escreve uma manchete (bloco em gradiente com duas linhas, manchete e subtítulo) e coloca/tira do ar; enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras. Pelo controle (seção "CG") o operador liga/desliga as caixas de cadeiras, a faixa de distritos e o selo/logo, e escolhe contar **eleitos** ou **projeção**. Use como fonte de navegador no OBS/vMix (fundo transparente) ou com chroma (`?fundo=verde`).
 
 Atalhos discretos: **C** (ou segurar o logo por 1 s) abre o controle; **F** tela cheia; **Esc** fecha. O botão de dois pontinhos no canto inferior direito alterna Smartv ⇄ SmartvNews.
 
@@ -67,8 +69,11 @@ Iniciar/pausar, ritmo (pontos % por minuto, com presets), saltos (+1/+5/+10, 100
 
 ### Sincronização
 
-- Padrão: estado guardado no servidor (`/api/2026/control`) — telão e controle podem estar em **computadores diferentes**. Ideal com `npm start` numa máquina.
-- Hospedagem serverless (ex.: Vercel) não compartilha memória entre instâncias: defina `NEXT_PUBLIC_CONTROL_MODE=local` e use o controle no **mesmo computador** do telão (outra janela/aba ou a gaveta da tecla C).
+Telão, CG e controle leem o mesmo estado em `/api/2026/control` — podem estar em **computadores diferentes**. O selo no topo do controle mostra onde ele está guardado:
+
+- **SERVIDOR · REDIS** — recomendado. Crie um banco gratuito no [Upstash](https://upstash.com) (ou Vercel KV / Upstash pelo Marketplace da Vercel) e defina `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`. Funciona em qualquer hospedagem.
+- **SERVIDOR · MEMÓRIA** — sem Redis, fica na memória do processo. Ok com `npm start` numa máquina; em hospedagem serverless (Vercel) cada instância tem a sua memória e os comandos podem demorar a aparecer em outras telas.
+- **LOCAL** — `NEXT_PUBLIC_CONTROL_MODE=local`: sincroniza só janelas do mesmo computador.
 
 ## Marcas (cores, fonte e logo)
 

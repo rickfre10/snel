@@ -19,7 +19,7 @@ export default function Controle2026() {
           </div>
           <Link href="/2026" target="_blank" className="text-xs underline text-white/70">abrir telão ↗</Link>
         </header>
-        <ControlPanel state={el.state} dispatch={el.dispatch} progress={el.progress} snap={el.snapshot} mode={el.mode} error={el.error} />
+        <ControlPanel state={el.state} dispatch={el.dispatch} progress={el.progress} snap={el.snapshot} mode={el.mode} error={el.error} store={el.store} />
       </div>
     </div>
   );

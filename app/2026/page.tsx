@@ -148,7 +148,7 @@ export default function Telao2026() {
           <button onClick={() => setDrawer(false)} className="w-9 h-9 rounded-lg hover:bg-white/10 text-xl" aria-label="Fechar">×</button>
         </div>
         <div className="p-4">
-          <ControlPanel state={state} dispatch={dispatch} progress={el.progress} snap={snap} mode={el.mode} error={el.error} />
+          <ControlPanel state={state} dispatch={dispatch} progress={el.progress} snap={snap} mode={el.mode} error={el.error} store={el.store} />
         </div>
       </div>
     </>

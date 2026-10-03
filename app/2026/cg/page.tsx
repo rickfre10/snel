@@ -10,7 +10,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
-import { DEFAULT_CG } from '@/lib/haagar2026/control';
+import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { DistrictSnapshot, ElectionSnapshot } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
 import { Stage, caseOf } from '@/components/tv/TvChrome';
@@ -30,6 +30,7 @@ export default function Cg2026() {
   const { state, snapshot: snap } = useElection2026();
   const brand = BRANDS[state.brand] ?? BRANDS.smartv;
   const cg = { ...DEFAULT_CG, ...state.cg };
+  const text = { ...DEFAULT_CG_TEXT, ...cg.text };
   const [fundo, setFundo] = useState('transparente');
 
   useEffect(() => {
@@ -51,8 +52,11 @@ export default function Cg2026() {
 
       {snap && (
         <>
-          <Slide show={cg.seats} from="bottom">
+          <Slide show={cg.seats && !text.show} from="bottom">
             <SeatsTarja snap={snap} brand={brand} count={cg.count} raised={cg.ticker} />
+          </Slide>
+          <Slide show={text.show && !!text.headline.trim()} from="bottom">
+            <TextTarja text={text} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={cg.ticker} from="bottom">
             <TickerBar snap={snap} brand={brand} />
@@ -177,6 +181,26 @@ function DistrictLine({ d, brand }: { d: DistrictSnapshot; brand: typeof BRANDS.
         </span>
       )}
       <span className="shrink-0 text-[18px] font-semibold opacity-70 tabular-nums">{caseOf(brand, `${fmtPct(d.reported)} apur.`)}</span>
+    </div>
+  );
+}
+
+// ------------------------------------------------ Tarja de texto livre ----
+/** Manchete escrita pelo operador (formato "edição das 19h" da News). */
+function TextTarja({ text, brand, raised }: { text: CgText; brand: typeof BRANDS.smartv; raised: boolean }) {
+  const long = text.headline.length > 42;
+  return (
+    <div className="absolute left-[104px] right-[104px] min-h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
+      style={{ bottom: raised ? 138 : 68, background: 'rgb(var(--tv-tarja) / 0.94)', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 text-white leading-[1.05]"
+        style={{ background: 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)' }}>
+        <span className="text-[44px] font-normal">{caseOf(brand, text.label1)}</span>
+        {text.label2 && <span className="text-[44px] font-normal">{caseOf(brand, text.label2)}</span>}
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col justify-center px-10 py-5 text-white">
+        <div className={`${long ? 'text-[50px]' : 'text-[60px]'} font-extrabold uppercase leading-[1.05] line-clamp-2`}>{text.headline}</div>
+        {text.sub && <div className="text-[32px] font-semibold uppercase mt-2 text-white/90 truncate">{text.sub}</div>}
+      </div>
     </div>
   );
 }

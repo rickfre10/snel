@@ -2,9 +2,9 @@
 "use client";
 // Controle da apuração 2026: ritmo, pausa, saltos, retenção por estado,
 // cenário (semente), cena do telão e marca.
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BRANDS, BrandId } from '@/lib/brand';
-import { ControlAction, ControlState, DEFAULT_CG, SceneId, SPEED_PRESETS } from '@/lib/haagar2026/control';
+import { ControlAction, ControlState, DEFAULT_CG, DEFAULT_CG_TEXT, CgText, SceneId, SPEED_PRESETS } from '@/lib/haagar2026/control';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER, frontColor } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
@@ -36,12 +36,13 @@ const Section = ({ title, children, right }: { title: string; children: React.Re
   </section>
 );
 
-export default function ControlPanel({ state, dispatch, progress, snap, mode, error }: {
+export default function ControlPanel({ state, dispatch, progress, snap, mode, error, store }: {
   state: ControlState;
   dispatch: (a: ControlAction) => void;
   progress: number;
   snap: ElectionSnapshot | null;
   mode: string;
+  store?: 'redis' | 'memory' | null;
   error?: string | null;
 }) {
   const [customSpeed, setCustomSpeed] = useState('');
@@ -59,7 +60,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
       <Section title="Apuração" right={
         <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${mode === 'server' ? 'bg-emerald-500/20 text-emerald-300' : mode === 'local' ? 'bg-amber-500/20 text-amber-300' : 'bg-white/10'}`}
           title={mode === 'server' ? 'Sincronizado pelo servidor (funciona entre computadores)' : 'Sem servidor: sincroniza só janelas deste navegador'}>
-          {mode === 'server' ? 'SERVIDOR' : mode === 'local' ? 'LOCAL' : '...'}
+          {mode === 'server' ? (store === 'redis' ? 'SERVIDOR · REDIS' : 'SERVIDOR · MEMÓRIA') : mode === 'local' ? 'LOCAL' : '...'}
         </span>}>
         <div className="flex items-end justify-between">
           <div>
@@ -154,6 +155,8 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
         </div>
       </Section>
 
+      <CgTextEditor state={state} dispatch={dispatch} />
+
       <Section title="CG (sobre o vídeo)" right={<a href="/2026/cg?fundo=cena" target="_blank" rel="noreferrer" className="text-xs underline text-white/70">abrir CG ↗</a>}>
         {(() => {
           const cg = { ...DEFAULT_CG, ...state.cg };
@@ -190,5 +193,48 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
         </div>
       )}
     </div>
+  );
+}
+
+// ------------------------------------------------ Texto livre no CG ------
+const TEXT_PRESETS: { label1: string; label2: string }[] = [
+  { label1: 'eleições', label2: '2026' },
+  { label1: 'apuração', label2: 'ao vivo' },
+  { label1: 'última', label2: 'hora' },
+];
+
+function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
+  const onAir: CgText = { ...DEFAULT_CG_TEXT, ...state.cg?.text };
+  const [draft, setDraft] = useState<CgText>(onAir);
+  const [touched, setTouched] = useState(false);
+  // Acompanha o que está no ar enquanto o operador não estiver editando.
+  useEffect(() => { if (!touched) setDraft(onAir); }, [onAir.headline, onAir.sub, onAir.label1, onAir.label2, touched]); // eslint-disable-line react-hooks/exhaustive-deps
+  const set = (patch: Partial<CgText>) => { setTouched(true); setDraft(d => ({ ...d, ...patch })); };
+  const send = (show: boolean) => {
+    dispatch({ type: 'setCgText', patch: { ...draft, show } });
+    setTouched(false);
+  };
+  const input = 'w-full h-10 rounded-lg bg-black/40 border border-white/15 px-3';
+
+  return (
+    <Section title="CG · texto livre" right={onAir.show ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/25 text-red-200">NO AR</span> : null}>
+      <div className="grid grid-cols-2 gap-2">
+        <input className={input} value={draft.label1} onChange={e => set({ label1: e.target.value })} placeholder="Bloco, linha 1 (ex.: edição)" />
+        <input className={input} value={draft.label2} onChange={e => set({ label2: e.target.value })} placeholder="Bloco, linha 2 (ex.: das 19h)" />
+      </div>
+      <div className="flex gap-1.5 mt-2">
+        {TEXT_PRESETS.map(p => (
+          <button key={p.label1} onClick={() => set(p)} className="text-[11px] px-2 py-1 rounded border border-white/15 hover:bg-white/10">{p.label1} {p.label2}</button>
+        ))}
+      </div>
+      <textarea className="w-full rounded-lg bg-black/40 border border-white/15 px-3 py-2 mt-2 resize-none" rows={2} maxLength={90}
+        value={draft.headline} onChange={e => set({ headline: e.target.value })} placeholder="Manchete (até 2 linhas)" />
+      <input className={`${input} mt-2`} maxLength={70} value={draft.sub} onChange={e => set({ sub: e.target.value })} placeholder="Subtítulo (opcional)" />
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        <Btn active={onAir.show && !touched} onClick={() => send(true)}>{onAir.show ? (touched ? 'Atualizar no ar' : 'No ar') : 'Colocar no ar'}</Btn>
+        <Btn onClick={() => send(false)} danger={onAir.show}>Tirar do ar</Btn>
+      </div>
+      <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras.</p>
+    </Section>
   );
 }
