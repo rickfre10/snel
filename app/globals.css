@@ -19,6 +19,15 @@
 @font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextW07-Bold.woff2') format('woff2'); font-weight: 600 700; font-display: swap; }
 @font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextW07-Black.woff2') format('woff2'); font-weight: 800 900; font-display: swap; }
 
+/*
+ * Posterama 1927 SemiBold: tem os acentos, mas é só de maiúsculas (minúsculas
+ * viram maiúsculas). Por isso não entra como peso 600 geral: só nos textos que
+ * já são em caixa alta e seminegrito (faixas, tickers, etiquetas, tarjas).
+ */
+@font-face { font-family: 'Posterama 1927'; src: url('/fonts/posterama/Posterama1927W04-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+.tv-stage .uppercase.font-semibold { font-family: 'Posterama 1927', var(--tv-font); }
+.tv-stage .uppercase.font-semibold :is(.font-thin, .font-light, .font-normal, .font-medium, .font-bold, .font-extrabold, .font-black) { font-family: var(--tv-font); }
+
 /* Telão: oculta barras de rolagem */
 .tv-stage ::-webkit-scrollbar { display: none; }
 

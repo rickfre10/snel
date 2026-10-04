@@ -5,6 +5,9 @@ Fonte Posterama Text (licença comercial), declarada em app/globals.css (@font-f
   PosteramaTextW07-Bold.woff2      pesos 600–700 (SemiBold usa o Bold)
   PosteramaTextW07-Black.woff2     pesos 800–900 (ExtraBold usa o Black)
 
+Posterama1927W04-SemiBold.woff2  peso 600 só em texto MAIÚSCULO + seminegrito
+  (a Posterama 1927 desenha tudo em maiúsculas; ver app/globals.css)
+
 PosteramaTextW15-SemiBold.woff2 está aqui, mas NÃO é usado: o pacote "W15"
 não tem os acentos do português (ç, ã, õ, é...). Se conseguir o SemiBold,
 Light, Medium ou ExtraBold na versão W01 (Latin), coloque nesta pasta e
