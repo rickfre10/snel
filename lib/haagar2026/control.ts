@@ -27,16 +27,32 @@ export interface ControlState {
   focus: ControlFocus | null;     // cena enviada pelo operador para o telão
   autoRotate: boolean;            // telão alterna cenas sozinho
   cg?: CgVisibility;              // o que o CG (/2026/cg) mostra no ar
+  view?: TelaoView;               // o que o telão está mostrando agora (para o CG replicar)
 }
+
+/** Cena exibida no telão neste momento (publicada pelo próprio telão). */
+export interface TelaoView { scene: SceneId; uf?: string; districtId?: number }
 
 export interface CgVisibility {
   seats: boolean;    // caixas de cadeiras por frente
   ticker: boolean;   // faixa de distritos
-  bug: boolean;      // selo de local/ao vivo e logo no topo
+  bug: boolean;      // logo da emissora no topo
   count: 'confirmadas' | 'projecao';
+  breaking?: boolean; // plantão automático de última hora (viradas, maioria)
+  text?: CgText;     // tarja de texto livre (manchete)
 }
 
-export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas' };
+/** Tarja de texto escrita pelo operador (formato "manchete" da News). */
+export interface CgText {
+  show: boolean;
+  label1: string;    // bloco em gradiente, linha 1 (ex.: "edição")
+  label2: string;    // bloco em gradiente, linha 2 (ex.: "das 19h")
+  headline: string;  // manchete (até 2 linhas)
+  sub: string;       // subtítulo (opcional)
+}
+
+export const DEFAULT_CG_TEXT: CgText = { show: false, label1: 'eleições', label2: '2026', headline: '', sub: '' };
+export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas', breaking: true, text: DEFAULT_CG_TEXT };
 
 export type ControlAction =
   | { type: 'play' }
@@ -51,7 +67,9 @@ export type ControlAction =
   | { type: 'setBrand'; brand: BrandId }
   | { type: 'focus'; scene: SceneId; uf?: string; districtId?: number }
   | { type: 'setAutoRotate'; value: boolean }
-  | { type: 'setCg'; patch: Partial<CgVisibility> };
+  | { type: 'setCg'; patch: Partial<CgVisibility> }
+  | { type: 'setCgText'; patch: Partial<CgText> }
+  | { type: 'setView'; view: TelaoView };
 
 export const SPEED_PRESETS = [
   { label: 'Lento', speed: 1 },      // ~1h40 até 100%
@@ -134,6 +152,14 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
     case 'setCg':
       next = { ...prev, cg: { ...DEFAULT_CG, ...prev.cg, ...action.patch } };
       break;
+    case 'setView':
+      next = { ...prev, view: action.view };
+      break;
+    case 'setCgText': {
+      const cg = { ...DEFAULT_CG, ...prev.cg };
+      next = { ...prev, cg: { ...cg, text: { ...DEFAULT_CG_TEXT, ...cg.text, ...action.patch } } };
+      break;
+    }
     default:
       next = prev;
   }

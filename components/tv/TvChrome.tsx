@@ -7,7 +7,7 @@ import type { BrandTheme } from '@/lib/brand';
 import { brandCssVars } from '@/lib/brand';
 import { frontColor, textOn } from '@/lib/haagar/rules';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
-import { BrandLogo, fmtPct } from './ui';
+import { BrandLogo, N8Seal, fmtPct } from './ui';
 
 export const STAGE_W = 1920;
 export const STAGE_H = 1080;
@@ -35,24 +35,26 @@ export function Stage({ brand, children, background }: { brand: BrandTheme; chil
   );
 }
 
-function Backdrop({ brand }: { brand: BrandTheme }) {
+/** Fundo animado da marca: movimentos lentos e contínuos (não competem com os dados). */
+export function Backdrop({ brand }: { brand: BrandTheme }) {
   if (brand.backdrop === 'pills') {
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(1200px 700px at 85% -10%, rgb(var(--tv-bg-glow) / 0.55), transparent 60%), radial-gradient(900px 600px at -5% 110%, rgb(var(--tv-accent2) / 0.25), transparent 60%)' }} />
+        <div className="absolute inset-[-20%] tv-bg-drift" style={{ background: 'radial-gradient(1200px 700px at 85% 10%, rgb(var(--tv-bg-glow) / 0.55), transparent 60%), radial-gradient(900px 600px at 5% 95%, rgb(var(--tv-accent2) / 0.25), transparent 60%)' }} />
         {[180, 520, 860, 1200, 1540].map((x, i) => (
-          <div key={x} className="absolute rounded-full border border-tv-text/[0.06]" style={{ left: x, top: i % 2 ? -260 : 420, width: 300, height: 900 }} />
+          <div key={x} className={`absolute rounded-full border border-tv-text/[0.06] ${i % 2 ? 'tv-bg-float-a' : 'tv-bg-float-b'}`}
+            style={{ left: x, top: i % 2 ? -260 : 420, width: 300, height: 900, animationDelay: `${-i * 7}s` }} />
         ))}
-        <div className="absolute -right-24 top-24 w-[220px] h-[420px] rounded-[48px] bg-tv-accent/30" />
-        <div className="absolute -left-28 bottom-40 w-[200px] h-[360px] rounded-[48px] bg-tv-accent2/20" />
+        <div className="absolute -right-24 top-24 w-[220px] h-[420px] rounded-[48px] bg-tv-accent/30 tv-bg-float-a" />
+        <div className="absolute -left-28 bottom-40 w-[200px] h-[360px] rounded-[48px] bg-tv-accent2/20 tv-bg-float-b" />
       </div>
     );
   }
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(1400px 900px at 0% 0%, rgb(var(--tv-bg-glow) / 0.55), transparent 55%)' }} />
-      <div className="absolute rounded-full" style={{ width: 1500, height: 1500, right: -1080, top: -1020, background: 'radial-gradient(circle at 30% 70%, rgb(var(--tv-accent) / 0.55), rgb(var(--tv-accent) / 0.12) 55%, transparent 70%)' }} />
-      <div className="absolute rounded-full border-[90px] border-tv-accent/[0.07]" style={{ width: 1900, height: 1900, left: -1500, bottom: -1500 }} />
+      <div className="absolute inset-[-20%] tv-bg-drift" style={{ background: 'radial-gradient(1400px 900px at 15% 15%, rgb(var(--tv-bg-glow) / 0.55), transparent 55%)' }} />
+      <div className="absolute rounded-full tv-bg-orbit" style={{ width: 1500, height: 1500, right: -1080, top: -1020, background: 'radial-gradient(circle at 30% 70%, rgb(var(--tv-accent) / 0.55), rgb(var(--tv-accent) / 0.12) 55%, transparent 70%)' }} />
+      <div className="absolute rounded-full border-[90px] border-tv-accent/[0.07] tv-bg-orbit-rev" style={{ width: 1900, height: 1900, left: -1500, bottom: -1500 }} />
     </div>
   );
 }
@@ -125,9 +127,7 @@ export function Ticker({ brand, items, right }: { brand: BrandTheme; items: stri
     <footer className="absolute left-10 right-10 bottom-6 h-[56px] flex gap-3">
       <div className="w-[150px] rounded-[14px] bg-tv-accent text-tv-accent-text flex items-center justify-center text-[26px] font-black tabular-nums">{clock}</div>
       <div className="flex-1 rounded-[14px] bg-tv-text/[0.14] backdrop-blur overflow-hidden flex items-center">
-        <div className="h-full px-5 flex items-center text-[24px] font-black text-white shrink-0" style={{ background: 'linear-gradient(90deg, rgb(var(--tv-accent)), rgb(var(--tv-accent2)) 85%, transparent)' }}>
-          {caseOf(brand, 'Apuração')}
-        </div>
+        <N8Seal size={30} />
         <div className="relative flex-1 overflow-hidden h-full">
           <div className="tv-marquee absolute inset-y-0 left-0 flex items-center whitespace-nowrap" style={{ ['--tv-marquee-duration' as string]: `${duration}s` }}>
             {[0, 1].map(k => (
@@ -146,7 +146,8 @@ export function Ticker({ brand, items, right }: { brand: BrandTheme; items: stri
 }
 
 // ------------------------------------------------------- Última hora -----
-export interface Breaking { id: string; headline: string; sub: string; front?: string | null }
+import type { Breaking } from '@/lib/haagar2026/useBreaking';
+export type { Breaking };
 
 /** Tarja de manchete (estilo "edição das 19h"): aparece por alguns segundos. */
 export function LowerThird({ brand, item }: { brand: BrandTheme; item: Breaking | null }) {

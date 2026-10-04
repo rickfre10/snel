@@ -19,8 +19,7 @@ export default function SceneGeral({ snap, onDistrict }: { snap: ElectionSnapsho
   const [mode, setMode] = useState<MapMode>('resultado');
   const [swingFront, setSwingFront] = useState('TDS');
   const leader = snap.fronts[0];
-  const turnout2026 = (snap.expectedTotal / snap.districts.reduce((s, d) => s + d.voters, 0)) * 100;
-  const turnout2022 = (snap.districts.reduce((s, d) => s + d.prev.total, 0) / snap.districts.reduce((s, d) => s + d.voters, 0)) * 100;
+  const prLeader = [...snap.fronts].sort((a, b) => b.prPct - a.prPct)[0];
 
   return (
     <div className="h-full grid grid-cols-[1fr_600px] gap-6">
@@ -47,7 +46,7 @@ export default function SceneGeral({ snap, onDistrict }: { snap: ElectionSnapsho
           <div className="grid grid-cols-4 gap-3 mt-5">
             <MiniStat label="Distritos definidos" value={<><AnimatedNumber value={snap.calledCount} /><span className="text-tv-muted text-[20px]">/{TOTAL_DISTRICT_SEATS}</span></>} />
             <MiniStat label="Viradas" value={<AnimatedNumber value={snap.flips.length} />} sub={`+${snap.districts.filter(d => d.leadingFlip).length} em andamento`} />
-            <MiniStat label="Comparecimento" value={fmtPct(snap.reported > 0 ? turnout2026 : 0)} sub={snap.reported > 0 ? <Delta value={turnout2026 - turnout2022} className="text-[14px]" /> : `2022: ${fmtPct(turnout2022)}`} />
+            <MiniStat label={`Voto proporcional · ${prLeader?.legend ?? '—'}`} value={fmtPct(snap.reported > 0 && prLeader ? prLeader.prPct : 0)} sub={snap.reported > 0 && prLeader ? <Delta value={prLeader.prPct - prLeader.prevPrPct} className="text-[14px]" /> : undefined} />
             <MiniStat label="Votos apurados" value={<AnimatedNumber value={snap.counted / 1e6} format={n => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} mi`} />} sub={`${fmtInt(snap.pollsCounted)} urnas`} />
           </div>
         </Panel>

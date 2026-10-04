@@ -2,10 +2,13 @@
 // Nomes fictícios para candidatos novos de 2026.
 import { Rng, pick } from './random';
 
-const FIRST = [
+const FIRST_F = [
   'Ana', 'Beatriz', 'Camila', 'Carla', 'Clara', 'Daniela', 'Elisa', 'Fernanda', 'Gabriela', 'Helena',
   'Isabela', 'Joana', 'Júlia', 'Larissa', 'Lívia', 'Luana', 'Marina', 'Natália', 'Patrícia', 'Raquel',
-  'Renata', 'Sofia', 'Tânia', 'Valéria', 'Yasmin', 'Adriano', 'André', 'Bruno', 'Caio', 'César',
+  'Renata', 'Sofia', 'Tânia', 'Valéria', 'Yasmin',
+];
+const FIRST_M = [
+  'Adriano', 'André', 'Bruno', 'Caio', 'César',
   'Diego', 'Eduardo', 'Fábio', 'Felipe', 'Gustavo', 'Heitor', 'Igor', 'João', 'Leonardo', 'Lucas',
   'Marcelo', 'Mateus', 'Otávio', 'Paulo', 'Rafael', 'Renan', 'Rodrigo', 'Samuel', 'Thiago', 'Vítor',
 ];
@@ -17,8 +20,12 @@ const LAST = [
   'Tavares', 'Teixeira', 'Valadares', 'Vasconcelos', 'Viana', 'Vieira', 'Xavier', 'Haag', 'Ardian', 'Montealvo',
 ];
 
-export function fictionalName(r: Rng): string {
-  const first = pick(r, FIRST);
+export type Gender = 'F' | 'M';
+
+/** Nome fictício; com gênero informado, o primeiro nome é coerente com ele. */
+export function fictionalName(r: Rng, gender?: Gender | null): string {
+  const g: Gender = gender ?? (r() < 0.45 ? 'F' : 'M');
+  const first = pick(r, g === 'F' ? FIRST_F : FIRST_M);
   const last1 = pick(r, LAST);
   if (r() < 0.35) {
     let last2 = pick(r, LAST);

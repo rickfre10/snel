@@ -1,10 +1,10 @@
 // app/api/baseline/2022/route.ts
 // Resultado final de 2022 (aba 100% da planilha) consolidado por distrito e
-// estado. Base de comparação do painel 2026. Sem acesso à planilha, devolve
-// uma estimativa a partir dos dados salvos no projeto.
+// estado. Base de comparação do painel 2026. Sem acesso à planilha, usa o
+// resultado oficial embutido em lib/data/haagar2022.json.
 import { NextResponse } from 'next/server';
 import { readVoteSheets, parseSheetNumber, sheetsConfigured } from '@/lib/server/sheets';
-import { Baseline2022, buildBaselineFromRows, buildFallbackBaseline } from '@/lib/haagar/baseline';
+import { Baseline2022, buildBaselineFromRows, buildEmbeddedBaseline } from '@/lib/haagar/baseline';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,7 +17,7 @@ export async function GET() {
   if (cache && Date.now() - cache.at < CACHE_MS) return NextResponse.json(cache.data);
 
   if (!sheetsConfigured()) {
-    return NextResponse.json(buildFallbackBaseline());
+    return NextResponse.json(await buildEmbeddedBaseline());
   }
   try {
     const { candidates, proportional } = await readVoteSheets('100');
@@ -31,6 +31,7 @@ export async function GET() {
           parl_front_legend: c.parl_front_legend ?? null,
           votes_qtn: parseSheetNumber(c.votes_qtn),
           candidate_photo: c.candidate_photo ?? null,
+          gender: c.gender ?? null,
         })),
       proportional
         .filter(p => p.uf && p.parl_front_legend)
@@ -43,7 +44,7 @@ export async function GET() {
     cache = { data, at: Date.now() };
     return NextResponse.json(data);
   } catch (error) {
-    console.error('[Baseline 2022] Falha ao ler planilha, usando estimativa:', error);
-    return NextResponse.json(buildFallbackBaseline());
+    console.error('[Baseline 2022] Falha ao ler planilha, usando dados embutidos:', error);
+    return NextResponse.json(await buildEmbeddedBaseline());
   }
 }

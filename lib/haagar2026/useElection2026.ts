@@ -2,8 +2,7 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 import type { Baseline2022 } from '@/lib/haagar/baseline';
-import { buildFallbackBaseline } from '@/lib/haagar/baseline';
-import { buildModel, snapshotAt, ElectionSnapshot } from './model';
+import { buildModel, snapshotAt, ElectionSnapshot, PhotoPool } from './model';
 import { progressAt } from './control';
 import { useControl } from './useControl';
 
@@ -17,10 +16,29 @@ export function useBaseline2022() {
     fetch('/api/baseline/2022')
       .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((b: Baseline2022) => { if (alive) setBaseline(b); })
-      .catch(() => { if (alive) setBaseline(buildFallbackBaseline()); });
+      .catch(async () => {
+        // Sem API: usa o resultado embutido (carregado sob demanda) ou a estimativa.
+        const m = await import('@/lib/haagar/baseline');
+        const b = await m.buildEmbeddedBaseline().catch(() => m.buildFallbackBaseline());
+        if (alive) setBaseline(b);
+      });
     return () => { alive = false; };
   }, []);
   return baseline;
+}
+
+/** Banco de rostos gerados (vazio se não houver chave da API). */
+export function usePhotoPool() {
+  const [pool, setPool] = useState<PhotoPool | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/2026/photos')
+      .then(r => (r.ok ? r.json() : null))
+      .then(b => { if (alive && b?.enabled) setPool({ female: b.female ?? [], male: b.male ?? [] }); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return pool;
 }
 
 /** Relógio que avança a cada segundo (para recalcular o progresso). */
@@ -36,10 +54,11 @@ export function useNow(intervalMs = TICK_MS) {
 export function useElection2026() {
   const control = useControl();
   const baseline = useBaseline2022();
+  const photos = usePhotoPool();
   const now = useNow();
   const { state, clockOffset } = control;
 
-  const model = useMemo(() => (baseline ? buildModel(baseline, state.seed) : null), [baseline, state.seed]);
+  const model = useMemo(() => (baseline ? buildModel(baseline, state.seed, photos) : null), [baseline, state.seed, photos]);
   const progress = progressAt(state, now + clockOffset);
   // Arredonda para não recalcular sem necessidade quando pausado.
   const progressKey = Math.round(progress * 1000) / 1000;

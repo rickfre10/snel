@@ -39,6 +39,7 @@ export function useControl() {
   const modeRef = useRef<Mode>('connecting');
   const channelRef = useRef<BroadcastChannel | null>(null);
   const failures = useRef(0);
+  const [store, setStore] = useState<'redis' | 'memory' | null>(null);
 
   const accept = useCallback((incoming: ControlState, force = false) => {
     const cur = stateRef.current;
@@ -87,7 +88,12 @@ export function useControl() {
         setClockOffset(body.serverNow - (t0 + t1) / 2);
         failures.current = 0;
         if (modeRef.current !== 'server') setModeBoth('server');
-        if (isControlState(body.state)) accept(body.state, true);
+        if (body.store) setStore(body.store);
+        if (isControlState(body.state)) {
+          // Nunca volta para um estado mais antigo (instância do servidor
+          // desatualizada em hospedagem serverless).
+          accept(body.state);
+        }
       } catch {
         if (!alive) return;
         failures.current++;
@@ -113,7 +119,7 @@ export function useControl() {
         const res = await fetch('/api/2026/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(pin ? { 'x-control-pin': pin } : {}) },
-          body: JSON.stringify(action),
+          body: JSON.stringify({ action, base: stateRef.current.updatedAt ? stateRef.current : undefined }),
         });
         const body = await res.json();
         if (res.status === 401) {
@@ -143,5 +149,5 @@ export function useControl() {
   }, [accept]);
 
   const ready = mode !== 'connecting';
-  return { state, dispatch, mode, ready, clockOffset, error };
+  return { state, dispatch, mode, ready, clockOffset, error, store };
 }

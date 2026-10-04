@@ -10,9 +10,10 @@
 
 import { districtsData, partyData } from '@/lib/staticData';
 import type { Baseline2022 } from '@/lib/haagar/baseline';
+import { previousDistrictResultsData } from '@/lib/previousElectionData';
 import { FRONT_ORDER, STATE_ORDER, PR_SEATS_BY_STATE, allocateStatePR, frontColor } from '@/lib/haagar/rules';
 import { calculateDistrictDynamicStatus, DistrictStatusOutput } from '@/lib/statusCalculator';
-import { rngFor, gauss, pick } from './random';
+import { rngFor, gauss, pick, hash } from './random';
 import { fictionalName } from './names';
 
 // ---------------------------------------------------------------- Tipos ----
@@ -22,7 +23,9 @@ export interface ModelCandidate {
   party: string | null;
   name: string;
   photo: string | null;
-  incumbent: boolean;      // venceu este distrito em 2022
+  gender: 'F' | 'M' | null;
+  incumbent: boolean;      // deputado atual (venceu este distrito em 2022) e concorre de novo
+  incumbentParty: boolean; // frente que venceu em 2022, com outro candidato (deputado não concorre)
   rerun: boolean;          // disputou este distrito em 2022
   finalVotes: number;
   bias: number;            // viés (p.p.) dos votos apurados primeiro
@@ -62,7 +65,9 @@ export interface CandidateResult {
   party: string | null;
   name: string;
   photo: string | null;
+  gender: 'F' | 'M' | null;
   incumbent: boolean;
+  incumbentParty: boolean;
   rerun: boolean;
   votes: number;
   pct: number;
@@ -98,7 +103,12 @@ export interface DistrictSnapshot {
     total: number;
     turnout: number;
     marginPct: number;
+    pct: number;                 // % do deputado eleito em 2022
+    deputyRunning: boolean;      // o deputado atual disputa 2026
+    candidates: { name: string; front: string; party: string | null; votes: number; pct: number; photo: string | null; gender: 'F' | 'M' | null }[];
   };
+  // ---- 2018 (vencedor e %)
+  y2018: { front: string; pct: number } | null;
   flipped: boolean;        // final e com frente diferente de 2022
   leadingFlip: boolean;    // liderança (ainda não final) diferente de 2022
 }
@@ -196,7 +206,10 @@ function reportedFraction(p: number, delay: number, curve: number): number {
 
 // ------------------------------------------------------------- Modelo -----
 
-export function buildModel(baseline: Baseline2022, seed: number): ElectionModel {
+/** Banco de rostos para candidatos sem foto (ver /api/2026/photos). */
+export interface PhotoPool { female: string[]; male: string[] }
+
+export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoPool | null): ElectionModel {
   const natR = rngFor(seed, 'national');
   const nationalSwing: Record<string, number> = {};
   FRONT_ORDER.forEach(f => { nationalSwing[f] = gauss(natR) * 3.2; });
@@ -235,7 +248,8 @@ export function buildModel(baseline: Baseline2022, seed: number): ElectionModel 
     const shares = normalize(finalShares);
 
     const baseTotal = base?.total && base.total > 0 ? base.total : d.voters_qtn * 0.72;
-    const total = Math.round(Math.min(d.voters_qtn * 0.96, baseTotal * (1 + natTurnout + gauss(r) * 0.035)));
+    // A base de 2022 soma ~100% dos eleitores cadastrados; 2026 varia em torno dela.
+    const total = Math.round(baseTotal * (1 + natTurnout + gauss(r) * 0.035));
 
     const fronts = Object.keys(shares);
     const votes = apportion(fronts.map(f => shares[f]), total);
@@ -247,12 +261,15 @@ export function buildModel(baseline: Baseline2022, seed: number): ElectionModel 
       const rerun = !!prevCand && cr() < (wasWinner ? 0.78 : 0.4);
       const parties = partiesOfFront(f);
       const party = rerun && prevCand?.party ? prevCand.party : (parties.length ? pick(cr, parties).party_legend : f);
+      const gender: 'F' | 'M' | null = rerun && prevCand ? prevCand.gender ?? null : cr() < 0.45 ? 'F' : 'M';
       return {
         front: f,
         party,
-        name: rerun && prevCand ? prevCand.name : fictionalName(cr),
+        name: rerun && prevCand ? prevCand.name : fictionalName(cr, gender),
         photo: rerun && prevCand ? prevCand.photo : null,
+        gender,
         incumbent: rerun && wasWinner,
+        incumbentParty: f === base?.winnerFront && !(rerun && wasWinner),
         rerun,
         finalVotes: votes[i],
         bias: gauss(cr) * 5.5,
@@ -273,6 +290,22 @@ export function buildModel(baseline: Baseline2022, seed: number): ElectionModel 
       candidates: candidates.sort((a, b) => b.finalVotes - a.finalVotes),
     };
   });
+
+  // Rostos gerados para quem não tem foto: escolha determinística e sem repetir.
+  if (photos && (photos.female.length || photos.male.length)) {
+    const used = new Set<string>();
+    districts.forEach(d => d.candidates.forEach(c => { if (c.photo) used.add(c.photo); }));
+    districts.forEach(d => d.candidates.forEach(c => {
+      if (c.photo) return;
+      const g = c.gender ?? (hash(seed, d.id, c.front, 'g') % 2 ? 'F' : 'M');
+      const pool = (g === 'F' ? photos.female : photos.male).length ? (g === 'F' ? photos.female : photos.male) : (photos.female.length ? photos.female : photos.male);
+      const start = hash(seed, d.id, c.front, 'photo') % pool.length;
+      for (let k = 0; k < pool.length; k++) {
+        const url = pool[(start + k) % pool.length];
+        if (!used.has(url)) { c.photo = url; used.add(url); break; }
+      }
+    }));
+  }
 
   const states: Record<string, ModelState> = {};
   STATE_ORDER.forEach(uf => {
@@ -335,8 +368,8 @@ export function snapshotAt(
 
     const candidates: CandidateResult[] = d.candidates
       .map(c => ({
-        front: c.front, party: c.party, name: c.name, photo: c.photo,
-        incumbent: c.incumbent, rerun: c.rerun,
+        front: c.front, party: c.party, name: c.name, photo: c.photo, gender: c.gender,
+        incumbent: c.incumbent, incumbentParty: c.incumbentParty, rerun: c.rerun,
         votes: votes[c.front] ?? 0,
         pct: counted > 0 ? ((votes[c.front] ?? 0) / counted) * 100 : 0,
       }))
@@ -388,7 +421,17 @@ export function snapshotAt(
         total: base?.total ?? 0,
         turnout: base && base.total > 0 ? (base.total / d.voters) * 100 : 0,
         marginPct: prevSorted.length > 1 ? prevSorted[0][1] - prevSorted[1][1] : prevSorted[0]?.[1] ?? 0,
+        pct: prevFront ? prevShares[prevFront] ?? 0 : 0,
+        deputyRunning: d.candidates.some(c => c.incumbent),
+        candidates: (base?.candidates ?? []).slice(0, 5).map(c => ({
+          name: c.name, front: c.front, party: c.party, votes: c.votes, photo: c.photo, gender: c.gender ?? null,
+          pct: base && base.total > 0 ? (c.votes / base.total) * 100 : 0,
+        })),
       },
+      y2018: (() => {
+        const r = previousDistrictResultsData.find(x => x.district_id === d.id);
+        return r ? { front: r.winner_2018_legend, pct: r.winner_2018_percentage } : null;
+      })(),
       flipped: isFinal && !!leader && !!prevFront && leader.front !== prevFront,
       leadingFlip: !isFinal && !!leader && !!prevFront && leader.front !== prevFront,
     };
