@@ -50,3 +50,48 @@
 .tv-bg-float-a { animation: tv-bg-float 26s ease-in-out infinite; }
 .tv-bg-float-b { animation: tv-bg-float 32s ease-in-out infinite reverse; }
 @media (prefers-reduced-motion: reduce) { .tv-bg-drift, .tv-bg-orbit, .tv-bg-orbit-rev, .tv-bg-float-a, .tv-bg-float-b { animation: none; } }
+
+/* Vinheta "ÚLTIMA HORA" (components/tv/BreakingStinger.tsx), disparada pelo
+ * operador. Cada peça tem entrada, espera e saída numa só animação; o meio
+ * cobre a tela inteira. */
+.tv-stinger { animation-duration: var(--tv-stinger-ms, 3600ms); animation-fill-mode: both; animation-timing-function: linear; }
+/* Smartv: íris circulares (creme por baixo, vermelho por cima) */
+@keyframes tv-stinger-iris-a {
+  0% { clip-path: circle(0px at 50% 50%); animation-timing-function: cubic-bezier(.7,0,.2,1); }
+  15%, 86% { clip-path: circle(1150px at 50% 50%); animation-timing-function: cubic-bezier(.7,0,.3,1); }
+  100% { clip-path: circle(0px at 50% 50%); }
+}
+@keyframes tv-stinger-iris-b {
+  0%, 4% { clip-path: circle(0px at 50% 50%); animation-timing-function: cubic-bezier(.7,0,.2,1); }
+  19%, 76% { clip-path: circle(1150px at 50% 50%); animation-timing-function: cubic-bezier(.7,0,.3,1); }
+  90%, 100% { clip-path: circle(0px at 50% 50%); }
+}
+.tv-stinger-iris-a { animation-name: tv-stinger-iris-a; }
+.tv-stinger-iris-b { animation-name: tv-stinger-iris-b; }
+@keyframes tv-stinger-ring { from { transform: scale(0.15); opacity: 1; } to { transform: scale(2.4); opacity: 0; } }
+.tv-stinger-ring { animation: tv-stinger-ring 2100ms cubic-bezier(.2,.6,.3,1) infinite both; }
+@keyframes tv-stinger-text {
+  0%, 14% { opacity: 0; transform: scale(1.35); letter-spacing: 0.12em; animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+  30%, 70% { opacity: 1; transform: scale(1); letter-spacing: -0.02em; animation-timing-function: cubic-bezier(.6,0,.8,.4); }
+  78%, 100% { opacity: 0; transform: scale(0.82); letter-spacing: -0.02em; }
+}
+.tv-stinger-text { animation-name: tv-stinger-text; }
+/* SmartvNews: cartões verticais que sobem em cascata */
+@keyframes tv-stinger-bar-a {
+  0% { transform: translateY(110%); animation-timing-function: cubic-bezier(.7,0,.2,1); }
+  16%, 84% { transform: translateY(0); animation-timing-function: cubic-bezier(.7,0,.3,1); }
+  100% { transform: translateY(-110%); }
+}
+@keyframes tv-stinger-bar-b {
+  0%, 5% { transform: translateY(110%); animation-timing-function: cubic-bezier(.7,0,.2,1); }
+  21%, 74% { transform: translateY(0); animation-timing-function: cubic-bezier(.7,0,.3,1); }
+  90%, 100% { transform: translateY(-110%); }
+}
+.tv-stinger-bar-a { animation-name: tv-stinger-bar-a; }
+.tv-stinger-bar-b { animation-name: tv-stinger-bar-b; }
+@keyframes tv-stinger-text-news {
+  0%, 22% { opacity: 0; transform: translateY(120px); animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+  34%, 68% { opacity: 1; transform: none; animation-timing-function: cubic-bezier(.6,0,.8,.4); }
+  76%, 100% { opacity: 0; transform: translateY(-140px); }
+}
+.tv-stinger-text-news { animation-name: tv-stinger-text-news; }

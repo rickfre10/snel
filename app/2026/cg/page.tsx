@@ -19,6 +19,7 @@ import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
 import TelaoScene from '@/components/tv/TelaoScene';
 import PillGrid from '@/components/tv/PillGrid';
 import IdleScreen from '@/components/tv/IdleScreen';
+import BreakingStinger, { useStinger } from '@/components/tv/BreakingStinger';
 import { AnimatedNumber, Avatar, BrandLogo, ElectionLockup, N8Seal, TargetMark, fmtInt, fmtPct, g } from '@/components/tv/ui';
 
 const TICKER_MS = 6000;
@@ -34,7 +35,7 @@ const BACKGROUNDS: Record<string, string> = {
 };
 
 export default function Cg2026() {
-  const { state, snapshot: snap, ready } = useElection2026();
+  const { state, snapshot: snap, ready, clockOffset } = useElection2026();
   const brand = BRANDS[state.brand] ?? BRANDS.smartv;
   const cg = { ...DEFAULT_CG, ...state.cg };
   const text = { ...DEFAULT_CG_TEXT, ...cg.text };
@@ -62,6 +63,9 @@ export default function Cg2026() {
   const prOn = !majorityOn && !districtOn && !!cg.pr?.show;
   const [lastDistrictId, setLastDistrictId] = useState<number | null>(null);
   useEffect(() => { if (cg.district?.id) setLastDistrictId(cg.district.id); }, [cg.district?.id]);
+
+  // ---- Vinheta "ÚLTIMA HORA" em tela cheia (por cima de tudo, só quando o operador solta)
+  const stinger = useStinger(state.stinger, clockOffset, ready);
 
   const [fundo, setFundo] = useState('transparente');
   useEffect(() => {
@@ -150,6 +154,7 @@ export default function Cg2026() {
           </Slide>
         </>
       )}
+      {stinger !== null && <BreakingStinger key={stinger} brand={brand} />}
     </Stage>
   );
 }

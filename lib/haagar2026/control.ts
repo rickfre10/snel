@@ -30,7 +30,11 @@ export interface ControlState {
   cg?: CgVisibility;              // o que o CG (/2026/cg) mostra no ar
   view?: TelaoView;               // o que o telão está mostrando agora (para o CG replicar)
   scenario?: Scenario | null;     // ajuste de votação do operador (null = só a semente)
+  stinger?: StingerCue;           // vinheta "ÚLTIMA HORA" em tela cheia, disparada pelo operador
 }
+
+/** Disparo da vinheta de última hora: cada novo `rev` toca uma vez (telão e CG). */
+export interface StingerCue { rev: number; at: number }  // at = epoch (ms) no relógio do servidor
 
 /** Cena exibida no telão neste momento (publicada pelo próprio telão). */
 export interface TelaoView { scene: SceneId; uf?: string; districtId?: number }
@@ -84,7 +88,8 @@ export type ControlAction =
   | { type: 'setAutoRotate'; value: boolean }
   | { type: 'setCg'; patch: Partial<CgVisibility> }
   | { type: 'setCgText'; patch: Partial<CgText> }
-  | { type: 'setView'; view: TelaoView };
+  | { type: 'setView'; view: TelaoView }
+  | { type: 'stinger' };
 
 export const SPEED_PRESETS = [
   { label: 'Lento', speed: 1 },      // ~1h40 até 100%
@@ -169,6 +174,9 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
       break;
     case 'setView':
       next = { ...prev, view: action.view };
+      break;
+    case 'stinger':
+      next = { ...prev, stinger: { rev: (prev.stinger?.rev ?? 0) + 1, at: now } };
       break;
     case 'setCgText': {
       const cg = { ...DEFAULT_CG, ...prev.cg };
