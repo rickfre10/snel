@@ -189,3 +189,47 @@ export function Dumbbells({ rows, max = 40 }: { rows: { legend: string; now: num
     </div>
   );
 }
+
+// --------------------------------------- Cadeiras proporcionais (faixa) --
+/**
+ * Uma marca por cadeira: cheia = garantida, contorno = projetada (ainda pode
+ * mudar), cinza = sem projeção. Ordem pelas frentes com mais cadeiras.
+ */
+export function SeatStrip({ total, guaranteed, projected, size = 18, gap = 4, columns }: {
+  total: number;
+  guaranteed: Record<string, number>;
+  projected: Record<string, number>;   // total projetado por frente (inclui as garantidas)
+  size?: number;
+  gap?: number;
+  columns?: number;
+}) {
+  const fronts = Object.keys(projected).filter(f => (projected[f] ?? 0) > 0)
+    .sort((a, b) => (projected[b] ?? 0) - (projected[a] ?? 0) || (guaranteed[b] ?? 0) - (guaranteed[a] ?? 0));
+  const marks: { front: string | null; sure: boolean }[] = [];
+  fronts.forEach(f => {
+    const g = Math.min(guaranteed[f] ?? 0, projected[f] ?? 0);
+    for (let i = 0; i < g; i++) marks.push({ front: f, sure: true });
+  });
+  fronts.forEach(f => {
+    const g = Math.min(guaranteed[f] ?? 0, projected[f] ?? 0);
+    for (let i = g; i < (projected[f] ?? 0); i++) marks.push({ front: f, sure: false });
+  });
+  // garantidas de cada frente ficam juntas das projetadas da mesma frente
+  marks.sort((a, b) => fronts.indexOf(a.front!) - fronts.indexOf(b.front!) || Number(b.sure) - Number(a.sure));
+  while (marks.length < total) marks.push({ front: null, sure: false });
+  return (
+    <div className="flex flex-wrap" style={{ gap, width: columns ? columns * size + (columns - 1) * gap : undefined }}>
+      {marks.slice(0, total).map((m, i) => {
+        const c = m.front ? frontColor(m.front) : null;
+        return (
+          <span key={i} className="rounded-[5px] transition-colors duration-700"
+            style={{
+              width: size, height: size,
+              background: c ? (m.sure ? c : `${c}33`) : 'rgb(var(--tv-border) / 0.6)',
+              boxShadow: c && !m.sure ? `inset 0 0 0 2px ${c}` : undefined,
+            }} />
+        );
+      })}
+    </div>
+  );
+}

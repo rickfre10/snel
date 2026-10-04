@@ -12,6 +12,7 @@ import { districtsData } from '@/lib/staticData';
 const SCENES: { id: SceneId; label: string }[] = [
   { id: 'geral', label: 'Visão geral' },
   { id: 'parlamento', label: 'Parlamento' },
+  { id: 'proporcional', label: 'Proporcional' },
   { id: 'estado', label: 'Estado' },
   { id: 'distrito', label: 'Distrito' },
   { id: 'viradas', label: 'Viradas' },
@@ -159,6 +160,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
 
       <CgUrgentSection state={state} dispatch={dispatch} />
       <CgDistrictSection state={state} dispatch={dispatch} snap={snap} />
+      <CgPrSection state={state} dispatch={dispatch} snap={snap} />
       <CgTextEditor state={state} dispatch={dispatch} />
 
       <Section title="CG (sobre o vídeo)" right={<a href="/2026/cg?fundo=cena" target="_blank" rel="noreferrer" className="text-xs underline text-white/70">abrir CG ↗</a>}>
@@ -219,7 +221,7 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
   const set = (patch: Partial<CgText>) => { setTouched(true); setDraft(d => ({ ...d, ...patch })); };
   const send = (show: boolean) => {
     const district = state.cg?.district;
-    if (show && (district?.show || state.cg?.majority)) dispatch({ type: 'setCg', patch: { majority: false, ...(district ? { district: { ...district, show: false } } : {}) } });
+    if (show && (district?.show || state.cg?.majority || state.cg?.pr?.show)) dispatch({ type: 'setCg', patch: { majority: false, pr: { uf: state.cg?.pr?.uf ?? 'auto', show: false }, ...(district ? { district: { ...district, show: false } } : {}) } });
     dispatch({ type: 'setCgText', patch: { ...draft, show } });
     setTouched(false);
   };
@@ -278,9 +280,36 @@ function MajorityToggle({ cg, snap, dispatch }: { cg: typeof DEFAULT_CG; snap: E
   const who = conf ? `${conf.legend} forma a maioria (${conf.confirmed})` : proj ? `${proj.legend} projeta maioria (${proj.projected})` : 'ninguém chegou à maioria ainda';
   return (
     <div className="flex items-center gap-2 mt-2">
-      <Btn active={!!cg.majority} onClick={() => dispatch({ type: 'setCg', patch: { majority: !cg.majority } })}>Tarja de maioria</Btn>
+      <Btn active={!!cg.majority} onClick={() => dispatch({ type: 'setCg', patch: { majority: !cg.majority, ...(!cg.majority && cg.pr?.show ? { pr: { ...cg.pr, show: false } } : {}) } })}>Tarja de maioria</Btn>
       <span className="text-[11px] text-white/60 min-w-0 truncate">{who}</span>
     </div>
+  );
+}
+
+// ----------------------------------------------- CG · proporcional -------
+function CgPrSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
+  const cg = { ...DEFAULT_CG, ...state.cg };
+  const cur = cg.pr ?? { show: false, uf: 'auto' };
+  const put = (uf: string) => dispatch({
+    type: 'setCg',
+    // Uma tarja manual por vez
+    patch: { pr: { show: true, uf }, majority: false, ...(cg.district ? { district: { ...cg.district, show: false } } : {}), text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
+  });
+  const options = [{ id: 'auto', label: 'Rodízio' }, { id: 'BR', label: 'Haagar' }, ...STATE_ORDER.map(u => ({ id: u, label: snap?.states[u]?.name ?? u }))];
+  const guaranteed = snap ? STATE_ORDER.reduce((a, u) => a + Object.values(snap.states[u].prGuaranteed).reduce((x, y) => x + y, 0), 0) : 0;
+  return (
+    <Section title="CG · proporcional" right={cur.show ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/25 text-red-200">NO AR</span> : null}>
+      <div className="grid grid-cols-4 gap-2">
+        {options.map(o => (
+          <Btn key={o.id} active={cur.show && cur.uf === o.id} onClick={() => put(o.id)} className="truncate">{o.label}</Btn>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <span className="flex-1 text-[11px] text-white/60">{guaranteed} de 93 cadeiras proporcionais já garantidas</span>
+        {cur.show && <Btn danger onClick={() => dispatch({ type: 'setCg', patch: { pr: { ...cur, show: false } } })}>Tirar do ar</Btn>}
+      </div>
+      <p className="text-[11px] text-white/50 mt-2">Cadeiras projetadas por frente, quantas já estão garantidas (✓) e o % do voto proporcional. Rodízio alterna Haagar e os estados a cada 8 s.</p>
+    </Section>
   );
 }
 
@@ -293,7 +322,7 @@ function CgDistrictSection({ state, dispatch, snap }: { state: ControlState; dis
   const put = (id: number) => dispatch({
     type: 'setCg',
     // Colocar o distrito tira o texto livre do ar (uma tarja por vez)
-    patch: { district: { show: true, id }, majority: false, text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
+    patch: { district: { show: true, id }, majority: false, pr: { uf: cg.pr?.uf ?? 'auto', show: false }, text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
   });
   return (
     <Section title="CG · distrito" right={cur?.show ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/25 text-red-200">NO AR</span> : null}>

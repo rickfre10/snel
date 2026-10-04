@@ -65,7 +65,7 @@ export default function SceneGeral({ snap, onDistrict }: { snap: ElectionSnapsho
                 </div>
                 <div className="text-[14px] text-tv-muted mt-0.5 tabular-nums">
                   {f.districtWon} distr. + {f.prConfirmed} prop. confirmadas
-                  {(f.districtLeading + f.prProjected) > 0 && <> · +{f.districtLeading + f.prProjected} em projeção</>}
+                  {(f.districtLeading + f.prProjected) > 0 && <> · projeção +{f.districtLeading} distr. +{f.prProjected} prop.</>}
                 </div>
                 <div className="text-[14px] mt-1 flex items-center gap-2">
                   <span className="text-tv-muted">Voto proporcional</span>

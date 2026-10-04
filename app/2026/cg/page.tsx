@@ -14,7 +14,7 @@ import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
-import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, frontName, textOn } from '@/lib/haagar/rules';
+import { FRONT_ORDER, MAJORITY, PR_BARRIER_PERCENT, PR_SEATS_BY_STATE, STATE_ORDER, TOTAL_PR_SEATS, TOTAL_SEATS, frontColor, frontName, textOn } from '@/lib/haagar/rules';
 import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
 import TelaoScene from '@/components/tv/TelaoScene';
 import PillGrid from '@/components/tv/PillGrid';
@@ -59,6 +59,7 @@ export default function Cg2026() {
   const [lastMajority, setLastMajority] = useState<{ front: string; projected: boolean } | null>(null);
   useEffect(() => { if (majority) setLastMajority(majority); }, [majority?.front, majority?.projected]); // eslint-disable-line react-hooks/exhaustive-deps
   const districtOn = !majorityOn && !!cg.district?.show && !!snap?.districtById[cg.district.id];
+  const prOn = !majorityOn && !districtOn && !!cg.pr?.show;
   const [lastDistrictId, setLastDistrictId] = useState<number | null>(null);
   useEffect(() => { if (cg.district?.id) setLastDistrictId(cg.district.id); }, [cg.district?.id]);
 
@@ -112,14 +113,17 @@ export default function Cg2026() {
 
       {snap && (
         <>
-          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !urgentOn} from="bottom">
+          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !prOn && !urgentOn} from="bottom">
             <SeatsTarja snap={snap} brand={brand} count={cg.count} raised={cg.ticker} />
           </Slide>
-          <Slide show={manualTextOn && !districtOn && !majorityOn && !urgentOn} from="bottom">
+          <Slide show={manualTextOn && !districtOn && !majorityOn && !prOn && !urgentOn} from="bottom">
             <TextTarja text={text} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={districtOn && !urgentOn} from="bottom">
             {manualDistrict && <DistrictTarja d={manualDistrict} brand={brand} raised={cg.ticker} />}
+          </Slide>
+          <Slide show={prOn && !urgentOn} from="bottom">
+            <PrTarja snap={snap} uf={cg.pr?.uf ?? 'auto'} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={majorityOn && !urgentOn} from="bottom">
             {lastMajority && <MajorityTarja snap={snap} front={lastMajority.front} projected={lastMajority.projected} brand={brand} raised={cg.ticker} />}
@@ -221,13 +225,14 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
         {fronts.map(f => {
           const c = frontColor(f.legend);
           const fg = textOn(c);
-          const extra = count === 'projecao' ? f.confirmed : f.districtLeading + f.prProjected;
+          const dist = count === 'projecao' ? f.districtWon + f.districtLeading : f.districtWon;
+          const prop = count === 'projecao' ? f.prConfirmed + f.prProjected : f.prConfirmed;
           return (
             <div key={f.legend} className="flex-1 h-full rounded-[18px] flex flex-col items-center justify-center min-w-0" style={{ background: c, color: fg }}>
               <div className="text-[26px] font-extrabold leading-none tracking-wide">{f.legend}</div>
               <div className="text-[64px] font-black leading-none tabular-nums mt-1"><AnimatedNumber value={value(f)} /></div>
-              <div className="text-[16px] font-bold leading-none mt-1.5 opacity-80 tabular-nums">
-                {count === 'projecao' ? `${extra} ${extra === 1 ? 'eleito' : 'eleitos'}` : extra > 0 ? `+${extra} na frente` : ' '}
+              <div className="text-[16px] font-bold leading-none mt-1.5 opacity-85 tabular-nums uppercase whitespace-nowrap">
+                {`${dist} dist · ${prop} prop`}
               </div>
             </div>
           );
@@ -433,6 +438,82 @@ function CandidateBox({ c, first, final, brand, ink, line, counted }: { c: Candi
         <div className={`${first ? 'text-[50px]' : 'text-[42px]'} font-black leading-none tabular-nums`}>{counted ? fmtPct(c.pct) : '—'}</div>
         <div className="text-[16px] font-semibold opacity-70 tabular-nums mt-1">{counted ? `${fmtInt(c.votes)} votos` : ' '}</div>
       </div>
+    </div>
+  );
+}
+
+// ------------------------------------------- Tarja do proporcional ------
+const PR_ROTATE_MS = 8000;
+
+/** Voto proporcional de um estado (ou nacional): cadeiras projetadas, garantidas e %. */
+function PrTarja({ snap, uf, brand, raised }: { snap: ElectionSnapshot; uf: string; brand: typeof BRANDS.smartv; raised: boolean }) {
+  const seq = useMemo(() => ['BR', ...STATE_ORDER], []);
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (uf !== 'auto') return;
+    const id = setInterval(() => setI(n => n + 1), PR_ROTATE_MS);
+    return () => clearInterval(id);
+  }, [uf]);
+  const cur = uf === 'auto' ? seq[i % seq.length] : uf;
+
+  const st = cur !== 'BR' ? snap.states[cur] ?? null : null;
+  const seatsTotal = st ? PR_SEATS_BY_STATE[cur] ?? 0 : TOTAL_PR_SEATS;
+  const proj: Record<string, number> = {};
+  const sure: Record<string, number> = {};
+  const pct: Record<string, number> = {};
+  FRONT_ORDER.forEach(f => {
+    if (st) { proj[f] = st.prSeats[f] ?? 0; sure[f] = st.prGuaranteed[f] ?? 0; pct[f] = st.prPct[f] ?? 0; }
+    else {
+      proj[f] = STATE_ORDER.reduce((a, u) => a + (snap.states[u].prSeats[f] ?? 0), 0);
+      sure[f] = STATE_ORDER.reduce((a, u) => a + (snap.states[u].prGuaranteed[f] ?? 0), 0);
+      pct[f] = snap.frontByLegend[f]?.prPct ?? 0;
+    }
+  });
+  const fronts = FRONT_ORDER.filter(f => proj[f] > 0 || pct[f] > 0)
+    .sort((a, b) => proj[b] - proj[a] || pct[b] - pct[a]).slice(0, 6);
+  const g = Object.values(sure).reduce((a, b) => a + b, 0);
+  const reported = st ? st.reported : snap.reported;
+  const final = st ? st.prSeatsFinal : snap.reported >= 100;
+  const place = caseOf(brand, st ? st.name : 'Haagar');
+  const ink = tarjaInk(brand);
+
+  return (
+    <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      <div key={cur} className="w-[310px] shrink-0 flex flex-col justify-center pl-8 pr-4 tv-scene-in"
+        style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
+        <span className={`text-[24px] leading-none ${brand.cgPaper ? 'text-tv-ink font-bold' : 'opacity-85 font-normal'}`}>{caseOf(brand, 'Proporcional')}</span>
+        <span className={`mt-1.5 whitespace-nowrap leading-[1.05] ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(place, 262, 48) }}>{place}</span>
+        <span className={`text-[18px] mt-1.5 font-bold ${brand.cgPaper ? 'text-tv-ink/70' : 'opacity-80'}`}>{seatsTotal} {seatsTotal === 1 ? 'cadeira' : 'cadeiras'}</span>
+      </div>
+
+      <div key={`${cur}-boxes`} className={`flex-1 flex items-center gap-3 py-4 pr-4 tv-scene-in ${brand.cgBlockFade ? 'pl-2' : 'pl-4'}`}>
+        {fronts.length === 0 && <span className="text-[30px] font-bold uppercase px-4" style={{ color: ink }}>Aguardando urnas</span>}
+        {fronts.map(f => {
+          const c = frontColor(f);
+          const fg = textOn(c);
+          const below = reported > 0 && pct[f] < PR_BARRIER_PERCENT && proj[f] === 0;
+          return (
+            <div key={f} className="flex-1 h-full rounded-[18px] flex flex-col items-center justify-center min-w-0" style={{ background: c, color: fg, opacity: below ? 0.55 : 1 }}>
+              <div className="text-[24px] font-extrabold leading-none tracking-wide">{f}</div>
+              <div className="text-[58px] font-black leading-none tabular-nums mt-1"><AnimatedNumber value={proj[f]} /></div>
+              <div className="text-[15px] font-bold leading-none mt-1.5 opacity-85 tabular-nums uppercase whitespace-nowrap">
+                {below ? `${fmtPct(pct[f])} · barreira` : `${sure[f]}✓ · ${fmtPct(pct[f])}`}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="w-[250px] shrink-0 flex flex-col justify-center px-6" style={{ color: ink, borderLeft: `1px solid ${brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.15)'}` }}>
+        <div className="text-[18px] font-bold uppercase tracking-wider opacity-80">{caseOf(brand, final ? 'Resultado' : 'Garantidas')}</div>
+        <div className="text-[52px] font-black leading-none tabular-nums">{final ? seatsTotal : g}<span className="text-[24px] opacity-70"> / {seatsTotal}</span></div>
+        <div className="mt-2 h-2.5 rounded-full overflow-hidden" style={{ background: brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.2)' }}>
+          <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${seatsTotal ? ((final ? seatsTotal : g) / seatsTotal) * 100 : 0}%`, background: brand.cgPaper ? 'rgb(var(--tv-accent))' : 'rgb(var(--tv-accent2))' }} />
+        </div>
+        <div className="text-[16px] font-semibold mt-1.5 opacity-85">{`${fmtPct(reported)} apurado`}</div>
+      </div>
+      {brand.cgPaper && <PillStrip />}
     </div>
   );
 }

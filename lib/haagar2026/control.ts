@@ -5,7 +5,7 @@
 
 import type { BrandId } from '@/lib/brand';
 
-export type SceneId = 'geral' | 'parlamento' | 'estado' | 'distrito' | 'viradas' | 'comparativo' | 'idle';
+export type SceneId = 'geral' | 'parlamento' | 'proporcional' | 'estado' | 'distrito' | 'viradas' | 'comparativo' | 'idle';
 
 export interface ControlFocus {
   scene: SceneId;
@@ -42,11 +42,15 @@ export interface CgVisibility {
   place?: string;     // texto do selo acima do "AO VIVO" (ex.: "São Pedro, MA")
   text?: CgText;     // tarja de texto livre (manchete)
   district?: CgDistrict; // tarja de um distrito escolhido pelo operador
+  pr?: CgPr;             // tarja do voto proporcional
   majority?: boolean;    // tarja de maioria (frente que forma/projeta maioria)
   autoResults?: boolean; // cada distrito definido entra sozinho no ar (15 s cada, fila)
   queueSkip?: number;    // incrementar = pula o item urgente atual
   queueClear?: number;   // incrementar = esvazia a fila urgente
 }
+
+/** Tarja do proporcional: 'auto' = rodízio (nacional + estados), 'BR' = nacional, ou a UF. */
+export interface CgPr { show: boolean; uf: string }
 
 /** Tarja de distrito (líder × 2º, apuração e situação). */
 export interface CgDistrict { show: boolean; id: number }

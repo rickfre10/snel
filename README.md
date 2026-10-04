@@ -38,8 +38,9 @@ Cenas (navegação no topo, tudo clicável/tocável):
 
 - **Visão geral** — mapa hexagonal (modos 2026, 2022, viradas, swing por frente e % apurado), corrida pela maioria e projeção de cadeiras por frente com saldo vs 2022.
 - **Parlamento** — hemiciclo 2026 (confirmadas × projeção), simulador de coalizão e parlamento de 2022.
-- **Estados** — mapa do estado, voto proporcional 2026 × 2022, bancada distrital + proporcional.
-- **Distrito** — candidatos (com selos de deputado atual e partido incumbente), status (manteve / ganhou / liderando), deputado atual, histórico 2018 · 2022 · 2026 por frente, margem e votos válidos.
+- **Proporcional** — as 93 cadeiras proporcionais: garantidas (cheias) × projetadas (contorno, ainda podem mudar), % por frente vs 2022 e um cartão por estado.
+- **Estados** — mapa do estado, voto proporcional 2026 × 2022 com as cadeiras garantidas/projetadas, bancada distrital + proporcional.
+- **Distrito** — candidatos (com selos de deputado atual e partido incumbente), status (manteve / ganhou / liderando), deputado atual, histórico 2018 · 2022 · 2026 por frente (com o voto proporcional estimado no distrito), margem e votos válidos.
 - **Viradas** — matriz "de quem para quem", saldo por frente, viradas confirmadas e em andamento.
 - **2022 × 2026** — dispersão distrito a distrito (votação da frente e margem) e maiores avanços/quedas.
 
@@ -53,7 +54,9 @@ Vinheta de espera (idle): Smartv com a grade de pílulas deslizando; SmartvNews 
 
 **Urgência (automático, seção "CG · urgência")**: cada distrito que é **definido** entra sozinho no CG por **15 s**; se vários saem juntos, entram em fila, um depois do outro. O plantão de **última hora** (maioria atingida; viradas, quando os resultados automáticos estão desligados) também entra sozinho. A urgência **passa por cima de qualquer outra tarja** (cadeiras, texto livre, distrito). O CG detecta tudo sozinho, sem depender do telão estar aberto. Botões **Pular atual** e **Limpar fila** no controle.
 
-**Tarja de maioria**: quando uma frente atinge a maioria, entra sozinha (como urgência, 15 s) uma tarja na cor da frente: "X forma a maioria", com o nome da frente e as cadeiras. No controle (seção "CG"), o botão **Tarja de maioria** coloca essa tarja no ar quando quiser; antes da maioria confirmada ela mostra "X projeta maioria". Pelo controle (seção "CG") o operador liga/desliga as caixas de cadeiras, a faixa de distritos e o selo/logo, e escolhe contar **eleitos** ou **projeção**. Use como fonte de navegador no OBS/vMix (fundo transparente) ou com chroma (`?fundo=verde`). Com `?fundo=telao`, o CG mostra o telão (a cena que está aberta em `/2026` agora) reduzido dentro de uma moldura de TV, acima das tarjas.
+**Tarja de maioria**: quando uma frente atinge a maioria, entra sozinha (como urgência, 15 s) uma tarja na cor da frente: "X forma a maioria", com o nome da frente e as cadeiras. No controle (seção "CG"), o botão **Tarja de maioria** coloca essa tarja no ar quando quiser; antes da maioria confirmada ela mostra "X projeta maioria". **Tarja do proporcional** (seção "CG · proporcional"): cadeiras proporcionais projetadas por frente, quantas já estão garantidas (✓) e o % — de Haagar, de um estado ou em **rodízio** (nacional + estados, 8 s cada). Nas caixas de cadeiras, cada frente mostra quantas são distritais e quantas proporcionais.
+
+Pelo controle (seção "CG") o operador liga/desliga as caixas de cadeiras, a faixa de distritos e o selo/logo, e escolhe contar **eleitos** ou **projeção**. Use como fonte de navegador no OBS/vMix (fundo transparente) ou com chroma (`?fundo=verde`). Com `?fundo=telao`, o CG mostra o telão (a cena que está aberta em `/2026` agora) reduzido dentro de uma moldura de TV, acima das tarjas.
 
 Atalhos discretos: **C** (ou segurar o logo por 1 s) abre o controle; **F** tela cheia; **Esc** fecha. A troca de emissora (Smartv ⇄ SmartvNews) fica no painel de controle.
 
@@ -65,6 +68,8 @@ Tudo em JavaScript, no navegador (`lib/haagar2026/model.ts`):
 2. A partir de uma **semente**, sorteia swings nacional, estadual e local por frente e o resultado final de cada distrito. Candidatos de 2022 podem concorrer de novo (o deputado eleito aparece como tal).
 3. Cada distrito apura num ritmo próprio e os primeiros votos têm um viés que some até o fim — há viradas durante a noite.
 4. As regras são as de 2022: distrital por maioria simples; proporcional por estado com mínimo de votos, barreira de 5% e D'Hondt.
+5. O **proporcional anda com o distrital**: o voto proporcional de cada estado é 70% o voto distrital do estado e 30% a tendência do proporcional de 2022; durante a apuração ele acompanha o desvio das urnas já apuradas.
+6. **Cadeiras proporcionais garantidas** vão sendo distribuídas durante a apuração: uma cadeira é garantida quando nem o pior cenário (todos os votos que faltam indo para as outras frentes, espalhados ou concentrados numa só) tira a cadeira da frente. Com metade dos votos apurados, cerca de 40% das 93 cadeiras já estão garantidas; o resto aparece como projeção e é rearranjado conforme os votos chegam.
 
 Fotos: quem concorreu em 2022 usa a foto da planilha. Os demais (candidatos novos ou sem foto) recebem um rosto do [generated.photos](https://generated.photos) se `GENERATED_PHOTOS_API_KEY` estiver definida — coerente com o gênero, sem repetir e igual em todas as telas. Sem a chave, aparece um avatar com as iniciais. Atenção à licença do generated.photos para uso em TV.
 

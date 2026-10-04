@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, PR_SEATS_BY_STATE, STATE_ORDER, frontColor } from '@/lib/haagar/rules';
 import HexMap, { MapLegend, MapMode } from '../HexMap';
-import { PairedShareBars } from '../charts';
+import { PairedShareBars, SeatStrip } from '../charts';
 import { Chip, Delta, Panel, ProgressBar, StatTile, fmtPct } from '../ui';
 
 export default function SceneEstado({ snap, uf, onUf, onDistrict }: { snap: ElectionSnapshot; uf: string; onUf: (uf: string) => void; onDistrict: (id: number) => void }) {
@@ -21,6 +21,7 @@ export default function SceneEstado({ snap, uf, onUf, onDistrict }: { snap: Elec
     district: st.districtLeads[f] ?? 0,
     districtFinal: st.districtWins[f] ?? 0,
     pr: st.prSeats[f] ?? 0,
+    prSure: st.prGuaranteed[f] ?? 0,
     prev: (st.prevDistrictWins[f] ?? 0) + (st.prev.prSeats[f] ?? 0),
   })).filter(r => r.district + r.pr + r.prev > 0);
 
@@ -50,8 +51,9 @@ export default function SceneEstado({ snap, uf, onUf, onDistrict }: { snap: Elec
         </Panel>
 
         <div className="grid grid-rows-[auto_1fr] gap-6 min-h-0 min-w-0">
-          <Panel kicker={st.prSeatsFinal ? 'Resultado final' : 'Projeção com votos parciais'} title="Voto proporcional"
+          <Panel kicker={st.prSeatsFinal ? 'Resultado final' : `${Object.values(st.prGuaranteed).reduce((a, b) => a + b, 0)} de ${PR_SEATS_BY_STATE[uf]} cadeiras garantidas`} title="Voto proporcional"
             right={<div className="w-40"><ProgressBar value={st.reported} /></div>}>
+            <div className="mb-4"><SeatStrip total={PR_SEATS_BY_STATE[uf] ?? 0} guaranteed={st.prGuaranteed} projected={st.prSeats} size={PR_SEATS_BY_STATE[uf] > 30 ? 20 : 26} gap={4} /></div>
             <PairedShareBars rows={fronts.map(f => ({
               legend: f,
               now: st.prPct[f] ?? 0,
@@ -67,7 +69,7 @@ export default function SceneEstado({ snap, uf, onUf, onDistrict }: { snap: Elec
               <div key={r.legend} className="grid grid-cols-[1fr_80px_80px_80px_90px] items-center py-[3px] border-b border-tv-border/40 text-[18px] tabular-nums">
                 <span className="flex items-center gap-2.5 font-black"><span className="w-3.5 h-3.5 rounded" style={{ background: frontColor(r.legend) }} />{r.legend}</span>
                 <span className="text-right">{r.district}{r.district > r.districtFinal && <span className="text-[13px] text-tv-muted"> ({r.districtFinal}✓)</span>}</span>
-                <span className="text-right">{r.pr}</span>
+                <span className="text-right">{r.pr}{r.pr > r.prSure && <span className="text-[13px] text-tv-muted"> ({r.prSure}✓)</span>}</span>
                 <span className="text-right font-black">{r.district + r.pr}</span>
                 <span className="text-right"><Delta value={r.district + r.pr - r.prev} digits={0} unit="" /></span>
               </div>

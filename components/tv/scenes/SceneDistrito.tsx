@@ -76,8 +76,8 @@ export default function SceneDistrito({ snap, districtId, onDistrict, onUf }: { 
         <div className="grid grid-rows-[auto_1fr] gap-6 min-h-0 min-w-0">
           <IncumbentPanel d={d} />
           <Panel kicker="2018 · 2022 · 2026" title="Histórico do distrito" bodyClassName="flex flex-col gap-3">
-            <div className="grid grid-cols-[64px_1fr_74px_74px_86px] text-[12px] uppercase tracking-wider text-tv-muted font-bold pb-1.5 border-b border-tv-border">
-              <span>Frente</span><span>Candidato 2022</span><span className="text-right">2022</span><span className="text-right">2026</span><span className="text-right">Var.</span>
+            <div className="grid grid-cols-[64px_1fr_70px_70px_76px_70px] text-[12px] uppercase tracking-wider text-tv-muted font-bold pb-1.5 border-b border-tv-border">
+              <span>Frente</span><span>Candidato 2022</span><span className="text-right">2022</span><span className="text-right">2026</span><span className="text-right">Var.</span><span className="text-right" title="Voto proporcional estimado no distrito">Prop.</span>
             </div>
             {fronts.map(f => {
               const c22 = d.prev.candidates.find(c => c.front === f);
@@ -85,12 +85,13 @@ export default function SceneDistrito({ snap, districtId, onDistrict, onUf }: { 
               const p26 = hasData ? d.shares[f] ?? 0 : null;
               const won22 = d.prev.front === f;
               return (
-                <div key={f} className="grid grid-cols-[64px_1fr_74px_74px_86px] items-center text-[17px] -mt-1.5 tabular-nums">
+                <div key={f} className="grid grid-cols-[64px_1fr_70px_70px_76px_70px] items-center text-[17px] -mt-1.5 tabular-nums">
                   <span><FrontPill legend={f} size="sm" /></span>
                   <span className={`truncate ${won22 ? 'font-black' : 'text-tv-muted'}`}>{c22?.name ?? '—'}{won22 && ' ✓'}</span>
                   <span className="text-right">{p22 > 0 ? fmtPct(p22) : '—'}</span>
                   <span className="text-right font-black">{p26 !== null ? fmtPct(p26) : '—'}</span>
                   <span className="text-right">{p26 !== null && p22 > 0 ? <Delta value={p26 - p22} unit="" className="text-[15px]" /> : ''}</span>
+                  <span className="text-right text-tv-muted">{hasData && d.prShares[f] ? fmtPct(d.prShares[f]) : '—'}</span>
                 </div>
               );
             })}
