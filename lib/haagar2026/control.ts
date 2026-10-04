@@ -4,6 +4,7 @@
 // tela recalcula exatamente os mesmos resultados.
 
 import type { BrandId } from '@/lib/brand';
+import type { Scenario } from './model';
 
 export type SceneId = 'geral' | 'parlamento' | 'proporcional' | 'estado' | 'distrito' | 'viradas' | 'comparativo' | 'idle';
 
@@ -28,6 +29,7 @@ export interface ControlState {
   autoRotate: boolean;            // telão alterna cenas sozinho
   cg?: CgVisibility;              // o que o CG (/2026/cg) mostra no ar
   view?: TelaoView;               // o que o telão está mostrando agora (para o CG replicar)
+  scenario?: Scenario | null;     // ajuste de votação do operador (null = só a semente)
 }
 
 /** Cena exibida no telão neste momento (publicada pelo próprio telão). */
@@ -74,7 +76,7 @@ export type ControlAction =
   | { type: 'setProgress'; progress: number }
   | { type: 'step'; delta: number }
   | { type: 'reset' }
-  | { type: 'newSeed'; seed?: number }
+  | { type: 'newSeed'; seed?: number; scenario?: Scenario | null }
   | { type: 'setHold'; uf: string; value: number | null }
   | { type: 'clearHolds' }
   | { type: 'setBrand'; brand: BrandId }
@@ -141,7 +143,7 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
       next = { ...rebased, baseProgress: 0, running: false, holds: {} };
       break;
     case 'newSeed':
-      next = { ...rebased, seed: action.seed ?? Math.floor(Math.random() * 1e9), baseProgress: 0, running: false, holds: {} };
+      next = { ...rebased, seed: action.seed ?? Math.floor(Math.random() * 1e9), scenario: action.scenario ?? null, baseProgress: 0, running: false, holds: {} };
       break;
     case 'setHold': {
       const holds = { ...prev.holds };
