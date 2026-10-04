@@ -28,6 +28,7 @@ export interface BrandTheme {
   programTitle: string;    // Título da cobertura (ex.: "Eleições")
   titleCase: 'upper' | 'lower' | 'none'; // Caixa do título da cobertura e das tarjas
   backdrop: 'arcs' | 'pills';             // Grafismo de fundo: arcos (Smartv) ou pílulas (News)
+  cgSolid: boolean;                       // CG com tarjas sólidas (sem transparência nem degradê vazado)
   fontFamily: string;      // Pilha CSS da fonte principal
   monoFontFamily: string;  // Pilha CSS da fonte numérica
   colors: {
@@ -78,6 +79,7 @@ export const BRANDS: Record<BrandId, BrandTheme> = {
     programTitle: 'Eleições',
     titleCase: 'upper',
     backdrop: 'arcs',
+    cgSolid: true,
     fontFamily: BRAND_FONT,
     monoFontFamily: 'var(--font-jetbrains)',
     colors: SMARTV_COLORS,
@@ -90,6 +92,7 @@ export const BRANDS: Record<BrandId, BrandTheme> = {
     programTitle: 'eleições',
     titleCase: 'lower',
     backdrop: 'pills',
+    cgSolid: false,
     fontFamily: BRAND_FONT,
     monoFontFamily: 'var(--font-jetbrains)',
     colors: {

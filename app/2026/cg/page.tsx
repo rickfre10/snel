@@ -114,6 +114,15 @@ function Slide({ show, from, children }: { show: boolean; from: 'top' | 'bottom'
 // -------------------------------------------------- Tarja de cadeiras -----
 const ALTERNATE_MS = 5000;
 
+// Fundo das tarjas: sólido na Smartv, levemente translúcido na News.
+const tarjaBg = (brand: typeof BRANDS.smartv) => (brand.cgSolid ? 'rgb(var(--tv-tarja))' : 'rgb(var(--tv-tarja) / 0.94)');
+// Bloco em gradiente da esquerda: na Smartv termina sólido (sem vazar para a tarja).
+const blockBg = (brand: typeof BRANDS.smartv) => (brand.cgSolid
+  ? 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 70%)'
+  : 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)');
+/** Tamanho de fonte para o texto caber na largura (fonte pesada ≈ 0,68 em por letra). */
+const fitSize = (text: string, width: number, max: number) => Math.min(max, Math.floor(width / (Math.max(1, text.length) * 0.68)));
+
 function AlternatingBlock({ brand, subject }: { brand: typeof BRANDS.smartv; subject: string }) {
   const [showLogo, setShowLogo] = useState(false);
   useEffect(() => {
@@ -123,10 +132,10 @@ function AlternatingBlock({ brand, subject }: { brand: typeof BRANDS.smartv; sub
   const layer = 'absolute inset-0 flex flex-col justify-center pl-8 transition-all duration-700 ease-out';
   return (
     <div className="relative w-[310px] shrink-0 text-white overflow-hidden"
-      style={{ background: 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)' }}>
+      style={{ background: blockBg(brand) }}>
       <div className={layer} style={{ opacity: showLogo ? 0 : 1, transform: showLogo ? 'translateY(-24px)' : 'none' }}>
         <span className="text-[24px] font-semibold leading-none opacity-85">{caseOf(brand, 'Parlamento')}</span>
-        <span className="text-[50px] font-extrabold leading-[1.05] mt-1">{caseOf(brand, subject)}</span>
+        <span className="font-extrabold leading-[1.05] mt-1 whitespace-nowrap" style={{ fontSize: fitSize(caseOf(brand, subject), 262, 50) }}>{caseOf(brand, subject)}</span>
       </div>
       <div className={layer} style={{ opacity: showLogo ? 1 : 0, transform: showLogo ? 'none' : 'translateY(24px)' }}>
         {brand.logo.kind === 'target' ? (
@@ -151,7 +160,7 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
 
   return (
     <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
-      style={{ bottom: raised ? 138 : 68, background: 'rgb(var(--tv-tarja) / 0.94)', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
       {/* Bloco de abertura em gradiente: alterna logo "eleições" e o assunto */}
       <AlternatingBlock brand={brand} subject={count === 'projecao' ? 'Projeção' : 'Resultados'} />
 
@@ -165,7 +174,7 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
               <div className="text-[26px] font-extrabold leading-none tracking-wide">{f.legend}</div>
               <div className="text-[64px] font-black leading-none tabular-nums mt-1"><AnimatedNumber value={value(f)} /></div>
               <div className="text-[16px] font-bold leading-none mt-1.5 opacity-80 tabular-nums">
-                {count === 'projecao' ? `${extra} eleitos` : extra > 0 ? `+${extra} na frente` : ' '}
+                {count === 'projecao' ? `${extra} ${extra === 1 ? 'eleito' : 'eleitos'}` : extra > 0 ? `+${extra} na frente` : ' '}
               </div>
             </div>
           );
@@ -209,7 +218,7 @@ function TickerBar({ snap, brand }: { snap: ElectionSnapshot; brand: typeof BRAN
   return (
     <div className="absolute left-[104px] right-[104px] bottom-[68px] h-[56px] flex gap-3">
       <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[28px] font-extrabold tabular-nums">{clock}</div>
-      <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: 'rgb(var(--tv-tarja) / 0.94)' }}>
+      <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: tarjaBg(brand) }}>
         <N8Seal size={28} />
         {d ? <DistrictLine key={d.id} d={d} brand={brand} /> : (
           <div className="px-6 text-[26px] font-bold text-white">{caseOf(brand, 'Aguardando as primeiras urnas')}</div>
@@ -257,9 +266,9 @@ function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof
   const long = text.headline.length > 42;
   return (
     <div className="absolute left-[104px] right-[104px] min-h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
-      style={{ bottom: raised ? 138 : 68, background: 'rgb(var(--tv-tarja) / 0.94)', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
       <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 text-white leading-[1.05]"
-        style={{ background: 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)' }}>
+        style={{ background: blockBg(brand) }}>
         <span className="text-[44px] font-normal">{caseOf(brand, text.label1)}</span>
         {text.label2 && <span className="text-[44px] font-normal">{caseOf(brand, text.label2)}</span>}
       </div>
