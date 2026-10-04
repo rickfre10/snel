@@ -6,7 +6,7 @@
 // controle da apuração.
 //
 // Parâmetros de URL:
-//   ?fundo=transparente (padrão) | verde | azul | preto | cena
+//   ?fundo=transparente (padrão) | verde | azul | preto | cena | telao
 import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
@@ -14,7 +14,9 @@ import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
-import { Stage, caseOf } from '@/components/tv/TvChrome';
+import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
+import TelaoScene from '@/components/tv/TelaoScene';
+import IdleScreen from '@/components/tv/IdleScreen';
 import { AnimatedNumber, BrandLogo, N8Seal, TargetMark, fmtPct, g } from '@/components/tv/ui';
 
 const TICKER_MS = 6000;
@@ -25,6 +27,8 @@ const BACKGROUNDS: Record<string, string> = {
   preto: '#000000',
   // Simula uma imagem de estúdio para conferir o CG sem vídeo
   cena: 'linear-gradient(160deg, #6d7f95 0%, #3a4656 45%, #1d232c 100%)',
+  // Replica o que o telão está mostrando (cena publicada pelo /2026)
+  telao: 'telao',
 };
 
 export default function Cg2026() {
@@ -50,16 +54,24 @@ export default function Cg2026() {
   }, []);
 
   return (
-    <Stage brand={brand} background={BACKGROUNDS[fundo]}>
+    <Stage brand={brand} background={fundo === 'telao' ? undefined : BACKGROUNDS[fundo]}>
+      {fundo === 'telao' && (
+        <TvFrame>
+          {state.view?.scene === 'idle' ? <IdleScreen brand={brand} /> : (
+            <>
+              <Backdrop brand={brand} />
+              <TelaoScene brand={brand} snap={snap} scene={state.view?.scene ?? 'geral'} uf={state.view?.uf ?? 'MA'} districtId={state.view?.districtId ?? 201} />
+            </>
+          )}
+        </TvFrame>
+      )}
       {/* Logo da emissora no canto superior direito */}
       <Slide show={cg.bug} from="top">
         <div className="absolute right-[104px] top-[72px]" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}>
           {brand.logo.kind === 'target' ? (
             <div className="flex flex-col items-center gap-2 text-white">
               <TargetMark size={72} />
-              <span className="rounded-[8px] bg-tv-tarja/90 px-2.5 py-0.5 text-[18px] font-extrabold inline-flex items-center gap-1.5 leading-tight">
-                <span className="w-2 h-2 rounded-full bg-tv-live tv-pulse" />{caseOf(brand, 'Ao vivo')}
-              </span>
+              <span className="text-[20px] font-extrabold tracking-wide leading-none">{caseOf(brand, 'Ao vivo')}</span>
             </div>
           ) : (
             <div className="opacity-90"><BrandLogo brand={brand} size={52} color="#ffffff" /></div>
@@ -261,6 +273,33 @@ function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof
           <span className="rounded-full px-6 py-2 text-[36px] font-black" style={{ background: frontColor(front), color: textOn(frontColor(front)) }}>{front}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+// ------------------------------------------------ Telão em moldura de TV --
+// O telão (1920×1080) reduzido dentro de uma "TV", acima das tarjas do CG.
+const TV_W = 1180;                 // largura da tela dentro da moldura
+const TV_H = Math.round(TV_W * 9 / 16);
+const TV_TOP = 40;
+
+function TvFrame({ children }: { children: React.ReactNode }) {
+  const scale = TV_W / 1920;
+  return (
+    <div className="absolute pointer-events-none" style={{ left: (1920 - TV_W) / 2 - 22, top: TV_TOP }}>
+      {/* moldura */}
+      <div className="relative rounded-[30px] p-[22px] pb-[30px]"
+        style={{ background: 'linear-gradient(180deg, #2a2a30 0%, #121216 100%)', boxShadow: '0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.6)' }}>
+        <div className="relative overflow-hidden rounded-[10px] bg-tv-bg" style={{ width: TV_W, height: TV_H, boxShadow: 'inset 0 0 0 2px rgba(0,0,0,0.8)' }}>
+          <div className="absolute left-0 top-0 font-tv text-tv-text" style={{ width: 1920, height: 1080, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+            {children}
+          </div>
+          {/* reflexo sutil da tela */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(125deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 35%)' }} />
+        </div>
+        {/* LED */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-[11px] w-2 h-2 rounded-full bg-tv-live/80" />
+      </div>
     </div>
   );
 }

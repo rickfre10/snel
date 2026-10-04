@@ -35,24 +35,26 @@ export function Stage({ brand, children, background }: { brand: BrandTheme; chil
   );
 }
 
-function Backdrop({ brand }: { brand: BrandTheme }) {
+/** Fundo animado da marca: movimentos lentos e contínuos (não competem com os dados). */
+export function Backdrop({ brand }: { brand: BrandTheme }) {
   if (brand.backdrop === 'pills') {
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(1200px 700px at 85% -10%, rgb(var(--tv-bg-glow) / 0.55), transparent 60%), radial-gradient(900px 600px at -5% 110%, rgb(var(--tv-accent2) / 0.25), transparent 60%)' }} />
+        <div className="absolute inset-[-20%] tv-bg-drift" style={{ background: 'radial-gradient(1200px 700px at 85% 10%, rgb(var(--tv-bg-glow) / 0.55), transparent 60%), radial-gradient(900px 600px at 5% 95%, rgb(var(--tv-accent2) / 0.25), transparent 60%)' }} />
         {[180, 520, 860, 1200, 1540].map((x, i) => (
-          <div key={x} className="absolute rounded-full border border-tv-text/[0.06]" style={{ left: x, top: i % 2 ? -260 : 420, width: 300, height: 900 }} />
+          <div key={x} className={`absolute rounded-full border border-tv-text/[0.06] ${i % 2 ? 'tv-bg-float-a' : 'tv-bg-float-b'}`}
+            style={{ left: x, top: i % 2 ? -260 : 420, width: 300, height: 900, animationDelay: `${-i * 7}s` }} />
         ))}
-        <div className="absolute -right-24 top-24 w-[220px] h-[420px] rounded-[48px] bg-tv-accent/30" />
-        <div className="absolute -left-28 bottom-40 w-[200px] h-[360px] rounded-[48px] bg-tv-accent2/20" />
+        <div className="absolute -right-24 top-24 w-[220px] h-[420px] rounded-[48px] bg-tv-accent/30 tv-bg-float-a" />
+        <div className="absolute -left-28 bottom-40 w-[200px] h-[360px] rounded-[48px] bg-tv-accent2/20 tv-bg-float-b" />
       </div>
     );
   }
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(1400px 900px at 0% 0%, rgb(var(--tv-bg-glow) / 0.55), transparent 55%)' }} />
-      <div className="absolute rounded-full" style={{ width: 1500, height: 1500, right: -1080, top: -1020, background: 'radial-gradient(circle at 30% 70%, rgb(var(--tv-accent) / 0.55), rgb(var(--tv-accent) / 0.12) 55%, transparent 70%)' }} />
-      <div className="absolute rounded-full border-[90px] border-tv-accent/[0.07]" style={{ width: 1900, height: 1900, left: -1500, bottom: -1500 }} />
+      <div className="absolute inset-[-20%] tv-bg-drift" style={{ background: 'radial-gradient(1400px 900px at 15% 15%, rgb(var(--tv-bg-glow) / 0.55), transparent 55%)' }} />
+      <div className="absolute rounded-full tv-bg-orbit" style={{ width: 1500, height: 1500, right: -1080, top: -1020, background: 'radial-gradient(circle at 30% 70%, rgb(var(--tv-accent) / 0.55), rgb(var(--tv-accent) / 0.12) 55%, transparent 70%)' }} />
+      <div className="absolute rounded-full border-[90px] border-tv-accent/[0.07] tv-bg-orbit-rev" style={{ width: 1900, height: 1900, left: -1500, bottom: -1500 }} />
     </div>
   );
 }

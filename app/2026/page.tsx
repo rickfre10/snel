@@ -7,22 +7,17 @@
 //    computador/tablet do operador).
 import Link from 'next/link';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BRANDS, BrandId } from '@/lib/brand';
+import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import type { SceneId } from '@/lib/haagar2026/control';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER } from '@/lib/haagar/rules';
-import { Stage, TopBar, Ticker, LowerThird, caseOf } from '@/components/tv/TvChrome';
-import { BrandLogo, fmtPct } from '@/components/tv/ui';
+import { Stage, Ticker, LowerThird } from '@/components/tv/TvChrome';
+import { fmtPct } from '@/components/tv/ui';
 import ControlPanel from '@/components/tv/ControlPanel';
 import { useBreaking } from '@/lib/haagar2026/useBreaking';
 import IdleScreen from '@/components/tv/IdleScreen';
-import SceneGeral from '@/components/tv/scenes/SceneGeral';
-import SceneParlamento from '@/components/tv/scenes/SceneParlamento';
-import SceneEstado from '@/components/tv/scenes/SceneEstado';
-import SceneDistrito from '@/components/tv/scenes/SceneDistrito';
-import SceneViradas from '@/components/tv/scenes/SceneViradas';
-import SceneComparativo from '@/components/tv/scenes/SceneComparativo';
+import TelaoScene from '@/components/tv/TelaoScene';
 
 const ROTATE_MS = 15000;
 
@@ -49,6 +44,21 @@ export default function Telao2026() {
     if (f.districtId) setDistrictId(f.districtId);
     setScene(f.scene);
   }, [state.focus]);
+
+  // ---- Publica a cena atual para o CG com fundo de telão replicar
+  const viewKey = `${scene}|${scene === 'estado' ? uf : ''}|${scene === 'distrito' ? districtId : ''}`;
+  useEffect(() => {
+    if (!el.ready) return;
+    const v = state.view;
+    const current = v ? `${v.scene}|${v.uf ?? ''}|${v.districtId ?? ''}` : '';
+    if (current === viewKey) return;
+    const t = setTimeout(() => dispatch({
+      type: 'setView',
+      view: { scene, uf: scene === 'estado' ? uf : undefined, districtId: scene === 'distrito' ? districtId : undefined },
+    }), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewKey, el.ready]);
 
   // ---- Rotação automática de cenas
   useEffect(() => {
@@ -87,51 +97,14 @@ export default function Telao2026() {
   const breaking = useBreaking(snap, state.seed);
   const tickerItems = useMemo(() => (snap ? buildTicker(snap) : []), [snap]);
 
-  const nav = [
-    { id: 'geral', label: caseOf(brand, 'Visão geral') },
-    { id: 'parlamento', label: caseOf(brand, 'Parlamento') },
-    { id: 'estado', label: caseOf(brand, 'Estados') },
-    { id: 'viradas', label: caseOf(brand, 'Viradas') },
-    { id: 'comparativo', label: '2022 × 2026' },
-    ...(scene === 'distrito' && snap ? [{ id: 'distrito', label: snap.districtById[districtId]?.name ?? 'Distrito' }] : []),
-  ].map(n => ({ ...n, active: scene === n.id, onClick: () => setScene(n.id as SceneId) }));
-
-  const toggleBrand = () => {
-    const ids = Object.keys(BRANDS) as BrandId[];
-    dispatch({ type: 'setBrand', brand: ids[(ids.indexOf(state.brand) + 1) % ids.length] });
-  };
-
   return (
     <>
       <Stage brand={brand}>
-        <TopBar brand={brand} snap={snap} nav={nav} onLogoLongPress={() => setDrawer(true)} />
-
-        <main className="absolute left-10 right-10 top-[132px] bottom-[100px]">
-          {!snap ? (
-            <div className="h-full flex flex-col items-center justify-center gap-6 text-tv-muted">
-              <div className="tv-pulse"><BrandLogo brand={brand} size={88} color="rgb(var(--tv-text))" /></div>
-              <div className="text-[22px]">Carregando base de 2022…</div>
-            </div>
-          ) : (
-            <div key={`${scene}-${scene === 'estado' ? uf : ''}-${scene === 'distrito' ? districtId : ''}`} className="h-full tv-scene-in">
-              {scene === 'geral' && <SceneGeral snap={snap} onDistrict={openDistrict} />}
-              {scene === 'parlamento' && <SceneParlamento snap={snap} />}
-              {scene === 'estado' && <SceneEstado snap={snap} uf={uf} onUf={setUf} onDistrict={openDistrict} />}
-              {scene === 'distrito' && <SceneDistrito snap={snap} districtId={districtId} onDistrict={openDistrict} onUf={openUf} />}
-              {scene === 'viradas' && <SceneViradas snap={snap} onDistrict={openDistrict} />}
-              {scene === 'comparativo' && <SceneComparativo snap={snap} onDistrict={openDistrict} />}
-            </div>
-          )}
-        </main>
+        <TelaoScene brand={brand} snap={snap} scene={scene} uf={uf} districtId={districtId}
+          onScene={setScene} onDistrict={openDistrict} onUf={setUf} onLogoLongPress={() => setDrawer(true)} />
 
         <LowerThird brand={brand} item={scene === 'idle' ? null : breaking} />
-        <Ticker brand={brand} items={tickerItems} right={
-          <button onClick={toggleBrand} title={`Visual: ${brand.name} (trocar)`}
-            className="w-[56px] rounded-[14px] bg-tv-text/[0.08] hover:bg-tv-text/20 flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ background: BRANDS.smartv.colors.accent, opacity: state.brand === 'smartv' ? 1 : 0.35 }} />
-            <span className="w-2.5 h-2.5 rounded-full" style={{ background: BRANDS.smartvnews.colors.accent2, opacity: state.brand === 'smartvnews' ? 1 : 0.35 }} />
-          </button>
-        } />
+        <Ticker brand={brand} items={tickerItems} />
         {scene === 'idle' && (
           <IdleScreen brand={brand} onExit={() => setScene('geral')}
             info={snap && snap.reported > 0 ? `${fmtPct(snap.reported)} dos votos apurados` : 'Acompanhe a apuração ao vivo'} />

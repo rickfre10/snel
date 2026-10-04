@@ -27,7 +27,11 @@ export interface ControlState {
   focus: ControlFocus | null;     // cena enviada pelo operador para o telão
   autoRotate: boolean;            // telão alterna cenas sozinho
   cg?: CgVisibility;              // o que o CG (/2026/cg) mostra no ar
+  view?: TelaoView;               // o que o telão está mostrando agora (para o CG replicar)
 }
+
+/** Cena exibida no telão neste momento (publicada pelo próprio telão). */
+export interface TelaoView { scene: SceneId; uf?: string; districtId?: number }
 
 export interface CgVisibility {
   seats: boolean;    // caixas de cadeiras por frente
@@ -64,7 +68,8 @@ export type ControlAction =
   | { type: 'focus'; scene: SceneId; uf?: string; districtId?: number }
   | { type: 'setAutoRotate'; value: boolean }
   | { type: 'setCg'; patch: Partial<CgVisibility> }
-  | { type: 'setCgText'; patch: Partial<CgText> };
+  | { type: 'setCgText'; patch: Partial<CgText> }
+  | { type: 'setView'; view: TelaoView };
 
 export const SPEED_PRESETS = [
   { label: 'Lento', speed: 1 },      // ~1h40 até 100%
@@ -146,6 +151,9 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
       break;
     case 'setCg':
       next = { ...prev, cg: { ...DEFAULT_CG, ...prev.cg, ...action.patch } };
+      break;
+    case 'setView':
+      next = { ...prev, view: action.view };
       break;
     case 'setCgText': {
       const cg = { ...DEFAULT_CG, ...prev.cg };
