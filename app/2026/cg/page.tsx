@@ -56,8 +56,8 @@ export default function Cg2026() {
   // Tarja de maioria manual: frente com maioria confirmada (ou projetada)
   const majority = snap ? majorityOf(snap) : null;
   const majorityOn = !!cg.majority && !!majority;
-  const [lastMajority, setLastMajority] = useState<{ front: string; projected: boolean } | null>(null);
-  useEffect(() => { if (majority) setLastMajority(majority); }, [majority?.front, majority?.projected]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [lastMajority, setLastMajority] = useState<MajorityStatus | null>(null);
+  useEffect(() => { if (majority) setLastMajority(majority); }, [majority?.front, majority?.kind, majority?.final]); // eslint-disable-line react-hooks/exhaustive-deps
   const districtOn = !majorityOn && !!cg.district?.show && !!snap?.districtById[cg.district.id];
   const prOn = !majorityOn && !districtOn && !!cg.pr?.show;
   const [lastDistrictId, setLastDistrictId] = useState<number | null>(null);
@@ -126,7 +126,9 @@ export default function Cg2026() {
             <PrTarja snap={snap} uf={cg.pr?.uf ?? 'auto'} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={majorityOn && !urgentOn} from="bottom">
-            {lastMajority && <MajorityTarja snap={snap} front={lastMajority.front} projected={lastMajority.projected} brand={brand} raised={cg.ticker} />}
+            {lastMajority && (lastMajority.kind === 'minority'
+              ? <MinorityTarja snap={snap} front={lastMajority.front} final={lastMajority.final} brand={brand} raised={cg.ticker} />
+              : <MajorityTarja snap={snap} front={lastMajority.front} projected={lastMajority.kind === 'projected'} brand={brand} raised={cg.ticker} />)}
           </Slide>
           {/* Urgência: sempre por cima de tudo */}
           <Slide show={urgentOn && lastUrgent?.kind === 'result'} from="bottom">
@@ -519,12 +521,71 @@ function PrTarja({ snap, uf, brand, raised }: { snap: ElectionSnapshot; uf: stri
 }
 
 // ------------------------------------------------ Tarja de maioria -------
-/** Frente com maioria confirmada; senão, a que projeta maioria. */
-function majorityOf(snap: ElectionSnapshot): { front: string; projected: boolean } | null {
+type MajorityStatus = { kind: 'majority' | 'projected' | 'minority'; front: string; final: boolean };
+
+/**
+ * Frente com maioria confirmada; senão, a que projeta maioria; senão, quem
+ * lidera sem maioria (eleição indefinida / governo de minoria).
+ */
+function majorityOf(snap: ElectionSnapshot): MajorityStatus | null {
+  const final = snap.reported >= 100;
   const c = snap.fronts.find(f => f.confirmed >= MAJORITY);
-  if (c) return { front: c.legend, projected: false };
+  if (c) return { kind: 'majority', front: c.legend, final };
   const p = snap.fronts.find(f => f.projected >= MAJORITY);
-  return p ? { front: p.legend, projected: true } : null;
+  if (p) return { kind: 'projected', front: p.legend, final };
+  if (snap.reported <= 0) return null;
+  const lead = [...snap.fronts].sort((a, b) => b.projected - a.projected || b.confirmed - a.confirmed)[0];
+  return lead && lead.projected > 0 ? { kind: 'minority', front: lead.legend, final } : null;
+}
+
+/** Ninguém chega à maioria: quem lidera, a divisão das cadeiras e quanto falta. */
+function MinorityTarja({ snap, front, final, brand, raised }: { snap: ElectionSnapshot; front: string; final: boolean; brand: typeof BRANDS.smartv; raised: boolean }) {
+  const seats = (f: FrontTotals) => (final ? f.confirmed : f.projected);
+  const fronts = [...snap.fronts].filter(f => seats(f) > 0).sort((a, b) => seats(b) - seats(a));
+  const lead = snap.frontByLegend[front];
+  const missing = Math.max(0, MAJORITY - (lead ? seats(lead) : 0));
+  const headline = `${front} lidera, mas não forma maioria`;
+  const ink = tarjaInk(brand);
+  const col = frontColor(front);
+  return (
+    <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 pr-4"
+        style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
+        <span className={`text-[24px] leading-none ${brand.cgPaper ? 'text-tv-ink font-bold' : 'opacity-85 font-normal'}`}>{caseOf(brand, final ? 'Parlamento' : 'Projeção')}</span>
+        <span className={`mt-1.5 leading-[1.05] whitespace-nowrap ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(final ? 'Governo de' : 'indefinida', 262, 40) }}>
+          {caseOf(brand, final ? 'Governo de' : 'Eleição')}<br />{caseOf(brand, final ? 'minoria' : 'indefinida')}
+        </span>
+      </div>
+      <div className="w-3 shrink-0" style={{ background: col }} />
+      <div className="flex-1 min-w-0 flex flex-col justify-center px-8 gap-2.5" style={{ color: ink }}>
+        <div className="text-[18px] font-bold uppercase tracking-[0.14em] opacity-80">{final ? 'Nenhuma frente tem maioria' : 'Ninguém projeta maioria'}</div>
+        <div className="font-black uppercase leading-none whitespace-nowrap" style={{ fontSize: fitSize(headline, 1000, 52) }}>{headline}</div>
+        {/* divisão das cadeiras */}
+        <div className="flex items-center gap-2 mt-1">
+          {fronts.map(f => {
+            const c = frontColor(f.legend);
+            return (
+              <span key={f.legend} className="rounded-[10px] px-3 py-1 flex items-baseline gap-2 tabular-nums" style={{ background: c, color: textOn(c) }}>
+                <span className="text-[18px] font-extrabold">{f.legend}</span>
+                <span className="text-[26px] font-black leading-none"><AnimatedNumber value={seats(f)} /></span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
+      <div className="w-[250px] shrink-0 flex flex-col justify-center px-6" style={{ color: ink, borderLeft: `1px solid ${brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.15)'}` }}>
+        <div className="text-[18px] font-bold uppercase tracking-wider opacity-80">{caseOf(brand, `Faltam ao ${front}`)}</div>
+        <div className="text-[56px] font-black leading-none tabular-nums">{missing}<span className="text-[22px] opacity-70"> {missing === 1 ? 'cadeira' : 'cadeiras'}</span></div>
+        <div className="relative mt-2 h-2.5 rounded-full" style={{ background: brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.2)' }}>
+          <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, ((lead ? seats(lead) : 0) / TOTAL_SEATS) * 100)}%`, background: col }} />
+          <div className="absolute -top-1.5 -bottom-1.5 w-[3px] rounded" style={{ left: `${(MAJORITY / TOTAL_SEATS) * 100}%`, background: ink }} />
+        </div>
+        <div className="text-[16px] font-semibold mt-1.5 opacity-85 tabular-nums whitespace-nowrap">{`maioria: ${MAJORITY} de ${TOTAL_SEATS}`}</div>
+      </div>
+      {brand.cgPaper && <PillStrip />}
+    </div>
+  );
 }
 
 /** Tarja na cor da frente: "X forma a maioria" (ou "projeta maioria"). */

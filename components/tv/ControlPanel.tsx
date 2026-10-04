@@ -283,10 +283,14 @@ function CgUrgentSection({ state, dispatch }: { state: ControlState; dispatch: (
 function MajorityToggle({ cg, snap, dispatch }: { cg: typeof DEFAULT_CG; snap: ElectionSnapshot | null; dispatch: (a: ControlAction) => void }) {
   const conf = snap?.fronts.find(f => f.confirmed >= MAJORITY);
   const proj = snap?.fronts.find(f => f.projected >= MAJORITY);
-  const who = conf ? `${conf.legend} forma a maioria (${conf.confirmed})` : proj ? `${proj.legend} projeta maioria (${proj.projected})` : 'ninguém chegou à maioria ainda';
+  const lead = snap ? [...snap.fronts].sort((a, b) => b.projected - a.projected)[0] : null;
+  const who = conf ? `${conf.legend} forma a maioria (${conf.confirmed})`
+    : proj ? `${proj.legend} projeta maioria (${proj.projected})`
+    : lead && snap && snap.reported > 0 ? `sem maioria: ${lead.legend} lidera com ${lead.projected} (faltam ${MAJORITY - lead.projected}) — tarja de ${snap.reported >= 100 ? 'governo de minoria' : 'eleição indefinida'}`
+    : 'aguardando apuração';
   return (
     <div className="flex items-center gap-2 mt-2">
-      <Btn active={!!cg.majority} onClick={() => dispatch({ type: 'setCg', patch: { majority: !cg.majority, ...(!cg.majority && cg.pr?.show ? { pr: { ...cg.pr, show: false } } : {}) } })}>Tarja de maioria</Btn>
+      <Btn active={!!cg.majority} onClick={() => dispatch({ type: 'setCg', patch: { majority: !cg.majority, ...(!cg.majority && cg.pr?.show ? { pr: { ...cg.pr, show: false } } : {}) } })}>Tarja de maioria / minoria</Btn>
       <span className="text-[11px] text-white/60 min-w-0 truncate">{who}</span>
     </div>
   );
