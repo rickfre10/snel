@@ -1,6 +1,7 @@
 // app/page.tsx
 "use client";
 
+import { expectedVotes2022 } from '@/lib/haagar/expected2022';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'; 
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
@@ -241,7 +242,7 @@ export default function Home() {
 
         let remainingVotesEstimate = 0;
         if (d.voters_qtn && totalVotesInDistrict >= 0) {
-            remainingVotesEstimate = d.voters_qtn - totalVotesInDistrict;
+            remainingVotesEstimate = expectedVotes2022(d.district_id, d.voters_qtn) - totalVotesInDistrict;
             if (remainingVotesEstimate < 0) remainingVotesEstimate = 0;
         }
 
@@ -391,7 +392,7 @@ export default function Home() {
         leadingCoalition: leadingCandidateData ? { legend: leadingCandidateData.parl_front_legend || "N/D", votes: leadingCandidateData.numericVotes, name: leadingCandidateData.candidate_name } : undefined,
         runnerUpCoalition: runnerUpCandidateData ? { legend: runnerUpCandidateData.parl_front_legend || "N/D", votes: runnerUpCandidateData.numericVotes, name: runnerUpCandidateData.candidate_name } : undefined,
         totalVotesInDistrict: currentTotalVotesInDistrict, 
-        remainingVotesEstimate: districtInfoFromStaticData.voters_qtn ? Math.max(0, districtInfoFromStaticData.voters_qtn - currentTotalVotesInDistrict) : 0, 
+        remainingVotesEstimate: Math.max(0, expectedVotes2022(districtNum, districtInfoFromStaticData.voters_qtn) - currentTotalVotesInDistrict), 
         previousSeatHolderCoalitionLegend: previousDistrictResultsData.find(d => d.district_id === districtNum)?.winner_2018_legend || null,
         coalitionColorMap: coalitionColorMap,
       };

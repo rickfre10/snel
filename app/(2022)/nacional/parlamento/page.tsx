@@ -1,6 +1,7 @@
 // app/parlamento/page.tsx
 "use client";
 
+import { expectedVotes2022 } from '@/lib/haagar/expected2022';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -173,7 +174,7 @@ export default function ParlamentoNacionalPage() {
             
             let remainingVotesEst = 0;
             if (district.voters_qtn && totalVotesInThisDistrict >= 0) { 
-                remainingVotesEst = district.voters_qtn - totalVotesInThisDistrict;
+                remainingVotesEst = expectedVotes2022(district.district_id, district.voters_qtn) - totalVotesInThisDistrict;
                 if (remainingVotesEst < 0) remainingVotesEst = 0;
             }
 

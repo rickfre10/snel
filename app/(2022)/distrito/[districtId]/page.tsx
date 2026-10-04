@@ -1,6 +1,7 @@
 // app/distrito/[districtId]/page.tsx
 "use client";
 
+import { expectedVotes2022 } from '@/lib/haagar/expected2022';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -187,7 +188,7 @@ export default function DistrictDetailPage() {
     // Assumindo que currentDistrictInfo.voters_qtn é o total esperado de votos.
     let remainingVotesEstimate = 0;
     if (currentDistrictInfo && currentDistrictInfo.voters_qtn && districtResults.totalVotes >= 0) {
-        remainingVotesEstimate = currentDistrictInfo.voters_qtn - districtResults.totalVotes;
+        remainingVotesEstimate = expectedVotes2022(currentDistrictInfo.district_id, currentDistrictInfo.voters_qtn) - districtResults.totalVotes;
         if (remainingVotesEstimate < 0) remainingVotesEstimate = 0; // Não pode ser negativo
     } else if (currentDistrictInfo && currentDistrictInfo.polls_qtn > 0) {
         // Fallback: Estimativa baseada em urnas se voters_qtn não for confiável ou ausente

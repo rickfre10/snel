@@ -1,6 +1,7 @@
 // app/ganhos-e-perdas/page.tsx
 "use client";
 
+import { expectedVotes2022 } from '@/lib/haagar/expected2022';
 import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -181,7 +182,7 @@ export default function GainsLossesPage() {
 
             let remainingVotes = 0;
             if (district.voters_qtn && totalVotesInDistrict >= 0) {
-                remainingVotes = district.voters_qtn - totalVotesInDistrict;
+                remainingVotes = expectedVotes2022(district.district_id, district.voters_qtn) - totalVotesInDistrict;
                 if (remainingVotes < 0) remainingVotes = 0;
             }
 

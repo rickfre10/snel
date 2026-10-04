@@ -97,7 +97,7 @@ export default function SceneDistrito({ snap, districtId, onDistrict, onUf }: { 
             <div className="grid grid-cols-3 gap-2.5 mt-auto">
               <Fact label="Vencedor em 2018" value={d.y2018 ? <span className="flex items-center gap-2"><FrontPill legend={d.y2018.front} size="sm" />{fmtPct(d.y2018.pct)}</span> : '—'} />
               <Fact label="Margem 2022 → 2026" value={<span>{fmtPct(d.prev.marginPct)} → {hasData ? fmtPct(d.marginPct) : '—'}</span>} />
-              <Fact label="Votos válidos 2022" value={fmtInt(d.prev.total)} sub={hasData ? `2026: ${fmtInt(d.counted)} apurados` : undefined} />
+              <Fact label="Comparecimento" value={<span>{fmtPct(d.prev.turnout)} → {fmtPct(d.turnout)}</span>} sub={`2022: ${fmtInt(d.prev.total)} votos válidos`} />
             </div>
           </Panel>
         </div>
