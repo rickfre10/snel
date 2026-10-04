@@ -134,7 +134,9 @@ const tickerBg = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv
 // Bloco em gradiente da esquerda: na Smartv termina sólido (sem vazar para a tarja).
 const blockBg = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-paper))' : brand.cgBlockFade
   // News: azul-céu → azul royal, fundindo na tarja (como "edição das 19h")
-  ? 'linear-gradient(110deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 42%, rgb(var(--tv-accent) / 0.85) 62%, rgb(var(--tv-tarja)) 100%)'
+  // Duas camadas: o desvanecimento horizontal (com curva suave) chega exatamente
+  // no cinza da tarja em toda a borda direita; por baixo, a cor em diagonal.
+  ? 'linear-gradient(90deg, rgb(var(--tv-tarja) / 0) 0%, rgb(var(--tv-tarja) / 0) 38%, rgb(var(--tv-tarja) / 0.06) 46%, rgb(var(--tv-tarja) / 0.18) 55%, rgb(var(--tv-tarja) / 0.36) 64%, rgb(var(--tv-tarja) / 0.57) 73%, rgb(var(--tv-tarja) / 0.77) 82%, rgb(var(--tv-tarja) / 0.92) 91%, rgb(var(--tv-tarja)) 100%), linear-gradient(110deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 45%, rgb(var(--tv-accent)) 100%)'
   : 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 70%)');
 /** Tamanho de fonte para o texto caber na largura (fonte pesada ≈ 0,68 em por letra). */
 const fitSize = (text: string, width: number, max: number) => Math.min(max, Math.floor(width / (Math.max(1, text.length) * 0.68)));
@@ -180,7 +182,7 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
       {/* Bloco de abertura em gradiente: alterna logo "eleições" e o assunto */}
       <AlternatingBlock brand={brand} subject={count === 'projecao' ? 'Projeção' : 'Resultados'} />
 
-      <div className="flex-1 flex items-center gap-3 py-4 pr-4">
+      <div className={`flex-1 flex items-center gap-3 py-4 pr-4 ${brand.cgBlockFade ? 'pl-2' : ''}`}>
         {fronts.map(f => {
           const c = frontColor(f.legend);
           const fg = textOn(c);
