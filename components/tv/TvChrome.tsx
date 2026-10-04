@@ -7,7 +7,7 @@ import type { BrandTheme } from '@/lib/brand';
 import { brandCssVars } from '@/lib/brand';
 import { frontColor, textOn } from '@/lib/haagar/rules';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
-import { BrandLogo, N8Seal, fmtPct } from './ui';
+import { BrandLogo, N8Seal, TargetMark, fmtPct } from './ui';
 import PillGrid from './PillGrid';
 
 export const STAGE_W = 1920;
@@ -74,7 +74,10 @@ export function TopBar({ brand, snap, nav, onLogoLongPress }: { brand: BrandThem
   return (
     <header className="absolute left-10 right-10 top-7 h-[84px] flex items-center gap-6">
       <div className="flex items-center gap-5 shrink-0 select-none" onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel}>
-        <div className="text-tv-kicker"><BrandLogo brand={brand} size={44} color="rgb(var(--tv-text))" /></div>
+        {/* Smartv: só o símbolo ◎; News: o logo "news°" */}
+        <div className="text-tv-text">
+          {brand.logo.kind === 'target' ? <TargetMark size={52} /> : <BrandLogo brand={brand} size={44} color="rgb(var(--tv-text))" />}
+        </div>
         <div>
           <div className="text-[30px] font-black leading-none tracking-tight">{caseOf(brand, brand.programTitle)} 2026</div>
         </div>

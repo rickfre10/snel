@@ -81,8 +81,8 @@ export default function Cg2026() {
       <Slide show={cg.bug} from="top">
         <div className="absolute right-[104px] top-[72px]" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}>
           {brand.logo.kind === 'target' ? (
-            <div className="flex flex-col items-end gap-2 text-white">
-              <BrandLogo brand={brand} size={52} color="#ffffff" />
+            <div className="flex flex-col items-center gap-2 text-white">
+              <TargetMark size={72} />
               <span className="text-[20px] font-extrabold tracking-wide leading-none">{caseOf(brand, 'Ao vivo')}</span>
             </div>
           ) : (
