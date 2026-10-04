@@ -11,10 +11,11 @@ import { BRANDS, BrandId } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import type { SceneId } from '@/lib/haagar2026/control';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
-import { MAJORITY, STATE_ORDER, frontName } from '@/lib/haagar/rules';
-import { Stage, TopBar, Ticker, LowerThird, Breaking, caseOf } from '@/components/tv/TvChrome';
+import { MAJORITY, STATE_ORDER } from '@/lib/haagar/rules';
+import { Stage, TopBar, Ticker, LowerThird, caseOf } from '@/components/tv/TvChrome';
 import { BrandLogo, fmtPct } from '@/components/tv/ui';
 import ControlPanel from '@/components/tv/ControlPanel';
+import { useBreaking } from '@/lib/haagar2026/useBreaking';
 import IdleScreen from '@/components/tv/IdleScreen';
 import SceneGeral from '@/components/tv/scenes/SceneGeral';
 import SceneParlamento from '@/components/tv/scenes/SceneParlamento';
@@ -24,7 +25,6 @@ import SceneViradas from '@/components/tv/scenes/SceneViradas';
 import SceneComparativo from '@/components/tv/scenes/SceneComparativo';
 
 const ROTATE_MS = 15000;
-const BREAKING_MS = 7000;
 
 export default function Telao2026() {
   const el = useElection2026();
@@ -156,61 +156,6 @@ export default function Telao2026() {
 }
 
 // ---------------------------------------------------------------- Helpers --
-
-function useBreaking(snap: ElectionSnapshot | null, seed: number): Breaking | null {
-  const seen = useRef<{ seed: number; finals: Set<number>; majority: string | null } | null>(null);
-  const queue = useRef<Breaking[]>([]);
-  const [current, setCurrent] = useState<Breaking | null>(null);
-
-  useEffect(() => {
-    if (!snap) return;
-    const finals = new Set(snap.districts.filter(d => d.isFinal).map(d => d.id));
-    const majorityFront = snap.fronts.find(f => f.confirmed >= MAJORITY)?.legend ?? null;
-    // Primeira leitura (ou novo cenário / volta no tempo): só memoriza.
-    if (!seen.current || seen.current.seed !== seed || finals.size < seen.current.finals.size) {
-      seen.current = { seed, finals, majority: majorityFront };
-      queue.current = [];
-      return;
-    }
-    const prev = seen.current;
-    snap.districts.forEach(d => {
-      if (d.flipped && !prev.finals.has(d.id) && d.leader) {
-        queue.current.push({
-          id: `flip-${seed}-${d.id}`,
-          headline: `${d.leader.front} toma ${d.name}`,
-          sub: `Cadeira era da ${d.prev.front} · ${d.ufName} · ${d.leader.name} eleito com ${fmtPct(d.leader.pct)}`,
-          front: d.leader.front,
-        });
-      }
-    });
-    if (majorityFront && prev.majority !== majorityFront) {
-      const f = snap.frontByLegend[majorityFront];
-      queue.current.unshift({
-        id: `maj-${seed}-${majorityFront}`,
-        headline: `${majorityFront} conquista a maioria`,
-        sub: `${frontName(majorityFront)} chega a ${f.confirmed} cadeiras confirmadas (maioria: ${MAJORITY})`,
-        front: majorityFront,
-      });
-    }
-    // Evita fila gigante em saltos grandes de apuração
-    if (queue.current.length > 6) queue.current = queue.current.slice(0, 6);
-    seen.current = { seed, finals, majority: majorityFront };
-  }, [snap, seed]);
-
-  useEffect(() => {
-    if (current) {
-      const t = setTimeout(() => setCurrent(queue.current.shift() ?? null), BREAKING_MS);
-      return () => clearTimeout(t);
-    }
-    const poll = setInterval(() => {
-      const next = queue.current.shift();
-      if (next) setCurrent(next);
-    }, 800);
-    return () => clearInterval(poll);
-  }, [current]);
-
-  return current;
-}
 
 function buildTicker(snap: ElectionSnapshot): string[] {
   const items: string[] = [];

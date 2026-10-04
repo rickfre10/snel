@@ -34,6 +34,7 @@ export interface CgVisibility {
   ticker: boolean;   // faixa de distritos
   bug: boolean;      // logo da emissora no topo
   count: 'confirmadas' | 'projecao';
+  breaking?: boolean; // plantão automático de última hora (viradas, maioria)
   text?: CgText;     // tarja de texto livre (manchete)
 }
 
@@ -47,7 +48,7 @@ export interface CgText {
 }
 
 export const DEFAULT_CG_TEXT: CgText = { show: false, label1: 'eleições', label2: '2026', headline: '', sub: '' };
-export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas', text: DEFAULT_CG_TEXT };
+export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas', breaking: true, text: DEFAULT_CG_TEXT };
 
 export type ControlAction =
   | { type: 'play' }

@@ -167,6 +167,10 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
                 <Btn active={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa distritos</Btn>
                 <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Logo</Btn>
               </div>
+              <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                <input type="checkbox" checked={!!cg.breaking} onChange={e => dispatch({ type: 'setCg', patch: { breaking: e.target.checked } })} className="w-4 h-4 accent-white" />
+                Última hora automática (viradas e maioria)
+              </label>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <Btn active={cg.count === 'confirmadas'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'confirmadas' } })}>Contar eleitos</Btn>
                 <Btn active={cg.count === 'projecao'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'projecao' } })}>Contar projeção</Btn>

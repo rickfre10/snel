@@ -10,6 +10,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
+import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
@@ -31,6 +32,13 @@ export default function Cg2026() {
   const brand = BRANDS[state.brand] ?? BRANDS.smartv;
   const cg = { ...DEFAULT_CG, ...state.cg };
   const text = { ...DEFAULT_CG_TEXT, ...cg.text };
+  const manualTextOn = text.show && !!text.headline.trim();
+  // Plantão de última hora (o texto manual tem prioridade)
+  const breaking = useBreaking(snap, state.seed);
+  const breakingOn = !!cg.breaking && !!breaking && !manualTextOn;
+  // Mantém o último plantão montado durante a animação de saída
+  const [lastBreaking, setLastBreaking] = useState<Breaking | null>(null);
+  useEffect(() => { if (breaking) setLastBreaking(breaking); }, [breaking]);
   const [fundo, setFundo] = useState('transparente');
 
   useEffect(() => {
@@ -61,11 +69,17 @@ export default function Cg2026() {
 
       {snap && (
         <>
-          <Slide show={cg.seats && !text.show} from="bottom">
+          <Slide show={cg.seats && !manualTextOn && !breakingOn} from="bottom">
             <SeatsTarja snap={snap} brand={brand} count={cg.count} raised={cg.ticker} />
           </Slide>
-          <Slide show={text.show && !!text.headline.trim()} from="bottom">
+          <Slide show={manualTextOn} from="bottom">
             <TextTarja text={text} brand={brand} raised={cg.ticker} />
+          </Slide>
+          <Slide show={breakingOn} from="bottom">
+            {lastBreaking && (
+              <TextTarja key={lastBreaking.id} brand={brand} raised={cg.ticker} front={lastBreaking.front}
+                text={{ show: true, label1: 'última', label2: 'hora', headline: lastBreaking.headline, sub: lastBreaking.sub }} />
+            )}
           </Slide>
           <Slide show={cg.ticker} from="bottom">
             <TickerBar snap={snap} brand={brand} />
@@ -227,7 +241,7 @@ function DistrictLine({ d, brand }: { d: DistrictSnapshot; brand: typeof BRANDS.
 
 // ------------------------------------------------ Tarja de texto livre ----
 /** Manchete escrita pelo operador (formato "edição das 19h" da News). */
-function TextTarja({ text, brand, raised }: { text: CgText; brand: typeof BRANDS.smartv; raised: boolean }) {
+function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof BRANDS.smartv; raised: boolean; front?: string | null }) {
   const long = text.headline.length > 42;
   return (
     <div className="absolute left-[104px] right-[104px] min-h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
@@ -237,10 +251,16 @@ function TextTarja({ text, brand, raised }: { text: CgText; brand: typeof BRANDS
         <span className="text-[44px] font-normal">{caseOf(brand, text.label1)}</span>
         {text.label2 && <span className="text-[44px] font-normal">{caseOf(brand, text.label2)}</span>}
       </div>
+      {front && <div className="w-3 shrink-0" style={{ background: frontColor(front) }} />}
       <div className="flex-1 min-w-0 flex flex-col justify-center px-10 py-5 text-white">
         <div className={`${long ? 'text-[50px]' : 'text-[60px]'} font-extrabold uppercase leading-[1.05] line-clamp-2`}>{text.headline}</div>
-        {text.sub && <div className="text-[32px] font-semibold uppercase mt-2 text-white/90 truncate">{text.sub}</div>}
+        {text.sub && <div className={`${text.sub.length > 55 ? 'text-[24px]' : 'text-[32px]'} font-semibold uppercase mt-2 text-white/90 truncate`}>{text.sub}</div>}
       </div>
+      {front && (
+        <div className="shrink-0 flex items-center pr-8">
+          <span className="rounded-full px-6 py-2 text-[36px] font-black" style={{ background: frontColor(front), color: textOn(frontColor(front)) }}>{front}</span>
+        </div>
+      )}
     </div>
   );
 }

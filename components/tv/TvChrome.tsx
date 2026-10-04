@@ -144,7 +144,8 @@ export function Ticker({ brand, items, right }: { brand: BrandTheme; items: stri
 }
 
 // ------------------------------------------------------- Última hora -----
-export interface Breaking { id: string; headline: string; sub: string; front?: string | null }
+import type { Breaking } from '@/lib/haagar2026/useBreaking';
+export type { Breaking };
 
 /** Tarja de manchete (estilo "edição das 19h"): aparece por alguns segundos. */
 export function LowerThird({ brand, item }: { brand: BrandTheme; item: Breaking | null }) {

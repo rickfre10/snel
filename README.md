@@ -48,7 +48,7 @@ Vinheta de espera (idle): Smartv com a grade de pílulas deslizando; SmartvNews 
 
 ### CG
 
-`/2026/cg` segue a marca escolhida no controle. Na seção **"CG · texto livre"** o operador escreve uma manchete (bloco em gradiente com duas linhas, manchete e subtítulo) e coloca/tira do ar; enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras. Pelo controle (seção "CG") o operador liga/desliga as caixas de cadeiras, a faixa de distritos e o selo/logo, e escolhe contar **eleitos** ou **projeção**. Use como fonte de navegador no OBS/vMix (fundo transparente) ou com chroma (`?fundo=verde`).
+`/2026/cg` segue a marca escolhida no controle. Na seção **"CG · texto livre"** o operador escreve uma manchete (bloco em gradiente com duas linhas, manchete e subtítulo) e coloca/tira do ar; enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras. O plantão de **última hora** (cadeira que vira, maioria atingida) também entra no CG automaticamente por alguns segundos — dá para desligar na seção "CG" do controle. Pelo controle (seção "CG") o operador liga/desliga as caixas de cadeiras, a faixa de distritos e o selo/logo, e escolhe contar **eleitos** ou **projeção**. Use como fonte de navegador no OBS/vMix (fundo transparente) ou com chroma (`?fundo=verde`).
 
 Atalhos discretos: **C** (ou segurar o logo por 1 s) abre o controle; **F** tela cheia; **Esc** fecha. O botão de dois pontinhos no canto inferior direito alterna Smartv ⇄ SmartvNews.
 
