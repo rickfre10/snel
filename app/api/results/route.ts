@@ -24,6 +24,26 @@ interface CacheEntry {
 let cache: CacheEntry | null = null;
 const CACHE_DURATION_MS = 1 * 60 * 1000; // Cache por 1 minuto, por exemplo
 
+// Resultado oficial de 2022 embutido no projeto (BASE_Haagar_Vota_2022.xlsx,
+// abas _final). Usado quando a planilha online não está configurada ou falha.
+async function embeddedVotes(time: string): Promise<ApiVotesData> {
+  const data = (await import('@/lib/data/haagar2022.json')).default as unknown as {
+    candidates: [number, string, string | null, string | null, number, 'F' | 'M' | null, string | null][];
+    proportional: [string, string, number][];
+  };
+  const frontName: Record<string, string> = { TDS: 'Frente de Todos', UNI: 'Unidos por Haagar', CON: 'Frente Conservadora', PSD: 'PSD', PSH: 'PSH', NAC: 'NAC' };
+  return {
+    time: parseInt(time, 10),
+    candidateVotes: data.candidates.map(([district_id, candidate_name, party_legend, parl_front_legend, votes_qtn, gender, candidate_photo]) => ({
+      district_id, candidate_name, party_legend: party_legend ?? 'N/A', parl_front_legend, votes_qtn,
+      candidate_status: null, candidate_photo, gender: gender === 'F' ? 'Feminino' : gender === 'M' ? 'Masculino' : null,
+    })),
+    proportionalVotes: data.proportional.map(([uf, parl_front_legend, proportional_votes_qtn]) => ({
+      uf, parl_front_legend, proportional_votes_qtn, parlamentar_front: frontName[parl_front_legend] ?? parl_front_legend,
+    })),
+  };
+}
+
 // ... (seu helper parseNumber e outras constantes) ...
 const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
@@ -58,8 +78,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiVotesDa
   const sheetId: string | undefined = process.env.GOOGLE_SHEET_ID;
 
   if (!clientEmail || !privateKey || !sheetId) {
-    console.error("[Results API] Erro: Variáveis de ambiente do Google Sheets não configuradas.");
-    return NextResponse.json({ error: 'Erro interno do servidor. Credenciais não configuradas.' }, { status: 500 });
+    console.warn("[Results API] Google Sheets não configurado: servindo o resultado de 2022 embutido.");
+    return NextResponse.json(await embeddedVotes(time));
   }
 
   try {
@@ -151,6 +171,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiVotesDa
   } catch (error: unknown) {
     // ... (seu tratamento de erro) ...
     console.error('[Results API] Erro ao buscar dados de VOTOS do Google Sheets:', error);
+    // Sem a planilha, serve o resultado oficial embutido em vez de quebrar o painel.
+    try {
+      return NextResponse.json(await embeddedVotes(time));
+    } catch (embeddedError) {
+      console.error('[Results API] Falha também nos dados embutidos:', embeddedError);
+    }
     let errorMessage = 'Erro ao buscar dados de votos da planilha.';
     // ... (resto do seu error handling)
     // Copiando seu error handling para completude

@@ -13,7 +13,7 @@ import type { Baseline2022 } from '@/lib/haagar/baseline';
 import { previousDistrictResultsData } from '@/lib/previousElectionData';
 import { FRONT_ORDER, STATE_ORDER, PR_SEATS_BY_STATE, allocateStatePR, frontColor } from '@/lib/haagar/rules';
 import { calculateDistrictDynamicStatus, DistrictStatusOutput } from '@/lib/statusCalculator';
-import { rngFor, gauss, pick } from './random';
+import { rngFor, gauss, pick, hash } from './random';
 import { fictionalName } from './names';
 
 // ---------------------------------------------------------------- Tipos ----
@@ -23,6 +23,7 @@ export interface ModelCandidate {
   party: string | null;
   name: string;
   photo: string | null;
+  gender: 'F' | 'M' | null;
   incumbent: boolean;      // deputado atual (venceu este distrito em 2022) e concorre de novo
   incumbentParty: boolean; // frente que venceu em 2022, com outro candidato (deputado não concorre)
   rerun: boolean;          // disputou este distrito em 2022
@@ -204,7 +205,10 @@ function reportedFraction(p: number, delay: number, curve: number): number {
 
 // ------------------------------------------------------------- Modelo -----
 
-export function buildModel(baseline: Baseline2022, seed: number): ElectionModel {
+/** Banco de rostos para candidatos sem foto (ver /api/2026/photos). */
+export interface PhotoPool { female: string[]; male: string[] }
+
+export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoPool | null): ElectionModel {
   const natR = rngFor(seed, 'national');
   const nationalSwing: Record<string, number> = {};
   FRONT_ORDER.forEach(f => { nationalSwing[f] = gauss(natR) * 3.2; });
@@ -256,11 +260,13 @@ export function buildModel(baseline: Baseline2022, seed: number): ElectionModel 
       const rerun = !!prevCand && cr() < (wasWinner ? 0.78 : 0.4);
       const parties = partiesOfFront(f);
       const party = rerun && prevCand?.party ? prevCand.party : (parties.length ? pick(cr, parties).party_legend : f);
+      const gender: 'F' | 'M' | null = rerun && prevCand ? prevCand.gender ?? null : cr() < 0.45 ? 'F' : 'M';
       return {
         front: f,
         party,
-        name: rerun && prevCand ? prevCand.name : fictionalName(cr, cr() < 0.45 ? 'F' : 'M'),
+        name: rerun && prevCand ? prevCand.name : fictionalName(cr, gender),
         photo: rerun && prevCand ? prevCand.photo : null,
+        gender,
         incumbent: rerun && wasWinner,
         incumbentParty: f === base?.winnerFront && !(rerun && wasWinner),
         rerun,
@@ -283,6 +289,22 @@ export function buildModel(baseline: Baseline2022, seed: number): ElectionModel 
       candidates: candidates.sort((a, b) => b.finalVotes - a.finalVotes),
     };
   });
+
+  // Rostos gerados para quem não tem foto: escolha determinística e sem repetir.
+  if (photos && (photos.female.length || photos.male.length)) {
+    const used = new Set<string>();
+    districts.forEach(d => d.candidates.forEach(c => { if (c.photo) used.add(c.photo); }));
+    districts.forEach(d => d.candidates.forEach(c => {
+      if (c.photo) return;
+      const g = c.gender ?? (hash(seed, d.id, c.front, 'g') % 2 ? 'F' : 'M');
+      const pool = (g === 'F' ? photos.female : photos.male).length ? (g === 'F' ? photos.female : photos.male) : (photos.female.length ? photos.female : photos.male);
+      const start = hash(seed, d.id, c.front, 'photo') % pool.length;
+      for (let k = 0; k < pool.length; k++) {
+        const url = pool[(start + k) % pool.length];
+        if (!used.has(url)) { c.photo = url; used.add(url); break; }
+      }
+    }));
+  }
 
   const states: Record<string, ModelState> = {};
   STATE_ORDER.forEach(uf => {

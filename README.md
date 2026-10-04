@@ -5,7 +5,7 @@ Painéis de apuração das eleições legislativas (fictícias) de **Haagar**, c
 | Rota | O que é |
 |---|---|
 | `/` | Seleção do pleito |
-| `/2022` (+ `/estado/[uf]`, `/distrito/[id]`, `/nacional`, `/nacional/parlamento`, `/ganhos-e-perdas`) | Painel 2022 — dados do Google Sheets (visual original) |
+| `/2022` (+ `/estado/[uf]`, `/distrito/[id]`, `/nacional`, `/nacional/parlamento`, `/ganhos-e-perdas`) | Painel 2022 — dados do Google Sheets ou, sem ele, o resultado oficial embutido (visual original) |
 | `/2026` | **Telão interativo 2026** (16:9, pensado para TV/touch) |
 | `/2026/controle` | Controle do ritmo da apuração (operador; não é linkado no telão) |
 | `/2026/cg` | **CG** para sobrepor ao vídeo: cadeiras por frente + faixa de distritos (fundo transparente; `?fundo=verde`/`azul`/`preto`/`cena`) |
@@ -29,6 +29,7 @@ CONTROL_PIN=1234                 # opcional: exige PIN para comandar a apuraçã
 UPSTASH_REDIS_REST_URL=...       # obrigatório em hospedagem serverless (Vercel): ver "Sincronização"
 UPSTASH_REDIS_REST_TOKEN=...     #   (ou KV_REST_API_URL / KV_REST_API_TOKEN do Vercel KV)
 NEXT_PUBLIC_CONTROL_MODE=local   # opcional: ver "Sincronização"
+GENERATED_PHOTOS_API_KEY=...     # opcional: rostos gerados para candidatos de 2026 sem foto
 ```
 
 ## Telão 2026
@@ -60,6 +61,8 @@ Tudo em JavaScript, no navegador (`lib/haagar2026/model.ts`):
 2. A partir de uma **semente**, sorteia swings nacional, estadual e local por frente e o resultado final de cada distrito. Candidatos de 2022 podem concorrer de novo (o deputado eleito aparece como tal).
 3. Cada distrito apura num ritmo próprio e os primeiros votos têm um viés que some até o fim — há viradas durante a noite.
 4. As regras são as de 2022: distrital por maioria simples; proporcional por estado com mínimo de votos, barreira de 5% e D'Hondt.
+
+Fotos: quem concorreu em 2022 usa a foto da planilha. Os demais (candidatos novos ou sem foto) recebem um rosto do [generated.photos](https://generated.photos) se `GENERATED_PHOTOS_API_KEY` estiver definida — coerente com o gênero, sem repetir e igual em todas as telas. Sem a chave, aparece um avatar com as iniciais. Atenção à licença do generated.photos para uso em TV.
 
 A mesma semente + o mesmo % global = o mesmo resultado em qualquer tela.
 

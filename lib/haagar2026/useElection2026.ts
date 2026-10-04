@@ -2,7 +2,7 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 import type { Baseline2022 } from '@/lib/haagar/baseline';
-import { buildModel, snapshotAt, ElectionSnapshot } from './model';
+import { buildModel, snapshotAt, ElectionSnapshot, PhotoPool } from './model';
 import { progressAt } from './control';
 import { useControl } from './useControl';
 
@@ -27,6 +27,20 @@ export function useBaseline2022() {
   return baseline;
 }
 
+/** Banco de rostos gerados (vazio se não houver chave da API). */
+export function usePhotoPool() {
+  const [pool, setPool] = useState<PhotoPool | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/2026/photos')
+      .then(r => (r.ok ? r.json() : null))
+      .then(b => { if (alive && b?.enabled) setPool({ female: b.female ?? [], male: b.male ?? [] }); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return pool;
+}
+
 /** Relógio que avança a cada segundo (para recalcular o progresso). */
 export function useNow(intervalMs = TICK_MS) {
   const [now, setNow] = useState(() => Date.now());
@@ -40,10 +54,11 @@ export function useNow(intervalMs = TICK_MS) {
 export function useElection2026() {
   const control = useControl();
   const baseline = useBaseline2022();
+  const photos = usePhotoPool();
   const now = useNow();
   const { state, clockOffset } = control;
 
-  const model = useMemo(() => (baseline ? buildModel(baseline, state.seed) : null), [baseline, state.seed]);
+  const model = useMemo(() => (baseline ? buildModel(baseline, state.seed, photos) : null), [baseline, state.seed, photos]);
   const progress = progressAt(state, now + clockOffset);
   // Arredonda para não recalcular sem necessidade quando pausado.
   const progressKey = Math.round(progress * 1000) / 1000;
