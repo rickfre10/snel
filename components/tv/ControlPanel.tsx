@@ -169,6 +169,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
                 <Btn active={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa distritos</Btn>
                 <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Logo</Btn>
               </div>
+              <PlaceInput value={cg.place ?? ''} onSave={place => dispatch({ type: 'setCg', patch: { place } })} />
               <label className="flex items-center gap-2 mt-2 cursor-pointer">
                 <input type="checkbox" checked={!!cg.breaking} onChange={e => dispatch({ type: 'setCg', patch: { breaking: e.target.checked } })} className="w-4 h-4 accent-white" />
                 Última hora automática (viradas e maioria)
@@ -204,6 +205,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
 
 // ------------------------------------------------ Texto livre no CG ------
 const TEXT_PRESETS: { label1: string; label2: string }[] = [
+  { label1: '', label2: '' },
   { label1: 'eleições', label2: '2026' },
   { label1: 'apuração', label2: 'ao vivo' },
   { label1: 'última', label2: 'hora' },
@@ -230,7 +232,7 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
       </div>
       <div className="flex gap-1.5 mt-2">
         {TEXT_PRESETS.map(p => (
-          <button key={p.label1} onClick={() => set(p)} className="text-[11px] px-2 py-1 rounded border border-white/15 hover:bg-white/10">{p.label1} {p.label2}</button>
+          <button key={p.label1 || 'logo'} onClick={() => set(p)} className="text-[11px] px-2 py-1 rounded border border-white/15 hover:bg-white/10">{p.label1 ? `${p.label1} ${p.label2}` : 'só o logo'}</button>
         ))}
       </div>
       <textarea className="w-full rounded-lg bg-black/40 border border-white/15 px-3 py-2 mt-2 resize-none" rows={2} maxLength={90}
@@ -240,7 +242,7 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
         <Btn active={onAir.show && !touched} onClick={() => send(true)}>{onAir.show ? (touched ? 'Atualizar no ar' : 'No ar') : 'Colocar no ar'}</Btn>
         <Btn onClick={() => send(false)} danger={onAir.show}>Tirar do ar</Btn>
       </div>
-      <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras.</p>
+      <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras. Com as duas linhas do bloco vazias, o bloco mostra o logo.</p>
     </Section>
   );
 }
@@ -287,6 +289,25 @@ function DistrictSearch({ snap, onShow, currentId }: { snap: ElectionSnapshot | 
         </div>
       )}
       {terms.length > 0 && results.length === 0 && <div className="text-[12px] text-white/50 mt-2">Nenhum distrito encontrado.</div>}
+    </div>
+  );
+}
+
+// ------------------------------------------- Texto do selo de local (CG) --
+function PlaceInput({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+  const save = () => { setEditing(false); if (draft !== value) onSave(draft.trim()); };
+  return (
+    <div className="mt-2">
+      <div className="text-[11px] text-white/50 mb-1">Selo acima do &quot;AO VIVO&quot; (SmartvNews) — vazio = &quot;Haagar · Eleições 2026&quot;</div>
+      <div className="flex gap-2">
+        <input value={draft} onChange={e => { setEditing(true); setDraft(e.target.value); }} onBlur={save}
+          onKeyDown={e => { if (e.key === 'Enter') save(); }} maxLength={40} placeholder="Ex.: São Pedro, MA"
+          className="flex-1 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
+        <Btn onClick={save}>Aplicar</Btn>
+      </div>
     </div>
   );
 }

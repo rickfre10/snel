@@ -11,11 +11,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
+import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
 import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
 import TelaoScene from '@/components/tv/TelaoScene';
+import PillGrid from '@/components/tv/PillGrid';
 import IdleScreen from '@/components/tv/IdleScreen';
 import { AnimatedNumber, BrandLogo, N8Seal, TargetMark, fmtPct, g } from '@/components/tv/ui';
 
@@ -65,12 +67,22 @@ export default function Cg2026() {
           )}
         </TvFrame>
       )}
+      {/* Selo de local + AO VIVO no canto superior esquerdo (News); texto editável no controle */}
+      {brand.cgPlaceBadge && (
+        <Slide show={cg.bug} from="top">
+          <div className="absolute left-[104px] top-[84px] flex flex-col items-start gap-1.5" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))' }}>
+            <span className="rounded-[10px] bg-tv-accent2 text-white px-3 py-1 text-[30px] font-extrabold leading-tight uppercase">{cg.place?.trim() || 'Haagar · Eleições 2026'}</span>
+            <span className="rounded-[8px] bg-tv-tarja text-white px-2.5 py-0.5 text-[19px] font-bold leading-tight uppercase">Ao vivo</span>
+          </div>
+        </Slide>
+      )}
+
       {/* Logo da emissora no canto superior direito */}
       <Slide show={cg.bug} from="top">
         <div className="absolute right-[104px] top-[72px]" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}>
           {brand.logo.kind === 'target' ? (
-            <div className="flex flex-col items-center gap-2 text-white">
-              <TargetMark size={72} />
+            <div className="flex flex-col items-end gap-2 text-white">
+              <BrandLogo brand={brand} size={52} color="#ffffff" />
               <span className="text-[20px] font-extrabold tracking-wide leading-none">{caseOf(brand, 'Ao vivo')}</span>
             </div>
           ) : (
@@ -114,6 +126,22 @@ function Slide({ show, from, children }: { show: boolean; from: 'top' | 'bottom'
 // -------------------------------------------------- Tarja de cadeiras -----
 const ALTERNATE_MS = 5000;
 
+// Fundo das tarjas: sólido na Smartv, levemente translúcido na News.
+const tarjaBg = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-paper))' : brand.cgSolid ? 'rgb(var(--tv-tarja))' : 'rgb(var(--tv-tarja) / 0.94)');
+// Cor do texto sobre a tarja (escuro no estilo creme da Smartv)
+const tarjaInk = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-ink))' : '#ffffff');
+// Faixa de distritos: marrom sólido no estilo creme
+const tickerBg = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-ink))' : tarjaBg(brand));
+// Bloco em gradiente da esquerda: na Smartv termina sólido (sem vazar para a tarja).
+const blockBg = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-paper))' : brand.cgBlockFade
+  // News: azul-céu → azul royal, fundindo na tarja (como "edição das 19h")
+  // Duas camadas: o desvanecimento horizontal (com curva suave) chega exatamente
+  // no cinza da tarja em toda a borda direita; por baixo, a cor em diagonal.
+  ? 'linear-gradient(90deg, rgb(var(--tv-tarja) / 0) 0%, rgb(var(--tv-tarja) / 0) 38%, rgb(var(--tv-tarja) / 0.06) 46%, rgb(var(--tv-tarja) / 0.18) 55%, rgb(var(--tv-tarja) / 0.36) 64%, rgb(var(--tv-tarja) / 0.57) 73%, rgb(var(--tv-tarja) / 0.77) 82%, rgb(var(--tv-tarja) / 0.92) 91%, rgb(var(--tv-tarja)) 100%), linear-gradient(110deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 45%, rgb(var(--tv-accent)) 100%)'
+  : 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 70%)');
+/** Tamanho de fonte para o texto caber na largura (fonte pesada ≈ 0,68 em por letra). */
+const fitSize = (text: string, width: number, max: number) => Math.min(max, Math.floor(width / (Math.max(1, text.length) * 0.68)));
+
 function AlternatingBlock({ brand, subject }: { brand: typeof BRANDS.smartv; subject: string }) {
   const [showLogo, setShowLogo] = useState(false);
   useEffect(() => {
@@ -122,11 +150,11 @@ function AlternatingBlock({ brand, subject }: { brand: typeof BRANDS.smartv; sub
   }, []);
   const layer = 'absolute inset-0 flex flex-col justify-center pl-8 transition-all duration-700 ease-out';
   return (
-    <div className="relative w-[310px] shrink-0 text-white overflow-hidden"
-      style={{ background: 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)' }}>
+    <div className="relative w-[310px] shrink-0 overflow-hidden"
+      style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
       <div className={layer} style={{ opacity: showLogo ? 0 : 1, transform: showLogo ? 'translateY(-24px)' : 'none' }}>
-        <span className="text-[24px] font-semibold leading-none opacity-85">{caseOf(brand, 'Parlamento')}</span>
-        <span className="text-[50px] font-extrabold leading-[1.05] mt-1">{caseOf(brand, subject)}</span>
+        <span className={`text-[24px] leading-none ${brand.cgPaper ? 'text-tv-ink font-bold' : 'opacity-85'} ${brand.cgBlockFade ? 'font-normal' : 'font-semibold'}`}>{caseOf(brand, 'Parlamento')}</span>
+        <span className={`leading-[1.05] mt-1 whitespace-nowrap ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(caseOf(brand, subject), 262, brand.cgBlockFade ? 46 : 50) }}>{caseOf(brand, subject)}</span>
       </div>
       <div className={layer} style={{ opacity: showLogo ? 1 : 0, transform: showLogo ? 'none' : 'translateY(24px)' }}>
         {brand.logo.kind === 'target' ? (
@@ -151,11 +179,11 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
 
   return (
     <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
-      style={{ bottom: raised ? 138 : 68, background: 'rgb(var(--tv-tarja) / 0.94)', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
       {/* Bloco de abertura em gradiente: alterna logo "eleições" e o assunto */}
       <AlternatingBlock brand={brand} subject={count === 'projecao' ? 'Projeção' : 'Resultados'} />
 
-      <div className="flex-1 flex items-center gap-3 py-4 pr-4">
+      <div className={`flex-1 flex items-center gap-3 py-4 pr-4 ${brand.cgBlockFade ? 'pl-2' : ''}`}>
         {fronts.map(f => {
           const c = frontColor(f.legend);
           const fg = textOn(c);
@@ -165,23 +193,24 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
               <div className="text-[26px] font-extrabold leading-none tracking-wide">{f.legend}</div>
               <div className="text-[64px] font-black leading-none tabular-nums mt-1"><AnimatedNumber value={value(f)} /></div>
               <div className="text-[16px] font-bold leading-none mt-1.5 opacity-80 tabular-nums">
-                {count === 'projecao' ? `${extra} eleitos` : extra > 0 ? `+${extra} na frente` : ' '}
+                {count === 'projecao' ? `${extra} ${extra === 1 ? 'eleito' : 'eleitos'}` : extra > 0 ? `+${extra} na frente` : ' '}
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="w-[250px] shrink-0 flex flex-col justify-center px-6 text-white border-l border-white/15">
+      <div className="w-[250px] shrink-0 flex flex-col justify-center px-6" style={{ color: tarjaInk(brand), borderLeft: `1px solid ${brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.15)'}` }}>
         <div className="text-[18px] font-bold uppercase tracking-wider opacity-80">{caseOf(brand, 'Maioria')}</div>
         <div className="text-[52px] font-black leading-none tabular-nums">{MAJORITY}<span className="text-[24px] opacity-70"> / {TOTAL_SEATS}</span></div>
-        <div className="mt-2 h-2.5 rounded-full bg-white/20 overflow-hidden">
-          <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${snap.reported}%`, background: 'rgb(var(--tv-accent2))' }} />
+        <div className="mt-2 h-2.5 rounded-full overflow-hidden" style={{ background: brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.2)' }}>
+          <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${snap.reported}%`, background: brand.cgPaper ? 'rgb(var(--tv-accent))' : 'rgb(var(--tv-accent2))' }} />
         </div>
         <div className="text-[16px] font-semibold mt-1.5 opacity-85">
           {majorityReached ? `${leader.legend} ${count === 'projecao' ? 'projeta maioria' : 'tem maioria'}` : `${fmtPct(snap.reported)} apurado`}
         </div>
       </div>
+      {brand.cgPaper && <PillStrip />}
     </div>
   );
 }
@@ -208,12 +237,29 @@ function TickerBar({ snap, brand }: { snap: ElectionSnapshot; brand: typeof BRAN
 
   return (
     <div className="absolute left-[104px] right-[104px] bottom-[68px] h-[56px] flex gap-3">
-      <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[28px] font-extrabold tabular-nums">{clock}</div>
-      <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: 'rgb(var(--tv-tarja) / 0.94)' }}>
+      <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[28px] font-bold tabular-nums">{clock}</div>
+      <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: tickerBg(brand) }}>
         <N8Seal size={28} />
-        {d ? <DistrictLine key={d.id} d={d} brand={brand} /> : (
-          <div className="px-6 text-[26px] font-bold text-white">{caseOf(brand, 'Aguardando as primeiras urnas')}</div>
-        )}
+        {d ? <DistrictLine key={d.id} d={d} brand={brand} /> : <TickerMarquee items={buildTicker(snap)} brand={brand} />}
+      </div>
+    </div>
+  );
+}
+
+/** Antes dos resultados: as mesmas frases da faixa do telão, rolando. */
+function TickerMarquee({ items, brand }: { items: string[]; brand: typeof BRANDS.smartv }) {
+  const list = items.length ? items : ['Aguardando as primeiras urnas'];
+  const duration = Math.max(30, list.join(' ').length / 7);
+  return (
+    <div className="relative flex-1 overflow-hidden h-full text-white">
+      <div className="tv-marquee absolute inset-y-0 left-0 flex items-center whitespace-nowrap" style={{ ['--tv-marquee-duration' as string]: `${duration}s` }}>
+        {[0, 1].map(k => (
+          <span key={k} className="flex items-center">
+            {list.map((t, i) => (
+              <span key={`${k}-${i}`} className="px-10 text-[24px] font-semibold tracking-wide uppercase">{t}</span>
+            ))}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -223,30 +269,30 @@ function DistrictLine({ d, brand }: { d: DistrictSnapshot; brand: typeof BRANDS.
   const lead = d.leader!;
   return (
     <div className="flex-1 min-w-0 flex items-center gap-5 px-5 text-white tv-scene-in">
-      <span className="shrink-0 text-[19px] font-black opacity-80">{d.uf}</span>
-      <span className="text-[24px] font-extrabold uppercase truncate max-w-[380px]">{d.name}</span>
-      <span className="shrink-0 rounded-[8px] px-2.5 py-0.5 text-[17px] font-extrabold uppercase" style={{ background: d.status.backgroundColor, color: d.status.textColor }}>
+      <span className="shrink-0 text-[19px] font-bold opacity-80">{d.uf}</span>
+      <span className="text-[24px] font-semibold uppercase truncate max-w-[380px]">{d.name}</span>
+      <span className="shrink-0 rounded-[8px] px-2.5 py-0.5 text-[17px] font-bold uppercase" style={{ background: d.status.backgroundColor, color: d.status.textColor }}>
         {d.status.label}
       </span>
       <span className="flex-1 min-w-0 flex items-baseline justify-center gap-2 truncate">
         <span className="shrink-0 self-center rounded-[6px] px-1.5 font-extrabold text-[15px]" style={{ background: frontColor(lead.front), color: textOn(frontColor(lead.front)) }}>{lead.front}</span>
-        <span className="text-[22px] font-extrabold uppercase truncate">{lead.name}</span>
+        <span className="text-[22px] font-semibold uppercase truncate">{lead.name}</span>
         {(lead.incumbent || lead.incumbentParty) && (
-          <span className="shrink-0 self-center rounded-[6px] border border-white/60 px-1.5 text-[13px] font-extrabold uppercase leading-[1.4]">
-            {lead.incumbent ? caseOf(brand, g('Deputado atual', 'Deputada atual', lead.gender)) : caseOf(brand, 'Incumbente')}
+          <span className="shrink-0 self-center rounded-[6px] border border-white/60 px-1.5 text-[13px] font-semibold uppercase leading-[1.4]">
+            {lead.incumbent ? g('Deputado atual', 'Deputada atual', lead.gender) : 'Incumbente'}
           </span>
         )}
-        <span className="text-[20px] font-bold opacity-90 tabular-nums">{fmtPct(lead.pct)}</span>
+        <span className="text-[20px] font-medium opacity-90 tabular-nums">{fmtPct(lead.pct)}</span>
       </span>
       {d.runnerUp && (
         <span className="shrink-0 flex items-baseline gap-2 text-[19px] opacity-90">
-          <span className="font-semibold">2º</span>
+          <span className="font-medium">2º</span>
           <span className="rounded-[6px] px-1.5 font-extrabold text-[15px]" style={{ background: frontColor(d.runnerUp.front), color: textOn(frontColor(d.runnerUp.front)) }}>{d.runnerUp.front}</span>
-          <span className="font-bold uppercase truncate max-w-[200px]">{d.runnerUp.name}</span>
+          <span className="font-semibold uppercase truncate max-w-[200px]">{d.runnerUp.name}</span>
           <span className="tabular-nums">{fmtPct(d.runnerUp.pct)}</span>
         </span>
       )}
-      <span className="shrink-0 text-[15px] font-semibold opacity-70 tabular-nums">{caseOf(brand, `${fmtPct(d.reported)} apur.`)}</span>
+      <span className="shrink-0 text-[15px] font-medium opacity-70 tabular-nums uppercase">{`${fmtPct(d.reported)} apur.`}</span>
     </div>
   );
 }
@@ -257,22 +303,46 @@ function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof
   const long = text.headline.length > 42;
   return (
     <div className="absolute left-[104px] right-[104px] min-h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
-      style={{ bottom: raised ? 138 : 68, background: 'rgb(var(--tv-tarja) / 0.94)', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
-      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 text-white leading-[1.05]"
-        style={{ background: 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)' }}>
-        <span className="text-[44px] font-normal">{caseOf(brand, text.label1)}</span>
-        {text.label2 && <span className="text-[44px] font-normal">{caseOf(brand, text.label2)}</span>}
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 leading-[1.05]"
+        style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
+        {!text.label1.trim() && !text.label2.trim() ? (
+          // Bloco vazio: mostra o logo (Smartv: ◎ ELEIÇÕES · News: news°)
+          brand.logo.kind === 'target' ? (
+            <span className="inline-flex items-center gap-2.5 text-[36px] font-black leading-none">
+              <TargetMark size={40} />{caseOf(brand, 'Eleições')}
+            </span>
+          ) : (
+            <span className="text-white"><BrandLogo brand={brand} size={64} color="#ffffff" /></span>
+          )
+        ) : (
+          <>
+            <span className={`text-[44px] ${brand.cgPaper ? 'font-black' : 'font-normal'}`}>{caseOf(brand, text.label1)}</span>
+            {text.label2 && <span className={`text-[44px] ${brand.cgPaper ? 'font-black' : 'font-normal'}`}>{caseOf(brand, text.label2)}</span>}
+          </>
+        )}
       </div>
+      {brand.cgPaper && !front && <div className="w-[3px] my-6 shrink-0 rounded-full bg-tv-accent" />}
       {front && <div className="w-3 shrink-0" style={{ background: frontColor(front) }} />}
-      <div className="flex-1 min-w-0 flex flex-col justify-center px-10 py-5 text-white">
+      <div className="flex-1 min-w-0 flex flex-col justify-center px-10 py-5" style={{ color: tarjaInk(brand) }}>
         <div className={`${long ? 'text-[50px]' : 'text-[60px]'} font-extrabold uppercase leading-[1.05] line-clamp-2`}>{text.headline}</div>
-        {text.sub && <div className={`${text.sub.length > 55 ? 'text-[24px]' : 'text-[32px]'} font-semibold uppercase mt-2 text-white/90 truncate`}>{text.sub}</div>}
+        {text.sub && <div className={`${text.sub.length > 55 ? 'text-[24px]' : 'text-[32px]'} font-semibold uppercase mt-2 opacity-85 truncate`}>{text.sub}</div>}
       </div>
       {front && (
         <div className="shrink-0 flex items-center pr-8">
           <span className="rounded-full px-6 py-2 text-[36px] font-black" style={{ background: frontColor(front), color: textOn(frontColor(front)) }}>{front}</span>
         </div>
       )}
+      {brand.cgPaper && <PillStrip />}
+    </div>
+  );
+}
+
+/** Ponta da tarja com as pílulas vermelhas animadas sobre o marrom (grafismo da vinheta Smartv). */
+function PillStrip() {
+  return (
+    <div className="w-[130px] shrink-0 relative overflow-hidden" style={{ background: 'rgb(var(--tv-ink))' }}>
+      <PillGrid width={130} height={176} rows={[0.42, 0.58]} ratio={1.6} secondsPerColumn={2.6} gap={3} originX={-110} pool={10} className="absolute inset-0" />
     </div>
   );
 }

@@ -28,6 +28,10 @@ export interface BrandTheme {
   programTitle: string;    // Título da cobertura (ex.: "Eleições")
   titleCase: 'upper' | 'lower' | 'none'; // Caixa do título da cobertura e das tarjas
   backdrop: 'arcs' | 'pills';             // Grafismo de fundo: arcos (Smartv) ou pílulas (News)
+  cgSolid: boolean;                       // CG com tarjas sólidas (sem transparência)
+  cgBlockFade: boolean;                   // bloco em gradiente do CG se funde na tarja (News) ou termina reto (Smartv)
+  cgPlaceBadge: boolean;                  // selo de local + "AO VIVO" no canto superior esquerdo do CG
+  cgPaper: boolean;                       // CG no estilo da vinheta: tarjas creme, texto escuro e pílulas (Smartv)
   fontFamily: string;      // Pilha CSS da fonte principal
   monoFontFamily: string;  // Pilha CSS da fonte numérica
   colors: {
@@ -78,6 +82,10 @@ export const BRANDS: Record<BrandId, BrandTheme> = {
     programTitle: 'Eleições',
     titleCase: 'upper',
     backdrop: 'arcs',
+    cgSolid: true,
+    cgBlockFade: false,
+    cgPlaceBadge: false,
+    cgPaper: true,
     fontFamily: BRAND_FONT,
     monoFontFamily: 'var(--font-jetbrains)',
     colors: SMARTV_COLORS,
@@ -90,6 +98,10 @@ export const BRANDS: Record<BrandId, BrandTheme> = {
     programTitle: 'eleições',
     titleCase: 'lower',
     backdrop: 'pills',
+    cgSolid: true,
+    cgBlockFade: true,
+    cgPlaceBadge: true,
+    cgPaper: false,
     fontFamily: BRAND_FONT,
     monoFontFamily: 'var(--font-jetbrains)',
     colors: {

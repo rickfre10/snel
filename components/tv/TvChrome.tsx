@@ -8,6 +8,7 @@ import { brandCssVars } from '@/lib/brand';
 import { frontColor, textOn } from '@/lib/haagar/rules';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { BrandLogo, N8Seal, fmtPct } from './ui';
+import PillGrid from './PillGrid';
 
 export const STAGE_W = 1920;
 export const STAGE_H = 1080;
@@ -54,6 +55,8 @@ export function Backdrop({ brand }: { brand: BrandTheme }) {
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <div className="absolute inset-[-20%] tv-bg-drift" style={{ background: 'radial-gradient(1400px 900px at 15% 15%, rgb(var(--tv-bg-glow) / 0.55), transparent 55%)' }} />
       <div className="absolute rounded-full tv-bg-orbit" style={{ width: 1500, height: 1500, right: -1080, top: -1020, background: 'radial-gradient(circle at 30% 70%, rgb(var(--tv-accent) / 0.55), rgb(var(--tv-accent) / 0.12) 55%, transparent 70%)' }} />
+      {/* pílulas da vinheta deslizando, bem sutis, por trás dos painéis */}
+      <PillGrid width={STAGE_W} height={STAGE_H} originX={-200} secondsPerColumn={5} gap={10} fill="rgb(var(--tv-accent) / 0.07)" className="absolute inset-0" />
       <div className="absolute rounded-full border-[90px] border-tv-accent/[0.07] tv-bg-orbit-rev" style={{ width: 1900, height: 1900, left: -1500, bottom: -1500 }} />
     </div>
   );
@@ -72,15 +75,8 @@ export function TopBar({ brand, snap, nav, onLogoLongPress }: { brand: BrandThem
     <header className="absolute left-10 right-10 top-7 h-[84px] flex items-center gap-6">
       <div className="flex items-center gap-5 shrink-0 select-none" onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel}>
         <div className="text-tv-kicker"><BrandLogo brand={brand} size={44} color="rgb(var(--tv-text))" /></div>
-        <div className="w-px h-12 bg-tv-text/20" />
         <div>
           <div className="text-[30px] font-black leading-none tracking-tight">{caseOf(brand, brand.programTitle)} 2026</div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="rounded-md bg-tv-accent2 text-white px-2 py-0.5 text-[13px] font-extrabold tracking-wide">{caseOf(brand, 'Haagar')}</span>
-            <span className="rounded-md bg-tv-text/15 px-2 py-0.5 text-[13px] font-extrabold tracking-wide inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-tv-live tv-pulse" />{caseOf(brand, 'Ao vivo')}
-            </span>
-          </div>
         </div>
       </div>
 
@@ -125,7 +121,7 @@ export function Ticker({ brand, items, right }: { brand: BrandTheme; items: stri
 
   return (
     <footer className="absolute left-10 right-10 bottom-6 h-[56px] flex gap-3">
-      <div className="w-[150px] rounded-[14px] bg-tv-accent text-tv-accent-text flex items-center justify-center text-[26px] font-black tabular-nums">{clock}</div>
+      <div className="w-[150px] rounded-[14px] bg-tv-accent text-tv-accent-text flex items-center justify-center text-[26px] font-bold tabular-nums">{clock}</div>
       <div className="flex-1 rounded-[14px] bg-tv-text/[0.14] backdrop-blur overflow-hidden flex items-center">
         <N8Seal size={30} />
         <div className="relative flex-1 overflow-hidden h-full">
@@ -133,7 +129,7 @@ export function Ticker({ brand, items, right }: { brand: BrandTheme; items: stri
             {[0, 1].map(k => (
               <span key={k} className="flex items-center">
                 {list.map((t, i) => (
-                  <span key={`${k}-${i}`} className="px-10 text-[21px] font-bold tracking-wide">{caseOf(brand, t)}</span>
+                  <span key={`${k}-${i}`} className="px-10 text-[21px] font-semibold tracking-wide uppercase">{t}</span>
                 ))}
               </span>
             ))}
