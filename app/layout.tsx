@@ -1,26 +1,41 @@
 // app/layout.tsx
 import type { Metadata } from 'next';
-import { Poppins, Outfit, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
+// Fontes salvas no projeto (app/fonts) — o build não depende do Google Fonts.
+
 // Fonte do painel 2022
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '900'],
+const poppins = localFont({
+  src: [
+    { path: './fonts/poppins-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/poppins-latin-600-normal.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/poppins-latin-700-normal.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/poppins-latin-900-normal.woff2', weight: '900', style: 'normal' },
+  ],
   display: 'swap',
   variable: '--font-poppins',
 });
 
 // Fontes disponíveis para os temas de marca do painel 2026 (ver lib/brand.ts)
-const outfit = Outfit({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
+const outfit = localFont({
+  src: [
+    { path: './fonts/outfit-latin-300-normal.woff2', weight: '300', style: 'normal' },
+    { path: './fonts/outfit-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/outfit-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/outfit-latin-600-normal.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/outfit-latin-700-normal.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/outfit-latin-800-normal.woff2', weight: '800', style: 'normal' },
+    { path: './fonts/outfit-latin-900-normal.woff2', weight: '900', style: 'normal' },
+  ],
   display: 'swap',
   variable: '--font-outfit',
 });
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['500', '700'],
+const jetbrainsMono = localFont({
+  src: [
+    { path: './fonts/jetbrains-mono-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/jetbrains-mono-latin-700-normal.woff2', weight: '700', style: 'normal' },
+  ],
   display: 'swap',
   variable: '--font-jetbrains',
 });

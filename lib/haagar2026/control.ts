@@ -42,6 +42,7 @@ export interface CgVisibility {
   place?: string;     // texto do selo acima do "AO VIVO" (ex.: "São Pedro, MA")
   text?: CgText;     // tarja de texto livre (manchete)
   district?: CgDistrict; // tarja de um distrito escolhido pelo operador
+  majority?: boolean;    // tarja de maioria (frente que forma/projeta maioria)
   autoResults?: boolean; // cada distrito definido entra sozinho no ar (15 s cada, fila)
   queueSkip?: number;    // incrementar = pula o item urgente atual
   queueClear?: number;   // incrementar = esvazia a fila urgente

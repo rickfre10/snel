@@ -171,6 +171,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
                 <Btn active={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa distritos</Btn>
                 <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Logo</Btn>
               </div>
+              <MajorityToggle cg={cg} snap={snap} dispatch={dispatch} />
               <PlaceInput value={cg.place ?? ''} onSave={place => dispatch({ type: 'setCg', patch: { place } })} />
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <Btn active={cg.count === 'confirmadas'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'confirmadas' } })}>Contar eleitos</Btn>
@@ -218,7 +219,7 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
   const set = (patch: Partial<CgText>) => { setTouched(true); setDraft(d => ({ ...d, ...patch })); };
   const send = (show: boolean) => {
     const district = state.cg?.district;
-    if (show && district?.show) dispatch({ type: 'setCg', patch: { district: { ...district, show: false } } });
+    if (show && (district?.show || state.cg?.majority)) dispatch({ type: 'setCg', patch: { majority: false, ...(district ? { district: { ...district, show: false } } : {}) } });
     dispatch({ type: 'setCgText', patch: { ...draft, show } });
     setTouched(false);
   };
@@ -270,6 +271,19 @@ function CgUrgentSection({ state, dispatch }: { state: ControlState; dispatch: (
   );
 }
 
+// ------------------------------------------------ CG · tarja de maioria --
+function MajorityToggle({ cg, snap, dispatch }: { cg: typeof DEFAULT_CG; snap: ElectionSnapshot | null; dispatch: (a: ControlAction) => void }) {
+  const conf = snap?.fronts.find(f => f.confirmed >= MAJORITY);
+  const proj = snap?.fronts.find(f => f.projected >= MAJORITY);
+  const who = conf ? `${conf.legend} forma a maioria (${conf.confirmed})` : proj ? `${proj.legend} projeta maioria (${proj.projected})` : 'ninguém chegou à maioria ainda';
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <Btn active={!!cg.majority} onClick={() => dispatch({ type: 'setCg', patch: { majority: !cg.majority } })}>Tarja de maioria</Btn>
+      <span className="text-[11px] text-white/60 min-w-0 truncate">{who}</span>
+    </div>
+  );
+}
+
 // ------------------------------------------------- CG · tarja de distrito --
 function CgDistrictSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
   const cg = { ...DEFAULT_CG, ...state.cg };
@@ -279,7 +293,7 @@ function CgDistrictSection({ state, dispatch, snap }: { state: ControlState; dis
   const put = (id: number) => dispatch({
     type: 'setCg',
     // Colocar o distrito tira o texto livre do ar (uma tarja por vez)
-    patch: { district: { show: true, id }, text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
+    patch: { district: { show: true, id }, majority: false, text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
   });
   return (
     <Section title="CG · distrito" right={cur?.show ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/25 text-red-200">NO AR</span> : null}>

@@ -122,7 +122,7 @@ export function useBreaking(snap: ElectionSnapshot | null, seed: number, opts: O
 
   useEffect(() => {
     if (current) {
-      const ms = current.kind === 'result' ? resultMs : durationMs;
+      const ms = current.kind === 'result' || current.kind === 'majority' ? resultMs : durationMs;
       const t = setTimeout(() => setCurrent(queue.current.shift() ?? null), ms);
       return () => clearTimeout(t);
     }
