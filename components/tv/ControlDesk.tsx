@@ -60,6 +60,7 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
       else if (e.key === 'ArrowLeft') { e.preventDefault(); dispatch({ type: 'step', delta: e.shiftKey ? -5 : -1 }); }
       else if (n >= 1 && n <= SCENES.length) showScene(SCENES[n - 1].id);
       else if (e.key === 'Escape') clearTarjas();
+      else if (e.key === 'u' || e.key === 'U') dispatch({ type: 'stinger' });
       else if (e.key === '/') { e.preventDefault(); document.getElementById('desk-search')?.focus(); }
       else if (e.key === '?') setHelp(h => !h);
     };
@@ -343,6 +344,7 @@ function Shortcuts() {
     ['1 – 8', 'cena do telão (na ordem dos botões)'],
     ['/', 'buscar distrito para o telão'],
     ['Esc', 'tirar as tarjas manuais do CG'],
+    ['U', 'soltar a vinheta "ÚLTIMA HORA" (tela cheia)'],
     ['?', 'mostrar / esconder esta ajuda'],
   ];
   return (

@@ -18,6 +18,7 @@ import { useBreaking } from '@/lib/haagar2026/useBreaking';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import IdleScreen from '@/components/tv/IdleScreen';
 import TelaoScene from '@/components/tv/TelaoScene';
+import BreakingStinger, { useStinger } from '@/components/tv/BreakingStinger';
 
 const ROTATE_MS = 15000;
 
@@ -95,6 +96,8 @@ export default function Telao2026() {
 
   // ---- Última hora: viradas confirmadas e maioria
   const breaking = useBreaking(snap, state.seed, { ready: el.ready });
+  // ---- Vinheta "ÚLTIMA HORA" (disparada pelo operador)
+  const stinger = useStinger(state.stinger, el.clockOffset, el.ready);
   const tickerItems = useMemo(() => (snap ? buildTicker(snap) : []), [snap]);
 
   return (
@@ -109,6 +112,7 @@ export default function Telao2026() {
           <IdleScreen brand={brand} onExit={() => setScene('geral')}
             info={snap && snap.reported > 0 ? `${fmtPct(snap.reported)} dos votos apurados` : 'Acompanhe a apuração ao vivo'} />
         )}
+        {stinger !== null && <BreakingStinger key={stinger} brand={brand} />}
       </Stage>
 
       {/* Gaveta discreta de controle (fora do palco, sem escala) */}

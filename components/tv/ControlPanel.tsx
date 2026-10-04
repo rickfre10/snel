@@ -256,12 +256,26 @@ export function CgTextEditor({ state, dispatch }: { state: ControlState; dispatc
   );
 }
 
+// ------------------------------------- Vinheta "ÚLTIMA HORA" (manual) --
+export function StingerButton({ dispatch }: { dispatch: (a: ControlAction) => void }) {
+  return (
+    <div className="mb-3">
+      <button onClick={() => dispatch({ type: 'stinger' })}
+        className="w-full h-14 rounded-xl bg-red-600 hover:bg-red-500 active:scale-[0.99] text-white font-black text-base tracking-wide uppercase shadow-lg shadow-red-900/40">
+        Soltar vinheta · Última hora
+      </button>
+      <p className="text-[11px] text-white/50 mt-1.5">Tela cheia por ~3,5 s no telão e no CG, para grandes anúncios. Só entra quando você aperta.</p>
+    </div>
+  );
+}
+
 // ------------------------------------------- CG · urgência (automático) --
 export function CgUrgentSection({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
   const cg = { ...DEFAULT_CG, ...state.cg };
   const auto = cg.autoResults !== false;
   return (
     <Section title="CG · urgência" right={auto || cg.breaking ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500/25 text-amber-200">AUTOMÁTICO</span> : null}>
+      <StingerButton dispatch={dispatch} />
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={auto} onChange={e => dispatch({ type: 'setCg', patch: { autoResults: e.target.checked } })} className="w-4 h-4 accent-white" />
         Resultados automáticos (cada distrito definido, 15 s cada, em fila)
