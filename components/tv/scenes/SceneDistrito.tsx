@@ -3,7 +3,7 @@
 import React from 'react';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, frontColor, frontName } from '@/lib/haagar/rules';
-import { AnimatedNumber, Avatar, Delta, FrontPill, Panel, ProgressBar, StatusChip, fmtInt, fmtPct } from '../ui';
+import { AnimatedNumber, Avatar, Delta, FrontPill, Panel, ProgressBar, StatusChip, fmtInt, fmtPct, g } from '../ui';
 
 export default function SceneDistrito({ snap, districtId, onDistrict, onUf }: { snap: ElectionSnapshot; districtId: number; onDistrict: (id: number) => void; onUf: (uf: string) => void }) {
   const d = snap.districtById[districtId];
@@ -39,7 +39,7 @@ export default function SceneDistrito({ snap, districtId, onDistrict, onUf }: { 
       </div>
 
       <div className="flex-1 min-h-0 grid grid-cols-[1fr_620px] gap-6">
-        <Panel kicker="Candidatos 2026" title={hasData && d.leader ? `${d.leader.name} ${d.isFinal ? 'eleito' : 'à frente'}` : 'Aguardando primeiras urnas'}
+        <Panel kicker="Candidatos 2026" title={hasData && d.leader ? `${d.leader.name} ${d.isFinal ? g('eleito', 'eleita', d.leader.gender) : 'à frente'}` : 'Aguardando primeiras urnas'}
           bodyClassName="flex flex-col gap-3">
           {top.map((c, i) => {
             const col = frontColor(c.front);
@@ -50,8 +50,8 @@ export default function SceneDistrito({ snap, districtId, onDistrict, onUf }: { 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className={`${i === 0 ? 'text-[32px]' : 'text-[24px]'} font-black leading-tight truncate`}>{c.name}</span>
-                    {elected && <span className="rounded-full bg-[#3fd0b8] text-[#06231e] px-3 py-0.5 text-[14px] font-black uppercase">Eleito</span>}
-                    {c.incumbent && <span className="rounded-full bg-tv-text text-tv-bg px-2.5 py-0.5 text-[12px] font-black uppercase tracking-wider">Deputado atual</span>}
+                    {elected && <span className="rounded-full bg-[#3fd0b8] text-[#06231e] px-3 py-0.5 text-[14px] font-black uppercase">{g('Eleito', 'Eleita', c.gender)}</span>}
+                    {c.incumbent && <span className="rounded-full bg-tv-text text-tv-bg px-2.5 py-0.5 text-[12px] font-black uppercase tracking-wider">{g('Deputado atual', 'Deputada atual', c.gender)}</span>}
                     {c.incumbentParty && <span className="rounded-full border-2 px-2.5 py-0.5 text-[12px] font-black uppercase tracking-wider" style={{ borderColor: col }}>Partido incumbente</span>}
                     {!c.incumbent && c.rerun && <span className="rounded-full border border-tv-border px-2.5 py-0.5 text-[12px] font-bold uppercase tracking-wider text-tv-muted">Também disputou 2022</span>}
                   </div>
@@ -123,14 +123,15 @@ function IncumbentPanel({ d }: { d: DistrictSnapshot }) {
   const defender = d.candidates.find(c => c.incumbentParty) ?? null;
   const pos = (c: CandidateResult | null) => (c ? d.candidates.indexOf(c) + 1 : 0);
   const hasData = d.counted > 0;
+  const prevGender = d.prev.candidates.find(c => c.name === d.prev.name)?.gender ?? null;
   return (
-    <Panel kicker="Deputado atual" title={d.prev.name ?? frontName(front)}>
+    <Panel kicker={g('Deputado atual', 'Deputada atual', prevGender)} title={d.prev.name ?? frontName(front)}>
       <div className="flex items-center gap-5">
         <Avatar name={d.prev.name ?? front ?? '?'} legend={front} photo={now?.photo ?? d.prev.candidates.find(c => c.name === d.prev.name)?.photo ?? null} size={76} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-[16px] text-tv-muted">
             <FrontPill legend={front} size="sm" />
-            <span className="truncate">{d.prev.party ?? ''} · eleito em 2022 com <b className="text-tv-text">{fmtPct(d.prev.pct)}</b></span>
+            <span className="truncate">{d.prev.party ?? ''} · {g('eleito', 'eleita', prevGender)} em 2022 com <b className="text-tv-text">{fmtPct(d.prev.pct)}</b></span>
           </div>
           <div className="mt-2.5 text-[18px] font-bold">
             {d.prev.deputyRunning ? (

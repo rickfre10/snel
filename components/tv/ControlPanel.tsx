@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { BRANDS, BrandId } from '@/lib/brand';
 import { ControlAction, ControlState, DEFAULT_CG, DEFAULT_CG_TEXT, CgText, SceneId, SPEED_PRESETS } from '@/lib/haagar2026/control';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
-import { MAJORITY, STATE_ORDER, frontColor } from '@/lib/haagar/rules';
+import { MAJORITY, STATE_ORDER, frontColor, textOn } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
 
 const SCENES: { id: SceneId; label: string }[] = [
@@ -131,7 +131,9 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
       </Section>
 
       <Section title="Telão">
-        <div className="grid grid-cols-3 gap-2">
+        <DistrictSearch snap={snap} onShow={id => { setFocusDistrict(id); dispatch({ type: 'focus', scene: 'distrito', districtId: id }); }}
+          currentId={state.focus?.scene === 'distrito' ? state.focus.districtId : undefined} />
+        <div className="grid grid-cols-3 gap-2 mt-3">
           {SCENES.map(s => (
             <Btn key={s.id} onClick={() => dispatch({ type: 'focus', scene: s.id, uf: s.id === 'estado' ? focusUf : undefined, districtId: s.id === 'distrito' ? focusDistrict : undefined })}>{s.label}</Btn>
           ))}
@@ -240,5 +242,51 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
       </div>
       <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras.</p>
     </Section>
+  );
+}
+
+// ------------------------------------------------ Busca de distritos -----
+const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+/** Busca por nome, número, UF, estado ou região; um toque manda o distrito para o telão. */
+function DistrictSearch({ snap, onShow, currentId }: { snap: ElectionSnapshot | null; onShow: (id: number) => void; currentId?: number }) {
+  const [q, setQ] = useState('');
+  const terms = norm(q).split(/\s+/).filter(Boolean);
+  const results = terms.length === 0 ? [] : districtsData
+    .map(d => ({ d, hay: norm(`${d.district_id} ${d.district_name} ${d.uf} ${d.uf_name} ${d.region_name} ${d.city_name}`) }))
+    .filter(x => terms.every(t => x.hay.includes(t)))
+    // nome que começa com o termo vem primeiro
+    .sort((a, b) => Number(!norm(a.d.district_name).startsWith(terms[0])) - Number(!norm(b.d.district_name).startsWith(terms[0])) || a.d.district_id - b.d.district_id)
+    .slice(0, 8);
+
+  return (
+    <div>
+      <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar distrito (nome, número, UF ou região)"
+        onKeyDown={e => { if (e.key === 'Enter' && results[0]) { onShow(results[0].d.district_id); setQ(''); } }}
+        className="w-full h-11 rounded-lg bg-black/40 border border-white/20 px-3 text-[15px]" />
+      {results.length > 0 && (
+        <div className="mt-2 flex flex-col gap-1">
+          {results.map(({ d }) => {
+            const sd = snap?.districtById[d.district_id];
+            const lead = sd?.leader;
+            const c = lead ? frontColor(lead.front) : null;
+            return (
+              <button key={d.district_id} onClick={() => { onShow(d.district_id); setQ(''); }}
+                className={`flex items-center gap-2 text-left rounded-lg px-2.5 py-2 border hover:bg-white/10 ${currentId === d.district_id ? 'border-white/60' : 'border-white/10'}`}>
+                <span className="text-[11px] text-white/50 w-8 tabular-nums">{d.district_id}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-bold truncate">{d.district_name}</span>
+                  <span className="block text-[11px] text-white/50 truncate">{d.uf} · {d.region_name}</span>
+                </span>
+                {lead && c && <span className="text-[11px] font-black rounded px-1.5 py-0.5" style={{ background: c, color: textOn(c) }}>{lead.front}</span>}
+                {sd && <span className="text-[11px] text-white/60 tabular-nums w-12 text-right">{sd.reported.toFixed(0)}%</span>}
+                <span className="text-[11px] font-bold text-white/80">no telão →</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {terms.length > 0 && results.length === 0 && <div className="text-[12px] text-white/50 mt-2">Nenhum distrito encontrado.</div>}
+    </div>
   );
 }

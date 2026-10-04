@@ -32,7 +32,7 @@ export function useBreaking(snap: ElectionSnapshot | null, seed: number, duratio
         queue.current.push({
           id: `flip-${seed}-${d.id}`,
           headline: `${d.leader.front} toma ${d.name}`,
-          sub: `Cadeira era da ${d.prev.front} · ${d.ufName} · ${d.leader.name} eleito com ${fmtPct(d.leader.pct)}`,
+          sub: `Cadeira era da ${d.prev.front} · ${d.ufName} · ${d.leader.name} ${d.leader.gender === 'F' ? 'eleita' : 'eleito'} com ${fmtPct(d.leader.pct)}`,
           front: d.leader.front,
         });
       }

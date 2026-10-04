@@ -15,7 +15,7 @@ import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
 import { Stage, caseOf } from '@/components/tv/TvChrome';
-import { AnimatedNumber, BrandLogo, N8Seal, TargetMark, fmtPct } from '@/components/tv/ui';
+import { AnimatedNumber, BrandLogo, N8Seal, TargetMark, fmtPct, g } from '@/components/tv/ui';
 
 const TICKER_MS = 6000;
 const BACKGROUNDS: Record<string, string> = {
@@ -221,7 +221,7 @@ function DistrictLine({ d, brand }: { d: DistrictSnapshot; brand: typeof BRANDS.
         <span className="text-[22px] font-extrabold uppercase truncate">{lead.name}</span>
         {(lead.incumbent || lead.incumbentParty) && (
           <span className="shrink-0 self-center rounded-[6px] border border-white/60 px-1.5 text-[13px] font-extrabold uppercase leading-[1.4]">
-            {lead.incumbent ? caseOf(brand, 'Deputado atual') : caseOf(brand, 'Incumbente')}
+            {lead.incumbent ? caseOf(brand, g('Deputado atual', 'Deputada atual', lead.gender)) : caseOf(brand, 'Incumbente')}
           </span>
         )}
         <span className="text-[20px] font-bold opacity-90 tabular-nums">{fmtPct(lead.pct)}</span>

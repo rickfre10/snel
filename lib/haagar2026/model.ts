@@ -65,6 +65,7 @@ export interface CandidateResult {
   party: string | null;
   name: string;
   photo: string | null;
+  gender: 'F' | 'M' | null;
   incumbent: boolean;
   incumbentParty: boolean;
   rerun: boolean;
@@ -104,7 +105,7 @@ export interface DistrictSnapshot {
     marginPct: number;
     pct: number;                 // % do deputado eleito em 2022
     deputyRunning: boolean;      // o deputado atual disputa 2026
-    candidates: { name: string; front: string; party: string | null; votes: number; pct: number; photo: string | null }[];
+    candidates: { name: string; front: string; party: string | null; votes: number; pct: number; photo: string | null; gender: 'F' | 'M' | null }[];
   };
   // ---- 2018 (vencedor e %)
   y2018: { front: string; pct: number } | null;
@@ -367,7 +368,7 @@ export function snapshotAt(
 
     const candidates: CandidateResult[] = d.candidates
       .map(c => ({
-        front: c.front, party: c.party, name: c.name, photo: c.photo,
+        front: c.front, party: c.party, name: c.name, photo: c.photo, gender: c.gender,
         incumbent: c.incumbent, incumbentParty: c.incumbentParty, rerun: c.rerun,
         votes: votes[c.front] ?? 0,
         pct: counted > 0 ? ((votes[c.front] ?? 0) / counted) * 100 : 0,
@@ -423,7 +424,7 @@ export function snapshotAt(
         pct: prevFront ? prevShares[prevFront] ?? 0 : 0,
         deputyRunning: d.candidates.some(c => c.incumbent),
         candidates: (base?.candidates ?? []).slice(0, 5).map(c => ({
-          name: c.name, front: c.front, party: c.party, votes: c.votes, photo: c.photo,
+          name: c.name, front: c.front, party: c.party, votes: c.votes, photo: c.photo, gender: c.gender ?? null,
           pct: base && base.total > 0 ? (c.votes / base.total) * 100 : 0,
         })),
       },

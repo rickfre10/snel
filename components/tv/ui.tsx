@@ -204,3 +204,6 @@ export function N8Seal({ size = 30, className = '' }: { size?: number; className
     </div>
   );
 }
+
+/** Concordância de gênero: g('eleito', 'eleita', gender). */
+export const g = (m: string, f: string, gender?: 'F' | 'M' | null) => (gender === 'F' ? f : m);
