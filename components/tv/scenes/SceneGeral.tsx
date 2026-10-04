@@ -18,14 +18,20 @@ const MODES: { id: MapMode; label: string }[] = [
 export default function SceneGeral({ snap, onDistrict }: { snap: ElectionSnapshot; onDistrict: (id: number) => void }) {
   const [mode, setMode] = useState<MapMode>('resultado');
   const [swingFront, setSwingFront] = useState('TDS');
+  // Mapa em foco: esconde a corrida pela maioria e a projeção de cadeiras
+  const [expanded, setExpanded] = useState(false);
   const leader = snap.fronts[0];
   const prLeader = [...snap.fronts].sort((a, b) => b.prPct - a.prPct)[0];
 
   return (
-    <div className="h-full grid grid-cols-[1fr_600px] gap-6">
+    <div className={`h-full grid gap-6 ${expanded ? 'grid-cols-1' : 'grid-cols-[1fr_600px]'}`}>
       <div className="flex flex-col gap-6 min-h-0 min-w-0">
         <Panel kicker="Parlamento de Haagar" title="Mapa dos distritos"
-          right={<div className="flex gap-2">{MODES.map(m => <Chip key={m.id} active={mode === m.id} onClick={() => setMode(m.id)}>{m.label}</Chip>)}</div>}
+          right={<div className="flex gap-2">
+            {MODES.map(m => <Chip key={m.id} active={mode === m.id} onClick={() => setMode(m.id)}>{m.label}</Chip>)}
+            <span className="w-px bg-tv-border mx-1" />
+            <Chip active={expanded} onClick={() => setExpanded(e => !e)}>{expanded ? '⤡ Reduzir' : '⤢ Expandir'}</Chip>
+          </div>}
           className="flex-1" bodyClassName="flex flex-col gap-3">
           {mode === 'swing' && (
             <div className="flex gap-2">
@@ -33,12 +39,12 @@ export default function SceneGeral({ snap, onDistrict }: { snap: ElectionSnapsho
             </div>
           )}
           <div className="flex-1 min-h-0">
-            <HexMap districts={snap.districtById} mode={mode} swingFront={swingFront} onSelect={onDistrict} />
+            <HexMap districts={snap.districtById} mode={mode} swingFront={swingFront} onSelect={onDistrict} showLabels={expanded} />
           </div>
           <MapLegend mode={mode} fronts={FRONT_ORDER} swingFront={swingFront} />
         </Panel>
 
-        <Panel kicker={`${TOTAL_DISTRICT_SEATS} distritais + proporcionais`} title="Corrida pela maioria"
+        {!expanded && <Panel kicker={`${TOTAL_DISTRICT_SEATS} distritais + proporcionais`} title="Corrida pela maioria"
           right={<div className="text-right text-[15px] text-tv-muted">Sólido: confirmadas · Hachurado: projeção · Faixa fina: 2022</div>}>
           <div className="pt-9">
             <SeatRaceBar fronts={snap.frontByLegend} height={50} />
@@ -46,12 +52,13 @@ export default function SceneGeral({ snap, onDistrict }: { snap: ElectionSnapsho
           <div className="grid grid-cols-4 gap-3 mt-5">
             <MiniStat label="Distritos definidos" value={<><AnimatedNumber value={snap.calledCount} /><span className="text-tv-muted text-[20px]">/{TOTAL_DISTRICT_SEATS}</span></>} />
             <MiniStat label="Viradas" value={<AnimatedNumber value={snap.flips.length} />} sub={`+${snap.districts.filter(d => d.leadingFlip).length} em andamento`} />
-            <MiniStat label={`Voto proporcional · ${prLeader?.legend ?? '—'}`} value={fmtPct(snap.reported > 0 && prLeader ? prLeader.prPct : 0)} sub={snap.reported > 0 && prLeader ? <Delta value={prLeader.prPct - prLeader.prevPrPct} className="text-[14px]" /> : undefined} />
+            <MiniStat label={`Proporcional · ${prLeader?.legend ?? '—'}`} value={fmtPct(snap.reported > 0 && prLeader ? prLeader.prPct : 0)} sub={snap.reported > 0 && prLeader ? <Delta value={prLeader.prPct - prLeader.prevPrPct} className="text-[14px]" /> : undefined} />
             <MiniStat label="Votos apurados" value={<AnimatedNumber value={snap.counted / 1e6} format={n => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} mi`} />} sub={`${fmtInt(snap.pollsCounted)} urnas`} />
           </div>
-        </Panel>
+        </Panel>}
       </div>
 
+      {!expanded && (
       <Panel kicker="Projeção de cadeiras" title={leader && leader.projected > 0 ? `${leader.legend} ${leader.projected >= MAJORITY ? 'rumo à maioria' : 'lidera'}` : 'Aguardando apuração'} bodyClassName="flex flex-col gap-3 overflow-hidden">
         {snap.fronts.map(f => {
           const delta = f.projected - f.prev.total;
@@ -81,6 +88,7 @@ export default function SceneGeral({ snap, onDistrict }: { snap: ElectionSnapsho
           );
         })}
       </Panel>
+      )}
     </div>
   );
 }

@@ -37,7 +37,7 @@ GENERATED_PHOTOS_API_KEY=...     # opcional: rostos gerados para candidatos de 2
 
 Cenas (navegação no topo, tudo clicável/tocável):
 
-- **Visão geral** — mapa hexagonal (modos 2026, 2022, viradas, swing por frente e % apurado), corrida pela maioria e projeção de cadeiras por frente com saldo vs 2022.
+- **Visão geral** — mapa hexagonal (modos 2026, 2022, viradas, swing por frente e % apurado; botão **Expandir** deixa só o mapa, com o nome dos distritos), corrida pela maioria (passe o mouse/toque na faixa fina para ver o Parlamento atual, eleito em 2022) e projeção de cadeiras por frente com saldo vs 2022.
 - **Parlamento** — hemiciclo 2026 (confirmadas × projeção), simulador de coalizão e parlamento de 2022.
 - **Proporcional** — as 93 cadeiras proporcionais: garantidas (cheias) × projetadas (contorno, ainda podem mudar), % por frente vs 2022 e um cartão por estado.
 - **Estados** — mapa do estado, voto proporcional 2026 × 2022 com as cadeiras garantidas/projetadas, bancada distrital + proporcional.
@@ -94,4 +94,6 @@ Telão, CG e controle leem o mesmo estado em `/api/2026/control` — podem estar
 
 Tudo em **`lib/brand.ts`**: cada marca define logo, cores, caixa dos títulos e grafismo de fundo. Os componentes do telão só usam as variáveis `tv-*` (Tailwind) geradas a partir dali.
 
-Fonte: **Posterama** (comercial). Coloque os `.woff2` em `public/fonts/posterama/` (nomes em `app/globals.css` e no `LEIA-ME.txt` da pasta). Sem eles, o telão usa a Outfit.
+Fonte: **Posterama Text** (comercial), em `public/fonts/posterama/`: Thin, Regular, Bold e Black (W01/W07, com acentos). Os pesos que faltam usam o arquivo mais próximo (faixas no `@font-face` de `app/globals.css`); o SemiBold "W15" do pacote não tem os acentos do português e não é usado. Detalhes no `LEIA-ME.txt` da pasta. Sem os arquivos, o telão usa a Outfit.
+
+Logos: em `public/brand/` — `smartv-eleicoes-branco.png` / `smartv-eleicoes-cor.png` (selo "◎ ELEIÇÕES" da Smartv) e `smartvnews-branco.png` ("news°"). Os brancos são usados como máscara, então podem ser pintados de qualquer cor; o colorido (com o til) entra em fundo claro. Para trocar, substitua o arquivo e ajuste `aspect` (largura/altura) em `lib/brand.ts`.

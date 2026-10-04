@@ -7,7 +7,7 @@ import type { BrandTheme } from '@/lib/brand';
 import { brandCssVars } from '@/lib/brand';
 import { frontColor, textOn } from '@/lib/haagar/rules';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
-import { BrandLogo, N8Seal, TargetMark, fmtPct } from './ui';
+import { BrandLogo, ElectionLockup, N8Seal, fmtPct } from './ui';
 import PillGrid from './PillGrid';
 
 export const STAGE_W = 1920;
@@ -75,12 +75,18 @@ export function TopBar({ brand, snap, nav, onLogoLongPress }: { brand: BrandThem
     <header className="absolute left-10 right-10 top-7 h-[84px] flex items-center gap-6">
       <div className="flex items-center gap-5 shrink-0 select-none" onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel}>
         {/* Smartv: só o símbolo ◎; News: o logo "news°" */}
-        <div className="text-tv-text">
-          {brand.logo.kind === 'target' ? <TargetMark size={52} /> : <BrandLogo brand={brand} size={44} color="rgb(var(--tv-text))" />}
-        </div>
-        <div>
-          <div className="text-[30px] font-black leading-none tracking-tight">{caseOf(brand, brand.programTitle)} 2026</div>
-        </div>
+        {brand.logo.kind === 'target' ? (
+          // Smartv: selo "◎ ELEIÇÕES" + ano
+          <div className="flex items-center gap-3 text-tv-text">
+            <ElectionLockup brand={brand} height={50} color="rgb(var(--tv-text))" />
+            <span className="text-[34px] font-black leading-none tracking-tight">2026</span>
+          </div>
+        ) : (
+          <>
+            <div className="text-tv-text"><BrandLogo brand={brand} size={44} color="rgb(var(--tv-text))" /></div>
+            <div className="text-[30px] font-black leading-none tracking-tight">{caseOf(brand, brand.programTitle)} 2026</div>
+          </>
+        )}
       </div>
 
       <nav className="flex-1 flex justify-center">
@@ -94,9 +100,9 @@ export function TopBar({ brand, snap, nav, onLogoLongPress }: { brand: BrandThem
         </div>
       </nav>
 
-      <div className="shrink-0 w-[300px]">
-        <div className="flex items-baseline justify-between">
-          <span className="text-[14px] uppercase tracking-[0.18em] font-bold text-tv-muted">Votos apurados</span>
+      <div className="shrink-0 w-[320px]">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[14px] uppercase tracking-[0.12em] font-bold text-tv-muted whitespace-nowrap">Apurado</span>
           <span className="text-[34px] font-black tabular-nums leading-none">{fmtPct(reported, 2)}</span>
         </div>
         <div className="mt-2 h-3 rounded-full bg-tv-surface2 overflow-hidden">

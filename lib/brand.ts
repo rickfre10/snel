@@ -16,9 +16,12 @@
 
 export type BrandId = 'smartv' | 'smartvnews';
 
+/** Arquivo de logo em /public (PNG/SVG em branco, com fundo transparente). */
+export interface LogoFile { src: string; aspect: number }   // aspect = largura / altura
+
 export type BrandLogo =
-  | { kind: 'target'; wordmark: string }            // ◎ SMARTV  (alvo antes do nome)
-  | { kind: 'superscript'; wordmark: string }       // news°     (alvo sobrescrito depois)
+  | { kind: 'target'; wordmark: string; lockup?: { white: LogoFile; color?: LogoFile } } // ◎ SMARTV (+ "◎ ELEIÇÕES" em arquivo)
+  | { kind: 'superscript'; wordmark: string; image?: LogoFile }                          // news° (texto ou arquivo)
   | { kind: 'image'; src: string; height: number; alt: string };
 
 export interface BrandTheme {
@@ -78,7 +81,14 @@ export const BRANDS: Record<BrandId, BrandTheme> = {
   smartv: {
     id: 'smartv',
     name: 'Smartv',
-    logo: { kind: 'target', wordmark: 'SMARTV' },
+    logo: {
+      kind: 'target', wordmark: 'SMARTV',
+      // "◎ ELEIÇÕES" (selo da cobertura): branco para pintar de qualquer cor, e o colorido (com o til)
+      lockup: {
+        white: { src: '/brand/smartv-eleicoes-branco.png', aspect: 822 / 198 },
+        color: { src: '/brand/smartv-eleicoes-cor.png', aspect: 823 / 198 },
+      },
+    },
     programTitle: 'Eleições',
     titleCase: 'upper',
     backdrop: 'arcs',
@@ -94,7 +104,7 @@ export const BRANDS: Record<BrandId, BrandTheme> = {
   smartvnews: {
     id: 'smartvnews',
     name: 'SmartvNews',
-    logo: { kind: 'superscript', wordmark: 'news' },
+    logo: { kind: 'superscript', wordmark: 'news', image: { src: '/brand/smartvnews-branco.png', aspect: 984 / 268 } },
     programTitle: 'eleições',
     titleCase: 'lower',
     backdrop: 'pills',

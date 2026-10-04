@@ -19,7 +19,7 @@ import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
 import TelaoScene from '@/components/tv/TelaoScene';
 import PillGrid from '@/components/tv/PillGrid';
 import IdleScreen from '@/components/tv/IdleScreen';
-import { AnimatedNumber, Avatar, BrandLogo, N8Seal, TargetMark, fmtInt, fmtPct, g } from '@/components/tv/ui';
+import { AnimatedNumber, Avatar, BrandLogo, ElectionLockup, N8Seal, TargetMark, fmtInt, fmtPct, g } from '@/components/tv/ui';
 
 const TICKER_MS = 6000;
 const BACKGROUNDS: Record<string, string> = {
@@ -198,9 +198,7 @@ function AlternatingBlock({ brand, subject }: { brand: typeof BRANDS.smartv; sub
       </div>
       <div className={layer} style={{ opacity: showLogo ? 1 : 0, transform: showLogo ? 'none' : 'translateY(24px)' }}>
         {brand.logo.kind === 'target' ? (
-          <span className="inline-flex items-center gap-2.5 text-[36px] font-black leading-none">
-            <TargetMark size={40} />{caseOf(brand, 'Eleições')}
-          </span>
+          <ElectionLockup brand={brand} height={50} colored={brand.cgPaper} />
         ) : (
           <span className="text-[56px] font-light leading-none tracking-tight">{caseOf(brand, 'Eleições')}</span>
         )}
@@ -602,7 +600,7 @@ function MajorityTarja({ snap, front, projected, brand, raised, urgent }: { snap
       {/* Bloco com o logo da cobertura */}
       <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 gap-2" style={{ background: 'rgba(0,0,0,0.18)' }}>
         {brand.logo.kind === 'target' ? (
-          <span className="inline-flex items-center gap-2.5 text-[36px] font-black leading-none"><TargetMark size={40} />{caseOf(brand, 'Eleições')}</span>
+          <ElectionLockup brand={brand} height={50} color={fg} />
         ) : (
           <BrandLogo brand={brand} size={60} color={fg} />
         )}
@@ -645,9 +643,7 @@ function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof
         {!text.label1.trim() && !text.label2.trim() ? (
           // Bloco vazio: mostra o logo (Smartv: ◎ ELEIÇÕES · News: news°)
           brand.logo.kind === 'target' ? (
-            <span className="inline-flex items-center gap-2.5 text-[36px] font-black leading-none">
-              <TargetMark size={40} />{caseOf(brand, 'Eleições')}
-            </span>
+            <ElectionLockup brand={brand} height={50} colored={brand.cgPaper} />
           ) : (
             <span className="text-white"><BrandLogo brand={brand} size={64} color="#ffffff" /></span>
           )

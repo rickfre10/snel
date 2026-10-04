@@ -5,7 +5,7 @@
 // as colunas seguem uma progressão geométrica, então o loop é contínuo.
 import React, { useEffect, useRef, useState } from 'react';
 import type { BrandTheme } from '@/lib/brand';
-import { BrandLogo, TargetMark } from './ui';
+import { BrandLogo, ElectionLockup } from './ui';
 import PillGrid from './PillGrid';
 import { STAGE_H, STAGE_W, caseOf } from './TvChrome';
 
@@ -81,9 +81,8 @@ function SmartvIdle({ brand, onExit, info }: IdleProps) {
       {/* Painel do título */}
       <div className="absolute inset-y-0 left-0 rounded-r-[44px] flex flex-col justify-center pl-[96px] pr-16"
         style={{ width: panelW, background: 'rgb(var(--tv-paper))' }}>
-        <div className="flex items-center gap-8 text-tv-accent">
-          <TargetMark size={168} />
-          <span className="text-[150px] font-black leading-none tracking-tight">{caseOf(brand, 'Eleições')}</span>
+        <div className="text-tv-accent">
+          <ElectionLockup brand={brand} height={196} colored />
         </div>
         <div className="absolute left-[96px] bottom-[80px] right-16 flex items-end justify-between text-tv-ink">
           <div>

@@ -1,12 +1,11 @@
-Coloque aqui os arquivos da fonte Posterama (licença comercial) em .woff2:
+Fonte Posterama Text (licença comercial), declarada em app/globals.css (@font-face):
 
-  Posterama-Light.woff2      (300) OK
-  Posterama-Regular.woff2    (400) OK
-  Posterama-Medium.woff2     (500)
-  Posterama-SemiBold.woff2   (600) OK
-  Posterama-Bold.woff2       (700) OK
-  Posterama-ExtraBold.woff2  (800) 
-  Posterama-Black.woff2      (900) OK
+  PosteramaTextW01-Thin.woff2      pesos 100–200
+  PosteramaTextW01-Regular.woff2   pesos 300–500 (Light e Medium usam o Regular)
+  PosteramaTextW07-Bold.woff2      pesos 600–700 (SemiBold usa o Bold)
+  PosteramaTextW07-Black.woff2     pesos 800–900 (ExtraBold usa o Black)
 
-Os nomes estão declarados em app/globals.css (@font-face). Pesos ausentes
-são simulados pelo navegador; sem nenhum arquivo, o telão usa a Outfit.
+PosteramaTextW15-SemiBold.woff2 está aqui, mas NÃO é usado: o pacote "W15"
+não tem os acentos do português (ç, ã, õ, é...). Se conseguir o SemiBold,
+Light, Medium ou ExtraBold na versão W01 (Latin), coloque nesta pasta e
+ajuste as faixas de peso no app/globals.css.
