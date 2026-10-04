@@ -157,6 +157,8 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
         </div>
       </Section>
 
+      <CgUrgentSection state={state} dispatch={dispatch} />
+      <CgDistrictSection state={state} dispatch={dispatch} snap={snap} />
       <CgTextEditor state={state} dispatch={dispatch} />
 
       <Section title="CG (sobre o vídeo)" right={<a href="/2026/cg?fundo=cena" target="_blank" rel="noreferrer" className="text-xs underline text-white/70">abrir CG ↗</a>}>
@@ -169,11 +171,8 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
                 <Btn active={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa distritos</Btn>
                 <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Logo</Btn>
               </div>
+              <MajorityToggle cg={cg} snap={snap} dispatch={dispatch} />
               <PlaceInput value={cg.place ?? ''} onSave={place => dispatch({ type: 'setCg', patch: { place } })} />
-              <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                <input type="checkbox" checked={!!cg.breaking} onChange={e => dispatch({ type: 'setCg', patch: { breaking: e.target.checked } })} className="w-4 h-4 accent-white" />
-                Última hora automática (viradas e maioria)
-              </label>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <Btn active={cg.count === 'confirmadas'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'confirmadas' } })}>Contar eleitos</Btn>
                 <Btn active={cg.count === 'projecao'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'projecao' } })}>Contar projeção</Btn>
@@ -219,6 +218,8 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
   useEffect(() => { if (!touched) setDraft(onAir); }, [onAir.headline, onAir.sub, onAir.label1, onAir.label2, touched]); // eslint-disable-line react-hooks/exhaustive-deps
   const set = (patch: Partial<CgText>) => { setTouched(true); setDraft(d => ({ ...d, ...patch })); };
   const send = (show: boolean) => {
+    const district = state.cg?.district;
+    if (show && (district?.show || state.cg?.majority)) dispatch({ type: 'setCg', patch: { majority: false, ...(district ? { district: { ...district, show: false } } : {}) } });
     dispatch({ type: 'setCgText', patch: { ...draft, show } });
     setTouched(false);
   };
@@ -242,7 +243,73 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
         <Btn active={onAir.show && !touched} onClick={() => send(true)}>{onAir.show ? (touched ? 'Atualizar no ar' : 'No ar') : 'Colocar no ar'}</Btn>
         <Btn onClick={() => send(false)} danger={onAir.show}>Tirar do ar</Btn>
       </div>
-      <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras. Com as duas linhas do bloco vazias, o bloco mostra o logo.</p>
+      <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras (e tira a tarja de distrito). Resultados automáticos e última hora passam por cima. Com as duas linhas do bloco vazias, o bloco mostra o logo.</p>
+    </Section>
+  );
+}
+
+// ------------------------------------------- CG · urgência (automático) --
+function CgUrgentSection({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
+  const cg = { ...DEFAULT_CG, ...state.cg };
+  const auto = cg.autoResults !== false;
+  return (
+    <Section title="CG · urgência" right={auto || cg.breaking ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500/25 text-amber-200">AUTOMÁTICO</span> : null}>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" checked={auto} onChange={e => dispatch({ type: 'setCg', patch: { autoResults: e.target.checked } })} className="w-4 h-4 accent-white" />
+        Resultados automáticos (cada distrito definido, 15 s cada, em fila)
+      </label>
+      <label className="flex items-center gap-2 mt-2 cursor-pointer">
+        <input type="checkbox" checked={!!cg.breaking} onChange={e => dispatch({ type: 'setCg', patch: { breaking: e.target.checked } })} className="w-4 h-4 accent-white" />
+        Última hora automática (viradas e maioria)
+      </label>
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <Btn onClick={() => dispatch({ type: 'setCg', patch: { queueSkip: (cg.queueSkip ?? 0) + 1 } })}>Pular atual</Btn>
+        <Btn danger onClick={() => dispatch({ type: 'setCg', patch: { queueClear: (cg.queueClear ?? 0) + 1 } })}>Limpar fila</Btn>
+      </div>
+      <p className="text-[11px] text-white/50 mt-2">Urgência passa por cima de qualquer outra tarja do CG (cadeiras, texto livre, distrito). Se vários distritos saem juntos, entram um depois do outro.</p>
+    </Section>
+  );
+}
+
+// ------------------------------------------------ CG · tarja de maioria --
+function MajorityToggle({ cg, snap, dispatch }: { cg: typeof DEFAULT_CG; snap: ElectionSnapshot | null; dispatch: (a: ControlAction) => void }) {
+  const conf = snap?.fronts.find(f => f.confirmed >= MAJORITY);
+  const proj = snap?.fronts.find(f => f.projected >= MAJORITY);
+  const who = conf ? `${conf.legend} forma a maioria (${conf.confirmed})` : proj ? `${proj.legend} projeta maioria (${proj.projected})` : 'ninguém chegou à maioria ainda';
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <Btn active={!!cg.majority} onClick={() => dispatch({ type: 'setCg', patch: { majority: !cg.majority } })}>Tarja de maioria</Btn>
+      <span className="text-[11px] text-white/60 min-w-0 truncate">{who}</span>
+    </div>
+  );
+}
+
+// ------------------------------------------------- CG · tarja de distrito --
+function CgDistrictSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
+  const cg = { ...DEFAULT_CG, ...state.cg };
+  const cur = cg.district;
+  const sd = cur ? snap?.districtById[cur.id] : null;
+  const name = cur ? districtsData.find(d => d.district_id === cur.id)?.district_name ?? String(cur.id) : null;
+  const put = (id: number) => dispatch({
+    type: 'setCg',
+    // Colocar o distrito tira o texto livre do ar (uma tarja por vez)
+    patch: { district: { show: true, id }, majority: false, text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
+  });
+  return (
+    <Section title="CG · distrito" right={cur?.show ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/25 text-red-200">NO AR</span> : null}>
+      <DistrictSearch snap={snap} onShow={put} currentId={cur?.id} actionLabel="no CG →" />
+      {cur && (
+        <div className="flex items-center gap-2 mt-3">
+          <div className="flex-1 min-w-0 text-sm">
+            <div className="font-bold truncate">{cur.id} · {name}</div>
+            <div className="text-[11px] text-white/50 truncate">{sd ? `${sd.reported.toFixed(1)}% apurado · ${sd.status.label}` : ''}</div>
+          </div>
+          {cur.show
+            ? <Btn danger onClick={() => dispatch({ type: 'setCg', patch: { district: { ...cur, show: false } } })}>Tirar do ar</Btn>
+            : <Btn onClick={() => put(cur.id)}>Colocar no ar</Btn>}
+        </div>
+      )}
+      <p className="text-[11px] text-white/50 mt-2">Líder e 2º colocado com foto, apuração e situação (lidera, muito próximo, mantém, toma de…). Fica no lugar da tarja de cadeiras.</p>
     </Section>
   );
 }
@@ -251,7 +318,7 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
 const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /** Busca por nome, número, UF, estado ou região; um toque manda o distrito para o telão. */
-function DistrictSearch({ snap, onShow, currentId }: { snap: ElectionSnapshot | null; onShow: (id: number) => void; currentId?: number }) {
+function DistrictSearch({ snap, onShow, currentId, actionLabel = 'no telão →' }: { snap: ElectionSnapshot | null; onShow: (id: number) => void; currentId?: number; actionLabel?: string }) {
   const [q, setQ] = useState('');
   const terms = norm(q).split(/\s+/).filter(Boolean);
   const results = terms.length === 0 ? [] : districtsData
@@ -282,7 +349,7 @@ function DistrictSearch({ snap, onShow, currentId }: { snap: ElectionSnapshot | 
                 </span>
                 {lead && c && <span className="text-[11px] font-black rounded px-1.5 py-0.5" style={{ background: c, color: textOn(c) }}>{lead.front}</span>}
                 {sd && <span className="text-[11px] text-white/60 tabular-nums w-12 text-right">{sd.reported.toFixed(0)}%</span>}
-                <span className="text-[11px] font-bold text-white/80">no telão →</span>
+                <span className="text-[11px] font-bold text-white/80 whitespace-nowrap">{actionLabel}</span>
               </button>
             );
           })}

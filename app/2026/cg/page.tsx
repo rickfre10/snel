@@ -13,13 +13,13 @@ import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
-import type { DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
-import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
+import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
+import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, frontName, textOn } from '@/lib/haagar/rules';
 import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
 import TelaoScene from '@/components/tv/TelaoScene';
 import PillGrid from '@/components/tv/PillGrid';
 import IdleScreen from '@/components/tv/IdleScreen';
-import { AnimatedNumber, BrandLogo, N8Seal, TargetMark, fmtPct, g } from '@/components/tv/ui';
+import { AnimatedNumber, Avatar, BrandLogo, N8Seal, TargetMark, fmtInt, fmtPct, g } from '@/components/tv/ui';
 
 const TICKER_MS = 6000;
 const BACKGROUNDS: Record<string, string> = {
@@ -34,19 +34,35 @@ const BACKGROUNDS: Record<string, string> = {
 };
 
 export default function Cg2026() {
-  const { state, snapshot: snap } = useElection2026();
+  const { state, snapshot: snap, ready } = useElection2026();
   const brand = BRANDS[state.brand] ?? BRANDS.smartv;
   const cg = { ...DEFAULT_CG, ...state.cg };
   const text = { ...DEFAULT_CG_TEXT, ...cg.text };
-  const manualTextOn = text.show && !!text.headline.trim();
-  // Plantão de última hora (o texto manual tem prioridade)
-  const breaking = useBreaking(snap, state.seed);
-  const breakingOn = !!cg.breaking && !!breaking && !manualTextOn;
-  // Mantém o último plantão montado durante a animação de saída
-  const [lastBreaking, setLastBreaking] = useState<Breaking | null>(null);
-  useEffect(() => { if (breaking) setLastBreaking(breaking); }, [breaking]);
-  const [fundo, setFundo] = useState('transparente');
+  const autoResults = cg.autoResults !== false;
 
+  // ---- Urgência (sobrepõe QUALQUER outra tarja): resultados de distrito
+  // definidos (15 s cada, em fila) e plantão de última hora (viradas, maioria).
+  // O CG detecta sozinho — não depende do telão estar aberto.
+  const urgent = useBreaking(snap, state.seed, {
+    results: autoResults, ready, skipRev: cg.queueSkip ?? 0, clearRev: cg.queueClear ?? 0,
+  });
+  const urgentOn = !!urgent && (urgent.kind === 'result' ? autoResults : !!cg.breaking);
+  // Mantém o último item montado durante a animação de saída
+  const [lastUrgent, setLastUrgent] = useState<Breaking | null>(null);
+  useEffect(() => { if (urgent) setLastUrgent(urgent); }, [urgent]);
+
+  // ---- Tarjas do operador (abaixo da urgência)
+  const manualTextOn = text.show && !!text.headline.trim();
+  // Tarja de maioria manual: frente com maioria confirmada (ou projetada)
+  const majority = snap ? majorityOf(snap) : null;
+  const majorityOn = !!cg.majority && !!majority;
+  const [lastMajority, setLastMajority] = useState<{ front: string; projected: boolean } | null>(null);
+  useEffect(() => { if (majority) setLastMajority(majority); }, [majority?.front, majority?.projected]); // eslint-disable-line react-hooks/exhaustive-deps
+  const districtOn = !majorityOn && !!cg.district?.show && !!snap?.districtById[cg.district.id];
+  const [lastDistrictId, setLastDistrictId] = useState<number | null>(null);
+  useEffect(() => { if (cg.district?.id) setLastDistrictId(cg.district.id); }, [cg.district?.id]);
+
+  const [fundo, setFundo] = useState('transparente');
   useEffect(() => {
     const f = new URLSearchParams(window.location.search).get('fundo');
     if (f && BACKGROUNDS[f]) setFundo(f);
@@ -54,6 +70,9 @@ export default function Cg2026() {
     document.documentElement.style.background = 'transparent';
     document.body.style.background = 'transparent';
   }, []);
+
+  const urgentDistrict = lastUrgent?.kind === 'result' && lastUrgent.districtId ? snap?.districtById[lastUrgent.districtId] : null;
+  const manualDistrict = lastDistrictId ? snap?.districtById[lastDistrictId] : null;
 
   return (
     <Stage brand={brand} background={fundo === 'telao' ? undefined : BACKGROUNDS[fundo]}>
@@ -93,16 +112,31 @@ export default function Cg2026() {
 
       {snap && (
         <>
-          <Slide show={cg.seats && !manualTextOn && !breakingOn} from="bottom">
+          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !urgentOn} from="bottom">
             <SeatsTarja snap={snap} brand={brand} count={cg.count} raised={cg.ticker} />
           </Slide>
-          <Slide show={manualTextOn} from="bottom">
+          <Slide show={manualTextOn && !districtOn && !majorityOn && !urgentOn} from="bottom">
             <TextTarja text={text} brand={brand} raised={cg.ticker} />
           </Slide>
-          <Slide show={breakingOn} from="bottom">
-            {lastBreaking && (
-              <TextTarja key={lastBreaking.id} brand={brand} raised={cg.ticker} front={lastBreaking.front}
-                text={{ show: true, label1: 'última', label2: 'hora', headline: lastBreaking.headline, sub: lastBreaking.sub }} />
+          <Slide show={districtOn && !urgentOn} from="bottom">
+            {manualDistrict && <DistrictTarja d={manualDistrict} brand={brand} raised={cg.ticker} />}
+          </Slide>
+          <Slide show={majorityOn && !urgentOn} from="bottom">
+            {lastMajority && <MajorityTarja snap={snap} front={lastMajority.front} projected={lastMajority.projected} brand={brand} raised={cg.ticker} />}
+          </Slide>
+          {/* Urgência: sempre por cima de tudo */}
+          <Slide show={urgentOn && lastUrgent?.kind === 'result'} from="bottom">
+            {urgentDistrict && <DistrictTarja key={lastUrgent!.id} d={urgentDistrict} brand={brand} raised={cg.ticker} urgent />}
+          </Slide>
+          <Slide show={urgentOn && lastUrgent?.kind === 'majority'} from="bottom">
+            {lastUrgent?.kind === 'majority' && lastUrgent.front && (
+              <MajorityTarja key={lastUrgent.id} snap={snap} front={lastUrgent.front} projected={false} brand={brand} raised={cg.ticker} urgent />
+            )}
+          </Slide>
+          <Slide show={urgentOn && lastUrgent?.kind === 'flip'} from="bottom">
+            {lastUrgent && lastUrgent.kind === 'flip' && (
+              <TextTarja key={lastUrgent.id} brand={brand} raised={cg.ticker} front={lastUrgent.front}
+                text={{ show: true, label1: 'última', label2: 'hora', headline: lastUrgent.headline, sub: lastUrgent.sub }} />
             )}
           </Slide>
           <Slide show={cg.ticker} from="bottom">
@@ -297,6 +331,166 @@ function DistrictLine({ d, brand }: { d: DistrictSnapshot; brand: typeof BRANDS.
   );
 }
 
+// ------------------------------------------------ Tarja de distrito -------
+/** Situação do distrito em uma frase curta (lidera / muito próximo / mantém / toma de X). */
+function districtSituation(d: DistrictSnapshot): { label: string; front: string | null } {
+  const lead = d.leader;
+  if (!lead || d.counted <= 0) return { label: 'Aguardando apuração', front: null };
+  const prev = d.prev.front;
+  if (d.isFinal) {
+    if (prev && prev !== lead.front) return { label: `${lead.front} toma do ${prev}`, front: lead.front };
+    if (prev === lead.front) return { label: `${lead.front} mantém`, front: lead.front };
+    return { label: `${lead.front} ${g('eleito', 'eleita', lead.gender)}`, front: lead.front };
+  }
+  if (d.runnerUp && d.marginPct < 2) return { label: 'Muito próximo', front: null };
+  if (prev && prev !== lead.front) return { label: `${lead.front} pode tomar do ${prev}`, front: lead.front };
+  return { label: `${lead.front} lidera`, front: lead.front };
+}
+
+const DISTRICT_H = 214;
+
+/** Líder × 2º colocado de um distrito, com apuração e situação. */
+function DistrictTarja({ d, brand, raised, urgent }: { d: DistrictSnapshot; brand: typeof BRANDS.smartv; raised: boolean; urgent?: boolean }) {
+  const ink = tarjaInk(brand);
+  const line = brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.16)';
+  const [a, b] = d.leader ? [d.leader, d.runnerUp] : [d.candidates[0] ?? null, d.candidates[1] ?? null];
+  const sit = districtSituation(d);
+  const sitBg = sit.front ? frontColor(sit.front) : d.counted > 0 ? '#ffb020' : (brand.cgPaper ? 'rgb(var(--tv-ink))' : 'rgba(255,255,255,0.2)');
+  const sitFg = sit.front ? textOn(frontColor(sit.front)) : d.counted > 0 ? '#1a1a1a' : '#ffffff';
+  const blockColor = brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff';
+  const ufLabel = caseOf(brand, d.ufName);
+  // Espaço do nome: largura útil menos situação e apuração
+  const nameRoom = 1712 - 310 - 64 - (brand.cgPaper ? 133 : 0) - 260 - 32 - (sit.label.length * 15 + 30);
+
+  return (
+    <div className="absolute left-[104px] right-[104px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
+      style={{ height: DISTRICT_H, bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      {/* Bloco: "Resultado"/"Distrito" + estado */}
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 pr-4 leading-[1.05]" style={{ background: blockBg(brand), color: blockColor }}>
+        <span className={`text-[24px] leading-none flex items-center gap-2 ${brand.cgPaper ? 'text-tv-ink font-bold' : 'opacity-85 font-normal'}`}>
+          {urgent && <span className="w-3 h-3 rounded-full bg-current animate-pulse" style={{ color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }} />}
+          {caseOf(brand, urgent ? 'Resultado' : 'Distrito')}
+        </span>
+        <span className={`mt-1.5 whitespace-nowrap ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(ufLabel, 262, 46) }}>{ufLabel}</span>
+        <span className={`text-[20px] mt-2 font-bold tabular-nums ${brand.cgPaper ? 'text-tv-ink/70' : 'opacity-80'}`}>{d.uf} · {String(d.id)}</span>
+      </div>
+      {brand.cgPaper && <div className="w-[3px] my-6 shrink-0 rounded-full bg-tv-accent" />}
+
+      <div className="flex-1 min-w-0 flex flex-col px-8 py-4" style={{ color: ink }}>
+        {/* Linha 1: distrito, situação e apuração (com a vantagem) */}
+        <div className="flex items-center gap-4 min-w-0 h-[56px]">
+          <span className="font-extrabold uppercase leading-none whitespace-nowrap" style={{ fontSize: fitSize(d.name, nameRoom, 46) }}>{d.name}</span>
+          <span className="shrink-0 rounded-[10px] px-3 py-1 text-[22px] font-extrabold uppercase leading-tight whitespace-nowrap" style={{ background: sitBg, color: sitFg }}>{sit.label}</span>
+          <span className="flex-1" />
+          <div className="shrink-0 w-[260px]">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[15px] font-bold uppercase tracking-wider opacity-75">{caseOf(brand, 'Apurado')}</span>
+              <span className="text-[28px] font-black tabular-nums leading-none">{fmtPct(d.reported)}</span>
+            </div>
+            <div className="mt-1.5 h-2.5 rounded-full overflow-hidden" style={{ background: line }}>
+              <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${d.reported}%`, background: brand.cgPaper ? 'rgb(var(--tv-accent))' : 'rgb(var(--tv-accent2))' }} />
+            </div>
+            {a && b && d.counted > 0 && (
+              <div className="text-[15px] font-semibold uppercase opacity-80 tabular-nums mt-1 whitespace-nowrap">
+                {`vantagem ${fmtPct(d.marginPct).replace('%', ' p.p.')} · ${fmtInt(d.marginVotes)} votos`}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Linha 2: 1º e 2º colocados */}
+        <div className="flex-1 flex items-center gap-5 mt-3 min-h-0">
+          {a && <CandidateBox c={a} first final={d.isFinal} brand={brand} ink={ink} line={line} counted={d.counted > 0} />}
+          {b && <CandidateBox c={b} final={false} brand={brand} ink={ink} line={line} counted={d.counted > 0} />}
+        </div>
+      </div>
+      {brand.cgPaper && <PillStrip height={DISTRICT_H} />}
+    </div>
+  );
+}
+
+function CandidateBox({ c, first, final, brand, ink, line, counted }: { c: CandidateResult; first?: boolean; final: boolean; brand: typeof BRANDS.smartv; ink: string; line: string; counted: boolean }) {
+  const col = frontColor(c.front);
+  const tag = final && first ? g('Eleito', 'Eleita', c.gender)
+    : c.incumbent ? g('Deputado atual', 'Deputada atual', c.gender)
+    : c.incumbentParty ? 'Partido incumbente' : null;
+  return (
+    <div className="flex-1 min-w-0 h-full flex items-center gap-4 rounded-[18px] pl-3 pr-5"
+      style={{ background: first ? (brand.cgPaper ? 'rgb(var(--tv-ink) / 0.06)' : 'rgba(255,255,255,0.08)') : 'transparent', border: `1px solid ${first ? col : line}` }}>
+      <Avatar name={c.name} legend={c.front} photo={c.photo} size={78} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="shrink-0 rounded-[6px] px-2 text-[18px] font-extrabold leading-[1.45]" style={{ background: col, color: textOn(col) }}>{c.front}</span>
+          {c.party && <span className="shrink-0 text-[16px] font-semibold opacity-70 uppercase">{c.party}</span>}
+          {tag && (
+            <span className="shrink-0 rounded-[6px] px-1.5 text-[14px] font-bold uppercase leading-[1.5]"
+              style={final && first ? { background: col, color: textOn(col) } : { border: `1px solid ${ink}`, opacity: 0.85 }}>{tag}</span>
+          )}
+        </div>
+        <div className="font-bold uppercase leading-tight truncate mt-1" style={{ fontSize: fitSize(c.name, 360, 28) }}>{c.name}</div>
+      </div>
+      <div className="shrink-0 text-right">
+        <div className={`${first ? 'text-[50px]' : 'text-[42px]'} font-black leading-none tabular-nums`}>{counted ? fmtPct(c.pct) : '—'}</div>
+        <div className="text-[16px] font-semibold opacity-70 tabular-nums mt-1">{counted ? `${fmtInt(c.votes)} votos` : ' '}</div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------ Tarja de maioria -------
+/** Frente com maioria confirmada; senão, a que projeta maioria. */
+function majorityOf(snap: ElectionSnapshot): { front: string; projected: boolean } | null {
+  const c = snap.fronts.find(f => f.confirmed >= MAJORITY);
+  if (c) return { front: c.legend, projected: false };
+  const p = snap.fronts.find(f => f.projected >= MAJORITY);
+  return p ? { front: p.legend, projected: true } : null;
+}
+
+/** Tarja na cor da frente: "X forma a maioria" (ou "projeta maioria"). */
+function MajorityTarja({ snap, front, projected, brand, raised, urgent }: { snap: ElectionSnapshot; front: string; projected: boolean; brand: typeof BRANDS.smartv; raised: boolean; urgent?: boolean }) {
+  const col = frontColor(front);
+  const fg = textOn(col);
+  const f = snap.frontByLegend[front];
+  const seats = f ? (projected ? f.projected : f.confirmed) : 0;
+  const name = frontName(front);
+  const headline = `${front} ${projected ? 'projeta maioria' : 'forma a maioria'}`;
+  return (
+    <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
+      style={{ bottom: raised ? 138 : 68, background: col, color: fg, boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      {/* Bloco com o logo da cobertura */}
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 gap-2" style={{ background: 'rgba(0,0,0,0.18)' }}>
+        {brand.logo.kind === 'target' ? (
+          <span className="inline-flex items-center gap-2.5 text-[36px] font-black leading-none"><TargetMark size={40} />{caseOf(brand, 'Eleições')}</span>
+        ) : (
+          <BrandLogo brand={brand} size={60} color={fg} />
+        )}
+        <span className="text-[20px] font-bold uppercase tracking-wider opacity-85 flex items-center gap-2">
+          {urgent && <span className="w-3 h-3 rounded-full bg-current animate-pulse" />}
+          {projected ? 'Projeção' : 'Parlamento'}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col justify-center px-10">
+        <div className="text-[20px] font-bold uppercase tracking-[0.14em] opacity-85">{projected ? 'Maioria projetada no Parlamento' : 'Maioria no Parlamento'}</div>
+        <div className="font-black uppercase leading-[1.05] whitespace-nowrap mt-1" style={{ fontSize: fitSize(headline, 900, 72) }}>{headline}</div>
+        <div className="text-[26px] font-semibold uppercase mt-1.5 opacity-90 truncate">{name}</div>
+      </div>
+      <div className="w-[300px] shrink-0 flex flex-col justify-center px-7" style={{ background: 'rgba(0,0,0,0.12)' }}>
+        <div className="flex items-baseline gap-2">
+          <span className="text-[76px] font-black leading-none tabular-nums"><AnimatedNumber value={seats} /></span>
+          <span className="text-[22px] font-bold uppercase opacity-85">cadeiras</span>
+        </div>
+        {/* barra das cadeiras com a marca da maioria */}
+        <div className="relative mt-3 h-3 rounded-full" style={{ background: 'rgba(255,255,255,0.25)' }}>
+          <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (seats / TOTAL_SEATS) * 100)}%`, background: fg }} />
+          <div className="absolute -top-1.5 -bottom-1.5 w-[3px] rounded" style={{ left: `${(MAJORITY / TOTAL_SEATS) * 100}%`, background: fg, opacity: 0.9 }} />
+        </div>
+        <div className="text-[16px] font-semibold mt-2 opacity-85 tabular-nums uppercase">{`maioria: ${MAJORITY} de ${TOTAL_SEATS}`}</div>
+      </div>
+      {brand.cgPaper && <PillStrip />}
+    </div>
+  );
+}
+
 // ------------------------------------------------ Tarja de texto livre ----
 /** Manchete escrita pelo operador (formato "edição das 19h" da News). */
 function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof BRANDS.smartv; raised: boolean; front?: string | null }) {
@@ -339,10 +533,10 @@ function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof
 }
 
 /** Ponta da tarja com as pílulas vermelhas animadas sobre o marrom (grafismo da vinheta Smartv). */
-function PillStrip() {
+function PillStrip({ height = 176 }: { height?: number }) {
   return (
     <div className="w-[130px] shrink-0 relative overflow-hidden" style={{ background: 'rgb(var(--tv-ink))' }}>
-      <PillGrid width={130} height={176} rows={[0.42, 0.58]} ratio={1.6} secondsPerColumn={2.6} gap={3} originX={-110} pool={10} className="absolute inset-0" />
+      <PillGrid width={130} height={height} rows={[0.42, 0.58]} ratio={1.6} secondsPerColumn={2.6} gap={3} originX={-110} pool={10} className="absolute inset-0" />
     </div>
   );
 }
