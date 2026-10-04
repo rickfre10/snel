@@ -38,9 +38,9 @@ Cenas (navegação no topo, tudo clicável/tocável):
 - **Visão geral** — mapa hexagonal (modos 2026, 2022, viradas, swing por frente e % apurado), corrida pela maioria e projeção de cadeiras por frente com saldo vs 2022.
 - **Parlamento** — hemiciclo 2026 (confirmadas × projeção), simulador de coalizão e parlamento de 2022.
 - **Estados** — mapa do estado, voto proporcional 2026 × 2022, bancada distrital + proporcional.
-- **Distrito** — candidatos, status (manteve / ganhou / liderando), variação de cada frente vs 2022, margem, comparecimento, swing.
+- **Distrito** — candidatos (com selos de deputado atual e partido incumbente), status (manteve / ganhou / liderando), deputado atual, histórico 2018 · 2022 · 2026 por frente, margem e votos válidos.
 - **Viradas** — matriz "de quem para quem", saldo por frente, viradas confirmadas e em andamento.
-- **2022 × 2026** — dispersão distrito a distrito (votação da frente, comparecimento, margem) e maiores avanços/quedas.
+- **2022 × 2026** — dispersão distrito a distrito (votação da frente e margem) e maiores avanços/quedas.
 
 Extras: tarja inferior com hora e feed, plantão de **última hora** automático (cadeira que vira, maioria atingida) e rotação automática de cenas.
 
@@ -56,7 +56,7 @@ Atalhos discretos: **C** (ou segurar o logo por 1 s) abre o controle; **F** tela
 
 Tudo em JavaScript, no navegador (`lib/haagar2026/model.ts`):
 
-1. A base é o **resultado final de 2022** lido da planilha (`/api/baseline/2022`, aba 100%). Sem acesso à planilha, usa uma estimativa a partir de `lib/previousElectionData.ts`.
+1. A base é o **resultado final de 2022** (`/api/baseline/2022`): votos de cada candidato por distrito e votos proporcionais por frente em cada estado. Fonte, em ordem: planilha online (aba `_100`), se configurada → resultado oficial embutido em `lib/data/haagar2022.json` (exportado da `BASE_Haagar_Vota_2022.xlsx`, com nomes, fotos e gênero) → estimativa a partir de `lib/previousElectionData.ts`.
 2. A partir de uma **semente**, sorteia swings nacional, estadual e local por frente e o resultado final de cada distrito. Candidatos de 2022 podem concorrer de novo (o deputado eleito aparece como tal).
 3. Cada distrito apura num ritmo próprio e os primeiros votos têm um viés que some até o fim — há viradas durante a noite.
 4. As regras são as de 2022: distrital por maioria simples; proporcional por estado com mínimo de votos, barreira de 5% e D'Hondt.

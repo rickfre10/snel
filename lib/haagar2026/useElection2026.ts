@@ -2,7 +2,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 import type { Baseline2022 } from '@/lib/haagar/baseline';
-import { buildFallbackBaseline } from '@/lib/haagar/baseline';
 import { buildModel, snapshotAt, ElectionSnapshot } from './model';
 import { progressAt } from './control';
 import { useControl } from './useControl';
@@ -17,7 +16,12 @@ export function useBaseline2022() {
     fetch('/api/baseline/2022')
       .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((b: Baseline2022) => { if (alive) setBaseline(b); })
-      .catch(() => { if (alive) setBaseline(buildFallbackBaseline()); });
+      .catch(async () => {
+        // Sem API: usa o resultado embutido (carregado sob demanda) ou a estimativa.
+        const m = await import('@/lib/haagar/baseline');
+        const b = await m.buildEmbeddedBaseline().catch(() => m.buildFallbackBaseline());
+        if (alive) setBaseline(b);
+      });
     return () => { alive = false; };
   }, []);
   return baseline;

@@ -103,7 +103,7 @@ export interface DistrictSnapshot {
     marginPct: number;
     pct: number;                 // % do deputado eleito em 2022
     deputyRunning: boolean;      // o deputado atual disputa 2026
-    candidates: { name: string; front: string; party: string | null; votes: number; pct: number }[];
+    candidates: { name: string; front: string; party: string | null; votes: number; pct: number; photo: string | null }[];
   };
   // ---- 2018 (vencedor e %)
   y2018: { front: string; pct: number } | null;
@@ -243,7 +243,8 @@ export function buildModel(baseline: Baseline2022, seed: number): ElectionModel 
     const shares = normalize(finalShares);
 
     const baseTotal = base?.total && base.total > 0 ? base.total : d.voters_qtn * 0.72;
-    const total = Math.round(Math.min(d.voters_qtn * 0.96, baseTotal * (1 + natTurnout + gauss(r) * 0.035)));
+    // A base de 2022 soma ~100% dos eleitores cadastrados; 2026 varia em torno dela.
+    const total = Math.round(baseTotal * (1 + natTurnout + gauss(r) * 0.035));
 
     const fronts = Object.keys(shares);
     const votes = apportion(fronts.map(f => shares[f]), total);
@@ -258,7 +259,7 @@ export function buildModel(baseline: Baseline2022, seed: number): ElectionModel 
       return {
         front: f,
         party,
-        name: rerun && prevCand ? prevCand.name : fictionalName(cr),
+        name: rerun && prevCand ? prevCand.name : fictionalName(cr, cr() < 0.45 ? 'F' : 'M'),
         photo: rerun && prevCand ? prevCand.photo : null,
         incumbent: rerun && wasWinner,
         incumbentParty: f === base?.winnerFront && !(rerun && wasWinner),
@@ -400,7 +401,7 @@ export function snapshotAt(
         pct: prevFront ? prevShares[prevFront] ?? 0 : 0,
         deputyRunning: d.candidates.some(c => c.incumbent),
         candidates: (base?.candidates ?? []).slice(0, 5).map(c => ({
-          name: c.name, front: c.front, party: c.party, votes: c.votes,
+          name: c.name, front: c.front, party: c.party, votes: c.votes, photo: c.photo,
           pct: base && base.total > 0 ? (c.votes / base.total) * 100 : 0,
         })),
       },

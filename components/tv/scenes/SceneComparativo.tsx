@@ -5,7 +5,7 @@ import type { ElectionSnapshot, DistrictSnapshot } from '@/lib/haagar2026/model'
 import { FRONT_ORDER, STATE_ORDER, frontColor, frontName } from '@/lib/haagar/rules';
 import { Chip, Delta, Panel, fmtPct, GAIN, LOSS } from '../ui';
 
-type Metric = 'share' | 'turnout' | 'margin';
+type Metric = 'share' | 'margin';
 
 const W = 860, H = 620, PAD = 64;
 
@@ -20,14 +20,13 @@ export default function SceneComparativo({ snap, onDistrict }: { snap: ElectionS
     .map(d => {
       let x = 0, y = 0;
       if (metric === 'share') { x = d.prev.shares[front] ?? 0; y = d.shares[front] ?? 0; }
-      else if (metric === 'turnout') { x = d.prev.turnout; y = d.turnout; }
       else { x = d.prev.marginPct; y = d.marginPct; }
       return { d, x, y, delta: y - x };
     }), [snap, front, metric, ufFilter]);
 
   const all = pts.flatMap(p => [p.x, p.y]);
-  const lo = metric === 'turnout' ? Math.floor((Math.min(...all, 60) - 2) / 5) * 5 : 0;
-  const hi = metric === 'turnout' ? Math.ceil((Math.max(...all, 80) + 2) / 5) * 5 : Math.ceil((Math.max(...all, 10) + 3) / 10) * 10;
+  const lo = 0;
+  const hi = Math.ceil((Math.max(...all, 10) + 3) / 10) * 10;
   const sx = (v: number) => PAD + ((v - lo) / (hi - lo)) * (W - PAD * 1.5);
   const sy = (v: number) => H - PAD - ((v - lo) / (hi - lo)) * (H - PAD * 1.5);
   const ticks = Array.from({ length: 6 }, (_, i) => lo + ((hi - lo) * i) / 5);
@@ -38,14 +37,13 @@ export default function SceneComparativo({ snap, onDistrict }: { snap: ElectionS
   const avgDelta = pts.length ? pts.reduce((s, p) => s + p.delta, 0) / pts.length : 0;
   const hovered = pts.find(p => p.d.id === hover);
 
-  const metricLabel = metric === 'share' ? `% de ${front}` : metric === 'turnout' ? 'Comparecimento' : 'Margem do vencedor';
+  const metricLabel = metric === 'share' ? `% de ${front}` : 'Margem do vencedor';
   const dotColor = (d: DistrictSnapshot) => metric === 'share' ? frontColor(front) : frontColor(d.leader?.front ?? null);
 
   return (
     <div className="h-full flex flex-col gap-5">
       <div className="flex items-center gap-3 flex-wrap">
         <Chip active={metric === 'share'} onClick={() => setMetric('share')}>Votação da frente</Chip>
-        <Chip active={metric === 'turnout'} onClick={() => setMetric('turnout')}>Comparecimento</Chip>
         <Chip active={metric === 'margin'} onClick={() => setMetric('margin')}>Margem</Chip>
         <span className="w-px h-8 bg-tv-border mx-2" />
         {metric === 'share' && FRONT_ORDER.map(f => <Chip key={f} active={front === f} color={frontColor(f)} onClick={() => setFront(f)}>{f}</Chip>)}

@@ -97,7 +97,7 @@ export default function SceneDistrito({ snap, districtId, onDistrict, onUf }: { 
             <div className="grid grid-cols-3 gap-2.5 mt-auto">
               <Fact label="Vencedor em 2018" value={d.y2018 ? <span className="flex items-center gap-2"><FrontPill legend={d.y2018.front} size="sm" />{fmtPct(d.y2018.pct)}</span> : '—'} />
               <Fact label="Margem 2022 → 2026" value={<span>{fmtPct(d.prev.marginPct)} → {hasData ? fmtPct(d.marginPct) : '—'}</span>} />
-              <Fact label="Comparecimento" value={<span>{fmtPct(d.prev.turnout)} → {fmtPct(d.turnout)}</span>} />
+              <Fact label="Votos válidos 2022" value={fmtInt(d.prev.total)} sub={hasData ? `2026: ${fmtInt(d.counted)} apurados` : undefined} />
             </div>
           </Panel>
         </div>
@@ -126,7 +126,7 @@ function IncumbentPanel({ d }: { d: DistrictSnapshot }) {
   return (
     <Panel kicker="Deputado atual" title={d.prev.name ?? frontName(front)}>
       <div className="flex items-center gap-5">
-        <Avatar name={d.prev.name ?? front ?? '?'} legend={front} photo={now?.photo ?? null} size={76} />
+        <Avatar name={d.prev.name ?? front ?? '?'} legend={front} photo={now?.photo ?? d.prev.candidates.find(c => c.name === d.prev.name)?.photo ?? null} size={76} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-[16px] text-tv-muted">
             <FrontPill legend={front} size="sm" />

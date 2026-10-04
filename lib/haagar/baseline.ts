@@ -17,6 +17,7 @@ export interface BaselineCandidate {
   front: string;
   votes: number;
   photo: string | null;
+  gender?: 'F' | 'M' | null;
 }
 
 export interface BaselineDistrict {
@@ -37,7 +38,7 @@ export interface BaselineState {
 }
 
 export interface Baseline2022 {
-  source: 'sheets' | 'fallback';
+  source: 'sheets' | 'embedded' | 'fallback';
   note?: string;
   districts: Record<number, BaselineDistrict>;
   states: Record<string, BaselineState>;
@@ -53,6 +54,7 @@ export interface RawCandidateRow {
   parl_front_legend?: string | null;
   votes_qtn: number;
   candidate_photo?: string | null;
+  gender?: string | null;
 }
 export interface RawProportionalRow {
   uf: string;
@@ -70,7 +72,11 @@ export function buildBaselineFromRows(candidates: RawCandidateRow[], proportiona
     const d = districts[c.district_id];
     if (!d) return;
     const front = c.parl_front_legend || (c.party_legend ? frontOfParty[c.party_legend] : null) || c.party_legend || 'OUT';
-    d.candidates.push({ name: c.candidate_name, party: c.party_legend ?? null, front, votes: c.votes_qtn, photo: c.candidate_photo || null });
+    const g = (c.gender || '').trim().toLowerCase();
+    d.candidates.push({
+      name: c.candidate_name, party: c.party_legend ?? null, front, votes: c.votes_qtn, photo: c.candidate_photo || null,
+      gender: g.startsWith('f') ? 'F' : g.startsWith('m') ? 'M' : null,
+    });
     d.votes[front] = (d.votes[front] || 0) + c.votes_qtn;
     d.total += c.votes_qtn;
   });
@@ -153,4 +159,23 @@ export function buildFallbackBaseline(): Baseline2022 {
     districts,
     states,
   };
+}
+
+/**
+ * Resultado oficial de 2022 embutido no projeto (lib/data/haagar2022.json,
+ * exportado da BASE_Haagar_Vota_2022.xlsx). Usado quando a planilha online
+ * não está configurada ou não responde.
+ */
+export async function buildEmbeddedBaseline(): Promise<Baseline2022> {
+  const data = (await import('@/lib/data/haagar2022.json')).default as unknown as {
+    candidates: [number, string, string | null, string | null, number, 'F' | 'M' | null, string | null][];
+    proportional: [string, string, number][];
+  };
+  const b = buildBaselineFromRows(
+    data.candidates.map(([district_id, candidate_name, party_legend, parl_front_legend, votes_qtn, gender, candidate_photo]) => ({
+      district_id, candidate_name, party_legend, parl_front_legend, votes_qtn, candidate_photo, gender,
+    })),
+    data.proportional.map(([uf, parl_front_legend, proportional_votes_qtn]) => ({ uf, parl_front_legend, proportional_votes_qtn })),
+  );
+  return { ...b, source: 'embedded' };
 }
