@@ -58,7 +58,8 @@ export function useElection2026() {
   const now = useNow();
   const { state, clockOffset } = control;
 
-  const model = useMemo(() => (baseline ? buildModel(baseline, state.seed, photos) : null), [baseline, state.seed, photos]);
+  const scenarioKey = JSON.stringify(state.scenario ?? null);
+  const model = useMemo(() => (baseline ? buildModel(baseline, state.seed, photos, JSON.parse(scenarioKey)) : null), [baseline, state.seed, photos, scenarioKey]);
   const progress = progressAt(state, now + clockOffset);
   // Arredonda para não recalcular sem necessidade quando pausado.
   const progressKey = Math.round(progress * 1000) / 1000;

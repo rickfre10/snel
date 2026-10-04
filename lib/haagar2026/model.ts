@@ -213,13 +213,18 @@ function reportedFraction(p: number, delay: number, curve: number): number {
 /** Banco de rostos para candidatos sem foto (ver /api/2026/photos). */
 export interface PhotoPool { female: string[]; male: string[] }
 
-export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoPool | null): ElectionModel {
+/** Ajuste do operador: swing nacional extra (p.p.) por frente, somado ao sorteado. */
+export interface Scenario { swing: Record<string, number> }
+
+export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoPool | null, scenario?: Scenario | null): ElectionModel {
   const natR = rngFor(seed, 'national');
   const nationalSwing: Record<string, number> = {};
   FRONT_ORDER.forEach(f => { nationalSwing[f] = gauss(natR) * 3.2; });
   // Uma frente "surpresa" da noite
   const surprise = pick(natR, FRONT_ORDER);
   nationalSwing[surprise] += 2.5 + natR() * 3;
+  // Cenário montado pelo operador (/2026/cenario)
+  if (scenario) FRONT_ORDER.forEach(f => { nationalSwing[f] += scenario.swing[f] ?? 0; });
   // Comparecimento de 2026: cada estado entre 85% e 90%; distritos variam em volta.
   // A variação de cada distrito é recentrada para a média do estado (ponderada
   // pelos eleitores) cair exatamente no valor sorteado.

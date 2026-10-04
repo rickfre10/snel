@@ -8,6 +8,7 @@ import { ControlAction, ControlState, DEFAULT_CG, DEFAULT_CG_TEXT, CgText, Scene
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER, frontColor, textOn } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
+import { parseScenarioCode, scenarioCode } from '@/lib/haagar2026/scenario';
 
 const SCENES: { id: SceneId; label: string }[] = [
   { id: 'geral', label: 'Visão geral' },
@@ -185,13 +186,18 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
         })()}
       </Section>
 
-      <Section title="Cenário">
-        <div className="text-xs text-white/60 mb-2">Semente atual: <b className="text-white">{state.seed}</b> — a mesma semente gera sempre o mesmo resultado em todas as telas.</div>
+      <Section title="Cenário" right={<a href="/2026/cenario" target="_blank" rel="noreferrer" className="text-xs underline text-white/70">montar cenário ↗</a>}>
+        <div className="text-xs text-white/60 mb-2">No ar: <b className="text-white font-mono">{scenarioCode(state.seed, state.scenario)}</b> — o mesmo código gera sempre o mesmo resultado em todas as telas.</div>
         <div className="flex gap-2">
-          <input value={seedInput} onChange={e => setSeedInput(e.target.value)} placeholder="Semente (número)" className="flex-1 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
-          <Btn onClick={() => { const v = parseInt(seedInput, 10); if (!isNaN(v) && confirm(`Trocar para o cenário ${v}? A apuração será zerada.`)) dispatch({ type: 'newSeed', seed: v }); }}>Usar</Btn>
-          <Btn onClick={() => { if (confirm('Sortear um novo cenário? A apuração será zerada.')) dispatch({ type: 'newSeed' }); }}>Sortear</Btn>
+          <input value={seedInput} onChange={e => setSeedInput(e.target.value)} placeholder="Semente ou código (ex.: 2026:UNI+12,TDS-6)" className="flex-1 min-w-0 h-10 rounded-lg bg-black/40 border border-white/15 px-3 font-mono text-sm" />
+          <Btn onClick={() => {
+            const p = parseScenarioCode(seedInput);
+            if (!p) { alert('Código inválido. Use a semente (ex.: 2026) ou o código da tela de cenário (ex.: 2026:UNI+12,TDS-6).'); return; }
+            if (confirm(`Usar o cenário ${scenarioCode(p.seed, p.scenario)}? A apuração será zerada.`)) { dispatch({ type: 'newSeed', seed: p.seed, scenario: p.scenario }); setSeedInput(''); }
+          }}>Usar</Btn>
+          <Btn onClick={() => { if (confirm('Sortear um novo cenário (sem ajustes)? A apuração será zerada.')) dispatch({ type: 'newSeed', scenario: null }); }}>Sortear</Btn>
         </div>
+        <p className="text-[11px] text-white/50 mt-2">Em &quot;montar cenário&quot; dá para ajustar a votação de cada frente ou pedir uma distribuição de cadeiras e ver o resultado final antes de mandar.</p>
       </Section>
 
       {error && <div className="rounded-lg bg-red-500/15 border border-red-400/40 text-red-200 px-3 py-2">{error}</div>}
