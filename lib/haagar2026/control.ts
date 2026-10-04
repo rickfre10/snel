@@ -39,6 +39,7 @@ export interface CgVisibility {
   bug: boolean;      // logo da emissora no topo
   count: 'confirmadas' | 'projecao';
   breaking?: boolean; // plantão automático de última hora (viradas, maioria)
+  place?: string;     // texto do selo acima do "AO VIVO" (ex.: "São Pedro, MA")
   text?: CgText;     // tarja de texto livre (manchete)
 }
 

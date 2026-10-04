@@ -65,6 +65,16 @@ export default function Cg2026() {
           )}
         </TvFrame>
       )}
+      {/* Selo de local + AO VIVO no canto superior esquerdo (News); texto editável no controle */}
+      {brand.cgPlaceBadge && (
+        <Slide show={cg.bug} from="top">
+          <div className="absolute left-[104px] top-[84px] flex flex-col items-start gap-1.5" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))' }}>
+            <span className="rounded-[10px] bg-tv-accent2 text-white px-3 py-1 text-[30px] font-extrabold leading-tight uppercase">{cg.place?.trim() || 'Haagar · Eleições 2026'}</span>
+            <span className="rounded-[8px] bg-tv-tarja text-white px-2.5 py-0.5 text-[19px] font-bold leading-tight uppercase">Ao vivo</span>
+          </div>
+        </Slide>
+      )}
+
       {/* Logo da emissora no canto superior direito */}
       <Slide show={cg.bug} from="top">
         <div className="absolute right-[104px] top-[72px]" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}>
@@ -117,9 +127,10 @@ const ALTERNATE_MS = 5000;
 // Fundo das tarjas: sólido na Smartv, levemente translúcido na News.
 const tarjaBg = (brand: typeof BRANDS.smartv) => (brand.cgSolid ? 'rgb(var(--tv-tarja))' : 'rgb(var(--tv-tarja) / 0.94)');
 // Bloco em gradiente da esquerda: na Smartv termina sólido (sem vazar para a tarja).
-const blockBg = (brand: typeof BRANDS.smartv) => (brand.cgSolid
-  ? 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 70%)'
-  : 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 55%, rgb(var(--tv-tarja) / 0) 100%)');
+const blockBg = (brand: typeof BRANDS.smartv) => (brand.cgBlockFade
+  // News: azul-céu → azul royal, fundindo na tarja (como "edição das 19h")
+  ? 'linear-gradient(110deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 42%, rgb(var(--tv-accent) / 0.85) 62%, rgb(var(--tv-tarja)) 100%)'
+  : 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 70%)');
 /** Tamanho de fonte para o texto caber na largura (fonte pesada ≈ 0,68 em por letra). */
 const fitSize = (text: string, width: number, max: number) => Math.min(max, Math.floor(width / (Math.max(1, text.length) * 0.68)));
 
@@ -134,8 +145,8 @@ function AlternatingBlock({ brand, subject }: { brand: typeof BRANDS.smartv; sub
     <div className="relative w-[310px] shrink-0 text-white overflow-hidden"
       style={{ background: blockBg(brand) }}>
       <div className={layer} style={{ opacity: showLogo ? 0 : 1, transform: showLogo ? 'translateY(-24px)' : 'none' }}>
-        <span className="text-[24px] font-semibold leading-none opacity-85">{caseOf(brand, 'Parlamento')}</span>
-        <span className="font-extrabold leading-[1.05] mt-1 whitespace-nowrap" style={{ fontSize: fitSize(caseOf(brand, subject), 262, 50) }}>{caseOf(brand, subject)}</span>
+        <span className={`text-[24px] leading-none opacity-85 ${brand.cgBlockFade ? 'font-normal' : 'font-semibold'}`}>{caseOf(brand, 'Parlamento')}</span>
+        <span className={`leading-[1.05] mt-1 whitespace-nowrap ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(caseOf(brand, subject), 262, brand.cgBlockFade ? 46 : 50) }}>{caseOf(brand, subject)}</span>
       </div>
       <div className={layer} style={{ opacity: showLogo ? 1 : 0, transform: showLogo ? 'none' : 'translateY(24px)' }}>
         {brand.logo.kind === 'target' ? (

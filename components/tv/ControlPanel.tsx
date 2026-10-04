@@ -169,6 +169,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
                 <Btn active={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa distritos</Btn>
                 <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Logo</Btn>
               </div>
+              <PlaceInput value={cg.place ?? ''} onSave={place => dispatch({ type: 'setCg', patch: { place } })} />
               <label className="flex items-center gap-2 mt-2 cursor-pointer">
                 <input type="checkbox" checked={!!cg.breaking} onChange={e => dispatch({ type: 'setCg', patch: { breaking: e.target.checked } })} className="w-4 h-4 accent-white" />
                 Última hora automática (viradas e maioria)
@@ -287,6 +288,25 @@ function DistrictSearch({ snap, onShow, currentId }: { snap: ElectionSnapshot | 
         </div>
       )}
       {terms.length > 0 && results.length === 0 && <div className="text-[12px] text-white/50 mt-2">Nenhum distrito encontrado.</div>}
+    </div>
+  );
+}
+
+// ------------------------------------------- Texto do selo de local (CG) --
+function PlaceInput({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+  const save = () => { setEditing(false); if (draft !== value) onSave(draft.trim()); };
+  return (
+    <div className="mt-2">
+      <div className="text-[11px] text-white/50 mb-1">Selo acima do &quot;AO VIVO&quot; (SmartvNews) — vazio = &quot;Haagar · Eleições 2026&quot;</div>
+      <div className="flex gap-2">
+        <input value={draft} onChange={e => { setEditing(true); setDraft(e.target.value); }} onBlur={save}
+          onKeyDown={e => { if (e.key === 'Enter') save(); }} maxLength={40} placeholder="Ex.: São Pedro, MA"
+          className="flex-1 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
+        <Btn onClick={save}>Aplicar</Btn>
+      </div>
     </div>
   );
 }

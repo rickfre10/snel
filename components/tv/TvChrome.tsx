@@ -77,9 +77,6 @@ export function TopBar({ brand, snap, nav, onLogoLongPress }: { brand: BrandThem
           <div className="text-[30px] font-black leading-none tracking-tight">{caseOf(brand, brand.programTitle)} 2026</div>
           <div className="flex items-center gap-2 mt-1.5">
             <span className="rounded-md bg-tv-accent2 text-white px-2 py-0.5 text-[13px] font-extrabold tracking-wide">{caseOf(brand, 'Haagar')}</span>
-            <span className="rounded-md bg-tv-text/15 px-2 py-0.5 text-[13px] font-extrabold tracking-wide inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-tv-live tv-pulse" />{caseOf(brand, 'Ao vivo')}
-            </span>
           </div>
         </div>
       </div>
