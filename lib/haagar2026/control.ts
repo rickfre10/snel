@@ -41,7 +41,14 @@ export interface CgVisibility {
   breaking?: boolean; // plantão automático de última hora (viradas, maioria)
   place?: string;     // texto do selo acima do "AO VIVO" (ex.: "São Pedro, MA")
   text?: CgText;     // tarja de texto livre (manchete)
+  district?: CgDistrict; // tarja de um distrito escolhido pelo operador
+  autoResults?: boolean; // cada distrito definido entra sozinho no ar (15 s cada, fila)
+  queueSkip?: number;    // incrementar = pula o item urgente atual
+  queueClear?: number;   // incrementar = esvazia a fila urgente
 }
+
+/** Tarja de distrito (líder × 2º, apuração e situação). */
+export interface CgDistrict { show: boolean; id: number }
 
 /** Tarja de texto escrita pelo operador (formato "manchete" da News). */
 export interface CgText {
@@ -53,7 +60,7 @@ export interface CgText {
 }
 
 export const DEFAULT_CG_TEXT: CgText = { show: false, label1: 'eleições', label2: '2026', headline: '', sub: '' };
-export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas', breaking: true, text: DEFAULT_CG_TEXT };
+export const DEFAULT_CG: CgVisibility = { seats: true, ticker: true, bug: true, count: 'confirmadas', breaking: true, autoResults: true, text: DEFAULT_CG_TEXT };
 
 export type ControlAction =
   | { type: 'play' }

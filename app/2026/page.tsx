@@ -94,7 +94,7 @@ export default function Telao2026() {
   }, []);
 
   // ---- Última hora: viradas confirmadas e maioria
-  const breaking = useBreaking(snap, state.seed);
+  const breaking = useBreaking(snap, state.seed, { ready: el.ready });
   const tickerItems = useMemo(() => (snap ? buildTicker(snap) : []), [snap]);
 
   return (
