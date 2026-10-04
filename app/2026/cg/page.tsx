@@ -286,8 +286,21 @@ function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof
       style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
       <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 leading-[1.05]"
         style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
-        <span className={`text-[44px] ${brand.cgPaper ? 'font-black' : 'font-normal'}`}>{caseOf(brand, text.label1)}</span>
-        {text.label2 && <span className={`text-[44px] ${brand.cgPaper ? 'font-black' : 'font-normal'}`}>{caseOf(brand, text.label2)}</span>}
+        {!text.label1.trim() && !text.label2.trim() ? (
+          // Bloco vazio: mostra o logo (Smartv: ◎ ELEIÇÕES · News: news°)
+          brand.logo.kind === 'target' ? (
+            <span className="inline-flex items-center gap-2.5 text-[36px] font-black leading-none">
+              <TargetMark size={40} />{caseOf(brand, 'Eleições')}
+            </span>
+          ) : (
+            <span className="text-white"><BrandLogo brand={brand} size={64} color="#ffffff" /></span>
+          )
+        ) : (
+          <>
+            <span className={`text-[44px] ${brand.cgPaper ? 'font-black' : 'font-normal'}`}>{caseOf(brand, text.label1)}</span>
+            {text.label2 && <span className={`text-[44px] ${brand.cgPaper ? 'font-black' : 'font-normal'}`}>{caseOf(brand, text.label2)}</span>}
+          </>
+        )}
       </div>
       {brand.cgPaper && !front && <div className="w-[3px] my-6 shrink-0 rounded-full bg-tv-accent" />}
       {front && <div className="w-3 shrink-0" style={{ background: frontColor(front) }} />}

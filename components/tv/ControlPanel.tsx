@@ -205,6 +205,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
 
 // ------------------------------------------------ Texto livre no CG ------
 const TEXT_PRESETS: { label1: string; label2: string }[] = [
+  { label1: '', label2: '' },
   { label1: 'eleições', label2: '2026' },
   { label1: 'apuração', label2: 'ao vivo' },
   { label1: 'última', label2: 'hora' },
@@ -231,7 +232,7 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
       </div>
       <div className="flex gap-1.5 mt-2">
         {TEXT_PRESETS.map(p => (
-          <button key={p.label1} onClick={() => set(p)} className="text-[11px] px-2 py-1 rounded border border-white/15 hover:bg-white/10">{p.label1} {p.label2}</button>
+          <button key={p.label1 || 'logo'} onClick={() => set(p)} className="text-[11px] px-2 py-1 rounded border border-white/15 hover:bg-white/10">{p.label1 ? `${p.label1} ${p.label2}` : 'só o logo'}</button>
         ))}
       </div>
       <textarea className="w-full rounded-lg bg-black/40 border border-white/15 px-3 py-2 mt-2 resize-none" rows={2} maxLength={90}
@@ -241,7 +242,7 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
         <Btn active={onAir.show && !touched} onClick={() => send(true)}>{onAir.show ? (touched ? 'Atualizar no ar' : 'No ar') : 'Colocar no ar'}</Btn>
         <Btn onClick={() => send(false)} danger={onAir.show}>Tirar do ar</Btn>
       </div>
-      <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras.</p>
+      <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras. Com as duas linhas do bloco vazias, o bloco mostra o logo.</p>
     </Section>
   );
 }
