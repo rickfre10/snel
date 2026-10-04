@@ -51,6 +51,7 @@ export interface ModelState {
   prTotal: number;
   prFinal: Record<string, number>;
   prBias: Record<string, number>;
+  distFinalPct: Record<string, number>;  // % final do voto distrital no estado (por frente)
 }
 
 export interface ElectionModel {
@@ -109,6 +110,8 @@ export interface DistrictSnapshot {
   };
   // ---- 2018 (vencedor e %)
   y2018: { front: string; pct: number } | null;
+  /** Voto proporcional estimado no distrito (% por frente; vazio sem apuração). */
+  prShares: Record<string, number>;
   flipped: boolean;        // final e com frente diferente de 2022
   leadingFlip: boolean;    // liderança (ainda não final) diferente de 2022
 }
@@ -121,7 +124,8 @@ export interface StateSnapshot {
   prCounted: number;
   prVotes: Record<string, number>;
   prPct: Record<string, number>;
-  prSeats: Record<string, number>;
+  prSeats: Record<string, number>;      // projeção (votos parciais)
+  prGuaranteed: Record<string, number>; // cadeiras já garantidas (nenhuma virada possível tira)
   prSeatsFinal: boolean;
   prev: { prPct: Record<string, number>; prSeats: Record<string, number> };
   districtWins: Record<string, number>;     // finais
@@ -216,7 +220,18 @@ export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoP
   // Uma frente "surpresa" da noite
   const surprise = pick(natR, FRONT_ORDER);
   nationalSwing[surprise] += 2.5 + natR() * 3;
-  const natTurnout = gauss(natR) * 0.03;
+  // Comparecimento de 2026: cada estado entre 85% e 90%; distritos variam em volta.
+  // A variação de cada distrito é recentrada para a média do estado (ponderada
+  // pelos eleitores) cair exatamente no valor sorteado.
+  const turnoutById: Record<number, number> = {};
+  STATE_ORDER.forEach(uf => {
+    const target = 85 + rngFor(seed, 'turnout', uf)() * 5;
+    const ds = districtsData.filter(d => d.uf === uf);
+    const raw = ds.map(d => gauss(rngFor(seed, 'turnout', d.district_id)) * 1.6);
+    const voters = ds.reduce((a, d) => a + d.voters_qtn, 0);
+    const mean = voters > 0 ? ds.reduce((a, d, i) => a + raw[i] * d.voters_qtn, 0) / voters : 0;
+    ds.forEach((d, i) => { turnoutById[d.district_id] = clamp(target + raw[i] - mean, 81, 94); });
+  });
 
   const stateSwing: Record<string, Record<string, number>> = {};
   STATE_ORDER.forEach(uf => {
@@ -247,9 +262,9 @@ export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoP
     });
     const shares = normalize(finalShares);
 
-    const baseTotal = base?.total && base.total > 0 ? base.total : d.voters_qtn * 0.72;
-    // A base de 2022 soma ~100% dos eleitores cadastrados; 2026 varia em torno dela.
-    const total = Math.round(baseTotal * (1 + natTurnout + gauss(r) * 0.035));
+    // Comparecimento do distrito: o do estado ± alguns pontos.
+    const turnout = turnoutById[d.district_id] ?? 87.5;
+    const total = Math.round(d.voters_qtn * turnout / 100);
 
     const fronts = Object.keys(shares);
     const votes = apportion(fronts.map(f => shares[f]), total);
@@ -312,11 +327,17 @@ export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoP
     const r = rngFor(seed, 'pr', uf);
     const base = baseline.states[uf];
     const basePct = base && base.total > 0 ? toPct(base.votes) : {};
+    // O proporcional caminha com o distrital: 70% do voto distrital do estado
+    // + 30% da tendência do proporcional de 2022 (com as mesmas ondas).
+    const distVotes: Record<string, number> = {};
+    districts.filter(d => d.uf === uf).forEach(d => d.candidates.forEach(c => { distVotes[c.front] = (distVotes[c.front] || 0) + c.finalVotes; }));
+    const distFinalPct = toPct(distVotes);
     const final: Record<string, number> = {};
     FRONT_ORDER.forEach(f => {
       const b = basePct[f] ?? 1;
       const scale = clamp(0.4 + b / 30, 0.4, 1.3);
-      final[f] = Math.max(0.3, b + ((nationalSwing[f] ?? 0) + (stateSwing[uf]?.[f] ?? 0) + gauss(r) * 1.2) * scale);
+      const prior = Math.max(0.3, b + ((nationalSwing[f] ?? 0) + (stateSwing[uf]?.[f] ?? 0)) * scale);
+      final[f] = Math.max(0.3, 0.7 * (distFinalPct[f] ?? 0) + 0.3 * prior + gauss(r) * 0.8);
     });
     const prTotal = Math.round(districts.filter(d => d.uf === uf).reduce((s, d) => s + d.total, 0) * 0.985);
     const fronts = Object.keys(final);
@@ -325,13 +346,55 @@ export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoP
     const prBias: Record<string, number> = {};
     fronts.forEach((f, i) => { prFinal[f] = v[i]; prBias[f] = gauss(r) * 3; });
     const name = districtsData.find(d => d.uf === uf)?.uf_name ?? uf;
-    states[uf] = { uf, name, prTotal, prFinal, prBias };
+    states[uf] = { uf, name, prTotal, prFinal, prBias, distFinalPct };
   });
 
   return { seed, districts, states, nationalSwing };
 }
 
 // ------------------------------------------------------------ Snapshot ----
+
+/**
+ * Cadeiras proporcionais já garantidas num estado: para cada frente, o pior
+ * cenário possível — todos os votos que faltam vão para as outras frentes
+ * (espalhados ou concentrados numa só) — e quantas cadeiras ela mantém mesmo
+ * assim (com a barreira e o mínimo de votos aplicados ao total final).
+ */
+function guaranteedPR(uf: string, counted: Record<string, number>, remaining: number): Record<string, number> {
+  const seats = PR_SEATS_BY_STATE[uf] ?? 0;
+  const fronts = Object.keys(counted);
+  const total = fronts.reduce((s, f) => s + counted[f], 0);
+  const out: Record<string, number> = {};
+  if (!seats || total <= 0) return out;
+  fronts.forEach(f => {
+    if (counted[f] <= 0) return;
+    const others = fronts.filter(g => g !== f);
+    const otherTotal = total - counted[f];
+    const scenarios: Record<string, number>[] = [];
+    // espalhados entre as outras frentes, na proporção atual
+    scenarios.push(Object.fromEntries(fronts.map(g => [g, counted[g] + (g === f ? 0 : remaining * (otherTotal > 0 ? counted[g] / otherTotal : 1 / others.length))])));
+    // ou todos numa única frente rival
+    others.forEach(o => scenarios.push(Object.fromEntries(fronts.map(g => [g, counted[g] + (g === o ? remaining : 0)]))));
+    out[f] = Math.min(...scenarios.map(sc => allocateStatePR(uf, sc, 1)[f] ?? 0));
+  });
+  // Segurança: nunca mais garantidas do que cadeiras
+  let sum = Object.values(out).reduce((a, b) => a + b, 0);
+  while (sum > seats) {
+    const top = Object.keys(out).sort((a, b) => out[b] - out[a])[0];
+    out[top]--; sum--;
+  }
+  return out;
+}
+
+/** Voto proporcional estimado no distrito: o % final do estado, deslocado pelo desvio local do voto distrital. */
+function districtPrShares(statePr: Record<string, number>, stateDist: Record<string, number>, districtShares: Record<string, number>): Record<string, number> {
+  const raw: Record<string, number> = {};
+  FRONT_ORDER.forEach(f => {
+    const v = (statePr[f] ?? 0) + ((districtShares[f] ?? 0) - (stateDist[f] ?? 0)) * 0.85;
+    raw[f] = Math.max(0.3, v);
+  });
+  return normalize(raw);
+}
 
 /** Votos parciais: proporção final + viés decrescente, aplicado sobre `counted`. */
 function partialVotes(finalVotes: Record<string, number>, bias: Record<string, number>, fraction: number, counted: number): Record<string, number> {
@@ -354,6 +417,8 @@ export function snapshotAt(
 ): ElectionSnapshot {
   const colorMap: Record<string, string> = {};
   FRONT_ORDER.forEach(f => { colorMap[f] = frontColor(f); });
+  const prFinalPct: Record<string, Record<string, number>> = {};
+  STATE_ORDER.forEach(uf => { prFinalPct[uf] = toPct(model.states[uf].prFinal); });
 
   const districts: DistrictSnapshot[] = model.districts.map(d => {
     const hold = holds[d.uf];
@@ -432,6 +497,7 @@ export function snapshotAt(
         const r = previousDistrictResultsData.find(x => x.district_id === d.id);
         return r ? { front: r.winner_2018_legend, pct: r.winner_2018_percentage } : null;
       })(),
+      prShares: counted > 0 ? districtPrShares(prFinalPct[d.uf], model.states[d.uf].distFinalPct, shares) : {},
       flipped: isFinal && !!leader && !!prevFront && leader.front !== prevFront,
       leadingFlip: !isFinal && !!leader && !!prevFront && leader.front !== prevFront,
     };
@@ -449,7 +515,20 @@ export function snapshotAt(
     const counted = ds.reduce((s, d) => s + d.counted, 0);
     const fraction = expected > 0 ? counted / expected : 0;
     const prCounted = Math.round(m.prTotal * fraction);
-    const prVotes = partialVotes(m.prFinal, m.prBias, fraction, prCounted);
+    // Votos parciais do proporcional acompanham o desvio do distrital apurado
+    // (mesmas urnas): começam enviesados e convergem para o resultado final.
+    const distPartial: Record<string, number> = {};
+    ds.forEach(d => d.candidates.forEach(c => { distPartial[c.front] = (distPartial[c.front] || 0) + c.votes; }));
+    const distPartialPct = toPct(distPartial);
+    const decay = Math.pow(1 - fraction, 1.3);
+    const prVotes = fraction >= 1 ? { ...m.prFinal } : (() => {
+      const keys = Object.keys(m.prFinal);
+      const w = keys.map(f => Math.max(0.1, prFinalPct[uf][f] + ((distPartialPct[f] ?? 0) - (m.distFinalPct[f] ?? 0)) * 0.8 + (m.prBias[f] ?? 0) * decay * 0.3));
+      const v = apportion(w, prCounted);
+      const out: Record<string, number> = {};
+      keys.forEach((f, i) => { out[f] = v[i]; });
+      return out;
+    })();
     const districtWins: Record<string, number> = {};
     const districtLeads: Record<string, number> = {};
     const prevDistrictWins: Record<string, number> = {};
@@ -470,6 +549,7 @@ export function snapshotAt(
       prVotes,
       prPct: toPct(prVotes),
       prSeats: prCounted > 0 ? allocateStatePR(uf, prVotes, fraction) : {},
+      prGuaranteed: fraction >= 1 ? allocateStatePR(uf, prVotes, 1) : prCounted > 0 ? guaranteedPR(uf, prVotes, Math.max(0, m.prTotal - prCounted) * 1.02) : {},
       prSeatsFinal: fraction >= 1,
       prev: { prPct: base ? toPct(base.votes) : {}, prSeats: base?.seats ?? {} },
       districtWins,
@@ -508,8 +588,11 @@ export function snapshotAt(
   let prevPrTotal = 0;
   const prevPrVotes: Record<string, number> = {};
   Object.values(states).forEach(s => {
-    Object.entries(s.prSeats).forEach(([f, n]) => {
-      if (s.prSeatsFinal) ensure(f).prConfirmed += n; else ensure(f).prProjected += n;
+    // Garantidas contam como confirmadas; o restante da projeção fica em aberto.
+    FRONT_ORDER.forEach(f => {
+      const g = s.prGuaranteed[f] ?? 0;
+      ensure(f).prConfirmed += g;
+      ensure(f).prProjected += Math.max(0, (s.prSeats[f] ?? 0) - g);
     });
     Object.entries(s.prev.prSeats).forEach(([f, n]) => { ensure(f).prev.pr += n; });
     Object.entries(s.prVotes).forEach(([f, v]) => { ensure(f).prVotes += v; prTotalCounted += v; });

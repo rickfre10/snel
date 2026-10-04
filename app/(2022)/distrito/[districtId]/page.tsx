@@ -354,6 +354,7 @@ export default function DistrictDetailPage() {
             areVotesBeingCounted={districtResults.totalVotes > 0}
             apuratedVotesCount={districtResults.totalVotes}
             totalPollsCount={currentDistrictInfo?.polls_qtn || 0} // Usa polls_qtn real
+            expectedVotesCount={currentDistrictInfo ? expectedVotes2022(currentDistrictInfo.district_id, currentDistrictInfo.voters_qtn) : undefined}
         />
       </div>
 

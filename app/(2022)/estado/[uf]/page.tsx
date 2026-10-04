@@ -478,6 +478,7 @@ export default function StatePage() {
                 areVotesBeingCounted={stateLevelScrutinyData.areVotesBeingCounted}
                 apuratedVotesCount={stateLevelScrutinyData.apuratedStateVotes}
                 totalPollsCount={stateLevelScrutinyData.totalPollsInState}
+                expectedVotesCount={districtsData.filter(d => d.uf === stateInfo.uf).reduce((s, d) => s + expectedVotes2022(d.district_id, d.voters_qtn), 0)}
                 />
             </div>
         )}

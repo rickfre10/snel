@@ -67,7 +67,8 @@ export default function SceneParlamento({ snap }: { snap: ElectionSnapshot }) {
                 style={active ? { background: c, borderColor: c, color: textOn(c) } : { borderColor: c, background: 'rgb(var(--tv-surface2) / 0.5)' }}>
                 <div className="text-[22px] font-black">{f.legend}</div>
                 <div className="text-[40px] font-black leading-none tabular-nums">{f.projected}</div>
-                <div className="text-[13px] opacity-80 mt-1">{f.confirmed} confirmadas</div>
+                <div className="text-[13px] opacity-80 mt-1 tabular-nums">{f.districtWon + f.districtLeading} distr. · {f.prConfirmed + f.prProjected} prop.</div>
+                <div className="text-[13px] opacity-80 tabular-nums">{f.confirmed} confirmadas</div>
               </button>
             );
           })}

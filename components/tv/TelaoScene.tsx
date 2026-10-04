@@ -14,6 +14,7 @@ import SceneEstado from './scenes/SceneEstado';
 import SceneDistrito from './scenes/SceneDistrito';
 import SceneViradas from './scenes/SceneViradas';
 import SceneComparativo from './scenes/SceneComparativo';
+import SceneProporcional from './scenes/SceneProporcional';
 
 export interface TelaoSceneProps {
   brand: BrandTheme;
@@ -33,6 +34,7 @@ export default function TelaoScene({ brand, snap, scene, uf, districtId, onScene
   const nav = [
     { id: 'geral', label: caseOf(brand, 'Visão geral') },
     { id: 'parlamento', label: caseOf(brand, 'Parlamento') },
+    { id: 'proporcional', label: caseOf(brand, 'Proporcional') },
     { id: 'estado', label: caseOf(brand, 'Estados') },
     { id: 'viradas', label: caseOf(brand, 'Viradas') },
     { id: 'comparativo', label: '2022 × 2026' },
@@ -54,6 +56,7 @@ export default function TelaoScene({ brand, snap, scene, uf, districtId, onScene
           <div key={`${scene}-${scene === 'estado' ? uf : ''}-${scene === 'distrito' ? districtId : ''}`} className="h-full tv-scene-in">
             {scene === 'geral' && <SceneGeral snap={snap} onDistrict={onDistrict} />}
             {scene === 'parlamento' && <SceneParlamento snap={snap} />}
+            {scene === 'proporcional' && <SceneProporcional snap={snap} onUf={openUf} />}
             {scene === 'estado' && <SceneEstado snap={snap} uf={uf} onUf={onUf} onDistrict={onDistrict} />}
             {scene === 'distrito' && <SceneDistrito snap={snap} districtId={districtId} onDistrict={onDistrict} onUf={openUf} />}
             {scene === 'viradas' && <SceneViradas snap={snap} onDistrict={onDistrict} />}

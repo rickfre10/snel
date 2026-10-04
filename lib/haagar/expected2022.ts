@@ -1,7 +1,7 @@
 // lib/haagar/expected2022.ts
 // Total final de votos válidos de cada distrito em 2022 (do resultado oficial
 // embutido). O painel 2022 usa isso para calcular os "votos restantes" —
-// com comparecimento de 70–85%, usar o total de eleitores deixaria distritos
+// com o comparecimento ajustado (88–91%, ver turnout2022.ts), usar o total de eleitores deixaria distritos
 // já 100% apurados como "liderando".
 import totals from '@/lib/data/haagar2022-totals.json';
 
