@@ -7,7 +7,7 @@ Painéis de apuração das eleições legislativas (fictícias) de **Haagar**, c
 | `/` | Seleção do pleito |
 | `/2022` (+ `/estado/[uf]`, `/distrito/[id]`, `/nacional`, `/nacional/parlamento`, `/ganhos-e-perdas`) | Painel 2022 — dados do Google Sheets ou, sem ele, o resultado oficial embutido (visual original) |
 | `/2026` | **Telão interativo 2026** (16:9, pensado para TV/touch) |
-| `/2026/controle` | Controle do ritmo da apuração (operador; não é linkado no telão) |
+| `/2026/controle` | **Mesa de controle** para computador (operador; não é linkada no telão): apuração, telão, CG e estados lado a lado, com o que está no ar e atalhos de teclado (Espaço, ← →, 1–8, /, Esc, ?) |
 | `/2026/cenario` | **Montar cenário**: ajustar a votação de cada frente ou pedir uma distribuição de cadeiras, ver o resultado final e mandar para o controle |
 | `/2026/cg` | **CG** para sobrepor ao vídeo: cadeiras por frente + faixa de distritos (fundo transparente; `?fundo=verde`/`azul`/`preto`/`cena`/`telao`) |
 | `/2026/idle` | Vinheta de espera em tela cheia |

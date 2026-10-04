@@ -10,7 +10,7 @@ import { MAJORITY, STATE_ORDER, frontColor, textOn } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
 import { parseScenarioCode, scenarioCode } from '@/lib/haagar2026/scenario';
 
-const SCENES: { id: SceneId; label: string }[] = [
+export const SCENES: { id: SceneId; label: string }[] = [
   { id: 'geral', label: 'Visão geral' },
   { id: 'parlamento', label: 'Parlamento' },
   { id: 'proporcional', label: 'Proporcional' },
@@ -218,7 +218,7 @@ const TEXT_PRESETS: { label1: string; label2: string }[] = [
   { label1: 'última', label2: 'hora' },
 ];
 
-function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
+export function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
   const onAir: CgText = { ...DEFAULT_CG_TEXT, ...state.cg?.text };
   const [draft, setDraft] = useState<CgText>(onAir);
   const [touched, setTouched] = useState(false);
@@ -257,7 +257,7 @@ function CgTextEditor({ state, dispatch }: { state: ControlState; dispatch: (a: 
 }
 
 // ------------------------------------------- CG · urgência (automático) --
-function CgUrgentSection({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
+export function CgUrgentSection({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
   const cg = { ...DEFAULT_CG, ...state.cg };
   const auto = cg.autoResults !== false;
   return (
@@ -280,7 +280,7 @@ function CgUrgentSection({ state, dispatch }: { state: ControlState; dispatch: (
 }
 
 // ------------------------------------------------ CG · tarja de maioria --
-function MajorityToggle({ cg, snap, dispatch }: { cg: typeof DEFAULT_CG; snap: ElectionSnapshot | null; dispatch: (a: ControlAction) => void }) {
+export function MajorityToggle({ cg, snap, dispatch }: { cg: typeof DEFAULT_CG; snap: ElectionSnapshot | null; dispatch: (a: ControlAction) => void }) {
   const conf = snap?.fronts.find(f => f.confirmed >= MAJORITY);
   const proj = snap?.fronts.find(f => f.projected >= MAJORITY);
   const lead = snap ? [...snap.fronts].sort((a, b) => b.projected - a.projected)[0] : null;
@@ -297,7 +297,7 @@ function MajorityToggle({ cg, snap, dispatch }: { cg: typeof DEFAULT_CG; snap: E
 }
 
 // ----------------------------------------------- CG · proporcional -------
-function CgPrSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
+export function CgPrSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
   const cg = { ...DEFAULT_CG, ...state.cg };
   const cur = cg.pr ?? { show: false, uf: 'auto' };
   const put = (uf: string) => dispatch({
@@ -324,7 +324,7 @@ function CgPrSection({ state, dispatch, snap }: { state: ControlState; dispatch:
 }
 
 // ------------------------------------------------- CG · tarja de distrito --
-function CgDistrictSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
+export function CgDistrictSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
   const cg = { ...DEFAULT_CG, ...state.cg };
   const cur = cg.district;
   const sd = cur ? snap?.districtById[cur.id] : null;
@@ -357,7 +357,7 @@ function CgDistrictSection({ state, dispatch, snap }: { state: ControlState; dis
 const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /** Busca por nome, número, UF, estado ou região; um toque manda o distrito para o telão. */
-function DistrictSearch({ snap, onShow, currentId, actionLabel = 'no telão →' }: { snap: ElectionSnapshot | null; onShow: (id: number) => void; currentId?: number; actionLabel?: string }) {
+export function DistrictSearch({ snap, onShow, currentId, actionLabel = 'no telão →', inputId }: { snap: ElectionSnapshot | null; onShow: (id: number) => void; currentId?: number; actionLabel?: string; inputId?: string }) {
   const [q, setQ] = useState('');
   const terms = norm(q).split(/\s+/).filter(Boolean);
   const results = terms.length === 0 ? [] : districtsData
@@ -369,7 +369,7 @@ function DistrictSearch({ snap, onShow, currentId, actionLabel = 'no telão →'
 
   return (
     <div>
-      <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar distrito (nome, número, UF ou região)"
+      <input id={inputId} value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar distrito (nome, número, UF ou região)"
         onKeyDown={e => { if (e.key === 'Enter' && results[0]) { onShow(results[0].d.district_id); setQ(''); } }}
         className="w-full h-11 rounded-lg bg-black/40 border border-white/20 px-3 text-[15px]" />
       {results.length > 0 && (
@@ -400,7 +400,7 @@ function DistrictSearch({ snap, onShow, currentId, actionLabel = 'no telão →'
 }
 
 // ------------------------------------------- Texto do selo de local (CG) --
-function PlaceInput({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+export function PlaceInput({ value, onSave }: { value: string; onSave: (v: string) => void }) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
@@ -411,7 +411,7 @@ function PlaceInput({ value, onSave }: { value: string; onSave: (v: string) => v
       <div className="flex gap-2">
         <input value={draft} onChange={e => { setEditing(true); setDraft(e.target.value); }} onBlur={save}
           onKeyDown={e => { if (e.key === 'Enter') save(); }} maxLength={40} placeholder="Ex.: São Pedro, MA"
-          className="flex-1 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
+          className="flex-1 min-w-0 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
         <Btn onClick={save}>Aplicar</Btn>
       </div>
     </div>
