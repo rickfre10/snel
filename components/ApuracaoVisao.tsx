@@ -12,6 +12,8 @@ interface ApuracaoVisaoProps {
   areVotesBeingCounted: boolean;
   apuratedVotesCount: number;
   totalPollsCount: number;
+  /** Votos esperados ao fim da apuração (com o comparecimento real). Sem ele, supõe 500 votos por urna. */
+  expectedVotesCount?: number;
 }
 
 const ApuracaoVisao: React.FC<ApuracaoVisaoProps> = ({
@@ -22,10 +24,16 @@ const ApuracaoVisao: React.FC<ApuracaoVisaoProps> = ({
   areVotesBeingCounted, // Pode ser usado para o display de "Aguardando dados" etc. se statusLabel não for suficiente
   apuratedVotesCount,
   totalPollsCount,
+  expectedVotesCount,
 }) => {
   // Lógica interna do ApuracaoVisao para calcular % de urnas etc. (mantida)
   let calculatedUrnasApuradas = 0;
-  if (totalPollsCount > 0) {
+  if (totalPollsCount > 0 && expectedVotesCount && expectedVotesCount > 0) {
+    // Urnas proporcionais aos votos esperados (o comparecimento não é 100%)
+    calculatedUrnasApuradas = apuratedVotesCount > 0
+      ? Math.min(totalPollsCount, Math.max(1, Math.round((apuratedVotesCount / expectedVotesCount) * totalPollsCount)))
+      : 0;
+  } else if (totalPollsCount > 0) {
     if (apuratedVotesCount > 0) {
       const urnasBasePorVotos = Math.floor(apuratedVotesCount / 500); // Regra de 500 votos/urna
       calculatedUrnasApuradas = urnasBasePorVotos + 1;

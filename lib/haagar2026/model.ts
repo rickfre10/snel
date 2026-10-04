@@ -220,7 +220,18 @@ export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoP
   // Uma frente "surpresa" da noite
   const surprise = pick(natR, FRONT_ORDER);
   nationalSwing[surprise] += 2.5 + natR() * 3;
-  const natTurnout = gauss(natR) * 0.03;
+  // Comparecimento de 2026: cada estado entre 85% e 90%; distritos variam em volta.
+  // A variação de cada distrito é recentrada para a média do estado (ponderada
+  // pelos eleitores) cair exatamente no valor sorteado.
+  const turnoutById: Record<number, number> = {};
+  STATE_ORDER.forEach(uf => {
+    const target = 85 + rngFor(seed, 'turnout', uf)() * 5;
+    const ds = districtsData.filter(d => d.uf === uf);
+    const raw = ds.map(d => gauss(rngFor(seed, 'turnout', d.district_id)) * 1.6);
+    const voters = ds.reduce((a, d) => a + d.voters_qtn, 0);
+    const mean = voters > 0 ? ds.reduce((a, d, i) => a + raw[i] * d.voters_qtn, 0) / voters : 0;
+    ds.forEach((d, i) => { turnoutById[d.district_id] = clamp(target + raw[i] - mean, 81, 94); });
+  });
 
   const stateSwing: Record<string, Record<string, number>> = {};
   STATE_ORDER.forEach(uf => {
@@ -251,9 +262,9 @@ export function buildModel(baseline: Baseline2022, seed: number, photos?: PhotoP
     });
     const shares = normalize(finalShares);
 
-    const baseTotal = base?.total && base.total > 0 ? base.total : d.voters_qtn * 0.72;
-    // A base de 2022 soma ~100% dos eleitores cadastrados; 2026 varia em torno dela.
-    const total = Math.round(baseTotal * (1 + natTurnout + gauss(r) * 0.035));
+    // Comparecimento do distrito: o do estado ± alguns pontos.
+    const turnout = turnoutById[d.district_id] ?? 87.5;
+    const total = Math.round(d.voters_qtn * turnout / 100);
 
     const fronts = Object.keys(shares);
     const votes = apportion(fronts.map(f => shares[f]), total);

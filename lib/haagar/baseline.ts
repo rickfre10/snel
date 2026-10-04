@@ -2,6 +2,7 @@
 // Resultado consolidado da eleição de 2022 — usado como base de comparação
 // (e como ponto de partida da simulação) do painel 2026.
 
+import { adjustTurnout2022 } from './turnout2022';
 import { districtsData, partyData } from '@/lib/staticData';
 import {
   previousDistrictResultsData,
@@ -63,7 +64,9 @@ export interface RawProportionalRow {
 }
 
 /** Monta a base a partir das linhas (já numéricas) da planilha de 2022, aba 100%. */
-export function buildBaselineFromRows(candidates: RawCandidateRow[], proportional: RawProportionalRow[]): Baseline2022 {
+export function buildBaselineFromRows(rawCandidates: RawCandidateRow[], proportional: RawProportionalRow[]): Baseline2022 {
+  // Comparecimento de 2022 ajustado (a planilha soma ~100% dos eleitores)
+  const candidates = adjustTurnout2022(rawCandidates);
   const districts: Record<number, BaselineDistrict> = {};
   districtsData.forEach(d => {
     districts[d.district_id] = { id: d.district_id, total: 0, votes: {}, candidates: [], winnerFront: null, winnerName: null, winnerParty: null };
@@ -124,7 +127,7 @@ export function buildFallbackBaseline(): Baseline2022 {
     const shares: Record<string, number> = { [winner]: winnerPct };
     others.forEach(([f, v]) => { shares[f] = Math.min(winnerPct - 1, (v / othersSum) * (100 - winnerPct)); });
     const sum = Object.values(shares).reduce((a, b) => a + b, 0);
-    const total = Math.round(d.voters_qtn * 0.72);
+    const total = Math.round(d.voters_qtn * 0.895);
     const votes: Record<string, number> = {};
     Object.entries(shares).forEach(([f, v]) => { votes[f] = Math.round((v / sum) * total); });
     // Candidatos fictícios (sempre os mesmos) para a estimativa de 2022

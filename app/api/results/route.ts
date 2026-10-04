@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSpreadsheet, GoogleSpreadsheetWorksheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 import { CandidateVote, ProportionalVote } from '@/types/election';
+import { adjustTurnout2022 } from '@/lib/haagar/turnout2022';
+import rawTotals2022 from '@/lib/data/haagar2022-rawtotals.json';
 
 export const runtime = 'nodejs';
 
@@ -34,10 +36,11 @@ async function embeddedVotes(time: string): Promise<ApiVotesData> {
   const frontName: Record<string, string> = { TDS: 'Frente de Todos', UNI: 'Unidos por Haagar', CON: 'Frente Conservadora', PSD: 'PSD', PSH: 'PSH', NAC: 'NAC' };
   return {
     time: parseInt(time, 10),
-    candidateVotes: data.candidates.map(([district_id, candidate_name, party_legend, parl_front_legend, votes_qtn, gender, candidate_photo]) => ({
+    // Comparecimento de 2022 ajustado (ver lib/haagar/turnout2022.ts)
+    candidateVotes: adjustTurnout2022(data.candidates.map(([district_id, candidate_name, party_legend, parl_front_legend, votes_qtn, gender, candidate_photo]) => ({
       district_id, candidate_name, party_legend: party_legend ?? 'N/A', parl_front_legend, votes_qtn,
       candidate_status: null, candidate_photo, gender: gender === 'F' ? 'Feminino' : gender === 'M' ? 'Masculino' : null,
-    })),
+    }))),
     proportionalVotes: data.proportional.map(([uf, parl_front_legend, proportional_votes_qtn]) => ({
       uf, parl_front_legend, proportional_votes_qtn, parlamentar_front: frontName[parl_front_legend] ?? parl_front_legend,
     })),
@@ -158,7 +161,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiVotesDa
     // ---- 6. Preparar e Retornar a Resposta ----
     const responseData: ApiVotesData = {
       time: parseInt(time, 10),
-      candidateVotes,
+      // Comparecimento de 2022 ajustado (ver lib/haagar/turnout2022.ts); na
+      // apuração parcial, o fator vem do total final de cada distrito.
+      candidateVotes: adjustTurnout2022(candidateVotes, time === '100' ? undefined : (rawTotals2022 as Record<string, number>)),
       proportionalVotes,
     };
 
