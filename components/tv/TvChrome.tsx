@@ -121,7 +121,7 @@ export function Ticker({ brand, items, right }: { brand: BrandTheme; items: stri
 
   return (
     <footer className="absolute left-10 right-10 bottom-6 h-[56px] flex gap-3">
-      <div className="w-[150px] rounded-[14px] bg-tv-accent text-tv-accent-text flex items-center justify-center text-[26px] font-black tabular-nums">{clock}</div>
+      <div className="w-[150px] rounded-[14px] bg-tv-accent text-tv-accent-text flex items-center justify-center text-[26px] font-bold tabular-nums">{clock}</div>
       <div className="flex-1 rounded-[14px] bg-tv-text/[0.14] backdrop-blur overflow-hidden flex items-center">
         <N8Seal size={30} />
         <div className="relative flex-1 overflow-hidden h-full">
@@ -129,7 +129,7 @@ export function Ticker({ brand, items, right }: { brand: BrandTheme; items: stri
             {[0, 1].map(k => (
               <span key={k} className="flex items-center">
                 {list.map((t, i) => (
-                  <span key={`${k}-${i}`} className="px-10 text-[21px] font-bold tracking-wide">{caseOf(brand, t)}</span>
+                  <span key={`${k}-${i}`} className="px-10 text-[21px] font-semibold tracking-wide uppercase">{t}</span>
                 ))}
               </span>
             ))}

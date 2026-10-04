@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
+import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
@@ -236,12 +237,29 @@ function TickerBar({ snap, brand }: { snap: ElectionSnapshot; brand: typeof BRAN
 
   return (
     <div className="absolute left-[104px] right-[104px] bottom-[68px] h-[56px] flex gap-3">
-      <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[28px] font-extrabold tabular-nums">{clock}</div>
+      <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[28px] font-bold tabular-nums">{clock}</div>
       <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: tickerBg(brand) }}>
         <N8Seal size={28} />
-        {d ? <DistrictLine key={d.id} d={d} brand={brand} /> : (
-          <div className="px-6 text-[26px] font-bold text-white">{caseOf(brand, 'Aguardando as primeiras urnas')}</div>
-        )}
+        {d ? <DistrictLine key={d.id} d={d} brand={brand} /> : <TickerMarquee items={buildTicker(snap)} brand={brand} />}
+      </div>
+    </div>
+  );
+}
+
+/** Antes dos resultados: as mesmas frases da faixa do telão, rolando. */
+function TickerMarquee({ items, brand }: { items: string[]; brand: typeof BRANDS.smartv }) {
+  const list = items.length ? items : ['Aguardando as primeiras urnas'];
+  const duration = Math.max(30, list.join(' ').length / 7);
+  return (
+    <div className="relative flex-1 overflow-hidden h-full text-white">
+      <div className="tv-marquee absolute inset-y-0 left-0 flex items-center whitespace-nowrap" style={{ ['--tv-marquee-duration' as string]: `${duration}s` }}>
+        {[0, 1].map(k => (
+          <span key={k} className="flex items-center">
+            {list.map((t, i) => (
+              <span key={`${k}-${i}`} className="px-10 text-[24px] font-semibold tracking-wide uppercase">{t}</span>
+            ))}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -251,30 +269,30 @@ function DistrictLine({ d, brand }: { d: DistrictSnapshot; brand: typeof BRANDS.
   const lead = d.leader!;
   return (
     <div className="flex-1 min-w-0 flex items-center gap-5 px-5 text-white tv-scene-in">
-      <span className="shrink-0 text-[19px] font-black opacity-80">{d.uf}</span>
-      <span className="text-[24px] font-extrabold uppercase truncate max-w-[380px]">{d.name}</span>
-      <span className="shrink-0 rounded-[8px] px-2.5 py-0.5 text-[17px] font-extrabold uppercase" style={{ background: d.status.backgroundColor, color: d.status.textColor }}>
+      <span className="shrink-0 text-[19px] font-bold opacity-80">{d.uf}</span>
+      <span className="text-[24px] font-semibold uppercase truncate max-w-[380px]">{d.name}</span>
+      <span className="shrink-0 rounded-[8px] px-2.5 py-0.5 text-[17px] font-bold uppercase" style={{ background: d.status.backgroundColor, color: d.status.textColor }}>
         {d.status.label}
       </span>
       <span className="flex-1 min-w-0 flex items-baseline justify-center gap-2 truncate">
         <span className="shrink-0 self-center rounded-[6px] px-1.5 font-extrabold text-[15px]" style={{ background: frontColor(lead.front), color: textOn(frontColor(lead.front)) }}>{lead.front}</span>
-        <span className="text-[22px] font-extrabold uppercase truncate">{lead.name}</span>
+        <span className="text-[22px] font-semibold uppercase truncate">{lead.name}</span>
         {(lead.incumbent || lead.incumbentParty) && (
-          <span className="shrink-0 self-center rounded-[6px] border border-white/60 px-1.5 text-[13px] font-extrabold uppercase leading-[1.4]">
-            {lead.incumbent ? caseOf(brand, g('Deputado atual', 'Deputada atual', lead.gender)) : caseOf(brand, 'Incumbente')}
+          <span className="shrink-0 self-center rounded-[6px] border border-white/60 px-1.5 text-[13px] font-semibold uppercase leading-[1.4]">
+            {lead.incumbent ? g('Deputado atual', 'Deputada atual', lead.gender) : 'Incumbente'}
           </span>
         )}
-        <span className="text-[20px] font-bold opacity-90 tabular-nums">{fmtPct(lead.pct)}</span>
+        <span className="text-[20px] font-medium opacity-90 tabular-nums">{fmtPct(lead.pct)}</span>
       </span>
       {d.runnerUp && (
         <span className="shrink-0 flex items-baseline gap-2 text-[19px] opacity-90">
-          <span className="font-semibold">2º</span>
+          <span className="font-medium">2º</span>
           <span className="rounded-[6px] px-1.5 font-extrabold text-[15px]" style={{ background: frontColor(d.runnerUp.front), color: textOn(frontColor(d.runnerUp.front)) }}>{d.runnerUp.front}</span>
-          <span className="font-bold uppercase truncate max-w-[200px]">{d.runnerUp.name}</span>
+          <span className="font-semibold uppercase truncate max-w-[200px]">{d.runnerUp.name}</span>
           <span className="tabular-nums">{fmtPct(d.runnerUp.pct)}</span>
         </span>
       )}
-      <span className="shrink-0 text-[15px] font-semibold opacity-70 tabular-nums">{caseOf(brand, `${fmtPct(d.reported)} apur.`)}</span>
+      <span className="shrink-0 text-[15px] font-medium opacity-70 tabular-nums uppercase">{`${fmtPct(d.reported)} apur.`}</span>
     </div>
   );
 }
