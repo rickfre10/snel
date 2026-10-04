@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { BrandTheme } from '@/lib/brand';
 import { BrandLogo, TargetMark } from './ui';
+import PillGrid from './PillGrid';
 import { STAGE_H, STAGE_W, caseOf } from './TvChrome';
 
 const RATIO = 1.3;                  // cada coluna é 30% mais larga que a anterior
@@ -70,55 +71,12 @@ function NewsIdle({ brand, onExit, info }: IdleProps) {
 // ---------------------------------------------------------------- Smartv --
 function SmartvIdle({ brand, onExit, info }: IdleProps) {
   const panelW = Math.round(STAGE_W * 0.52);
-  const originX = 270;                       // ponto de fuga atrás do painel (colunas menores ficam escondidas)
-  const gridW = STAGE_W - originX;           // largura até a borda direita
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rects = Array.from(svg.querySelectorAll<SVGRectElement>('rect[data-cell]'));
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    let raf = 0;
-    const start = performance.now();
-    const rowTops: number[] = [];
-    ROWS.reduce((acc, h) => { rowTops.push(acc); return acc + h * STAGE_H; }, 0);
-
-    const draw = (now: number) => {
-      const p = reduce ? 0 : ((now - start) / 1000 / SECONDS_PER_COLUMN) % 1;
-      // limites das colunas: x(s) = gridW * RATIO^s, s = j - p (s ≤ 1 visível)
-      for (let c = 0; c < POOL; c++) {
-        const s0 = 1 - c - p;          // coluna c, da direita para a esquerda
-        const xR = gridW * Math.pow(RATIO, s0);
-        const xL = gridW * Math.pow(RATIO, s0 - 1);
-        const w = xR - xL - GAP;
-        ROWS.forEach((rh, r) => {
-          const el = rects[c * ROWS.length + r];
-          if (!el) return;
-          const h = rh * STAGE_H - GAP;
-          const rad = Math.max(0, Math.min(w, h) / 2);
-          el.setAttribute('x', String(originX + xL + GAP / 2));
-          el.setAttribute('y', String(rowTops[r] + GAP / 2));
-          el.setAttribute('width', String(Math.max(0, w)));
-          el.setAttribute('height', String(h));
-          el.setAttribute('rx', String(rad));
-        });
-      }
-      if (!reduce) raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [gridW, originX]);
-
   const clock = useClock();
 
   return (
     <div className="absolute inset-0 z-40 overflow-hidden cursor-pointer" style={{ background: 'rgb(var(--tv-ink))' }} onClick={onExit}>
-      <svg ref={svgRef} width={STAGE_W} height={STAGE_H} className="absolute inset-0">
-        {Array.from({ length: POOL }).flatMap((_, c) => ROWS.map((__, r) => (
-          <rect key={`${c}-${r}`} data-cell="" fill="rgb(var(--tv-accent))" />
-        )))}
-      </svg>
+      {/* ponto de fuga atrás do painel: as colunas menores ficam escondidas */}
+      <PillGrid width={STAGE_W} height={STAGE_H} rows={ROWS} ratio={RATIO} secondsPerColumn={SECONDS_PER_COLUMN} gap={GAP} originX={270} pool={POOL} className="absolute inset-0" />
 
       {/* Painel do título */}
       <div className="absolute inset-y-0 left-0 rounded-r-[44px] flex flex-col justify-center pl-[96px] pr-16"

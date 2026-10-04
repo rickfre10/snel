@@ -16,6 +16,7 @@ import type { DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haag
 import { FRONT_ORDER, MAJORITY, STATE_ORDER, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
 import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
 import TelaoScene from '@/components/tv/TelaoScene';
+import PillGrid from '@/components/tv/PillGrid';
 import IdleScreen from '@/components/tv/IdleScreen';
 import { AnimatedNumber, BrandLogo, N8Seal, TargetMark, fmtPct, g } from '@/components/tv/ui';
 
@@ -79,8 +80,8 @@ export default function Cg2026() {
       <Slide show={cg.bug} from="top">
         <div className="absolute right-[104px] top-[72px]" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}>
           {brand.logo.kind === 'target' ? (
-            <div className="flex flex-col items-center gap-2 text-white">
-              <TargetMark size={72} />
+            <div className="flex flex-col items-end gap-2 text-white">
+              <BrandLogo brand={brand} size={52} color="#ffffff" />
               <span className="text-[20px] font-extrabold tracking-wide leading-none">{caseOf(brand, 'Ao vivo')}</span>
             </div>
           ) : (
@@ -125,9 +126,13 @@ function Slide({ show, from, children }: { show: boolean; from: 'top' | 'bottom'
 const ALTERNATE_MS = 5000;
 
 // Fundo das tarjas: sólido na Smartv, levemente translúcido na News.
-const tarjaBg = (brand: typeof BRANDS.smartv) => (brand.cgSolid ? 'rgb(var(--tv-tarja))' : 'rgb(var(--tv-tarja) / 0.94)');
+const tarjaBg = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-paper))' : brand.cgSolid ? 'rgb(var(--tv-tarja))' : 'rgb(var(--tv-tarja) / 0.94)');
+// Cor do texto sobre a tarja (escuro no estilo creme da Smartv)
+const tarjaInk = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-ink))' : '#ffffff');
+// Faixa de distritos: marrom sólido no estilo creme
+const tickerBg = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-ink))' : tarjaBg(brand));
 // Bloco em gradiente da esquerda: na Smartv termina sólido (sem vazar para a tarja).
-const blockBg = (brand: typeof BRANDS.smartv) => (brand.cgBlockFade
+const blockBg = (brand: typeof BRANDS.smartv) => (brand.cgPaper ? 'rgb(var(--tv-paper))' : brand.cgBlockFade
   // News: azul-céu → azul royal, fundindo na tarja (como "edição das 19h")
   ? 'linear-gradient(110deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 42%, rgb(var(--tv-accent) / 0.85) 62%, rgb(var(--tv-tarja)) 100%)'
   : 'linear-gradient(115deg, rgb(var(--tv-accent2)) 0%, rgb(var(--tv-accent)) 70%)');
@@ -142,10 +147,10 @@ function AlternatingBlock({ brand, subject }: { brand: typeof BRANDS.smartv; sub
   }, []);
   const layer = 'absolute inset-0 flex flex-col justify-center pl-8 transition-all duration-700 ease-out';
   return (
-    <div className="relative w-[310px] shrink-0 text-white overflow-hidden"
-      style={{ background: blockBg(brand) }}>
+    <div className="relative w-[310px] shrink-0 overflow-hidden"
+      style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
       <div className={layer} style={{ opacity: showLogo ? 0 : 1, transform: showLogo ? 'translateY(-24px)' : 'none' }}>
-        <span className={`text-[24px] leading-none opacity-85 ${brand.cgBlockFade ? 'font-normal' : 'font-semibold'}`}>{caseOf(brand, 'Parlamento')}</span>
+        <span className={`text-[24px] leading-none ${brand.cgPaper ? 'text-tv-ink font-bold' : 'opacity-85'} ${brand.cgBlockFade ? 'font-normal' : 'font-semibold'}`}>{caseOf(brand, 'Parlamento')}</span>
         <span className={`leading-[1.05] mt-1 whitespace-nowrap ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(caseOf(brand, subject), 262, brand.cgBlockFade ? 46 : 50) }}>{caseOf(brand, subject)}</span>
       </div>
       <div className={layer} style={{ opacity: showLogo ? 1 : 0, transform: showLogo ? 'none' : 'translateY(24px)' }}>
@@ -192,16 +197,17 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
         })}
       </div>
 
-      <div className="w-[250px] shrink-0 flex flex-col justify-center px-6 text-white border-l border-white/15">
+      <div className="w-[250px] shrink-0 flex flex-col justify-center px-6" style={{ color: tarjaInk(brand), borderLeft: `1px solid ${brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.15)'}` }}>
         <div className="text-[18px] font-bold uppercase tracking-wider opacity-80">{caseOf(brand, 'Maioria')}</div>
         <div className="text-[52px] font-black leading-none tabular-nums">{MAJORITY}<span className="text-[24px] opacity-70"> / {TOTAL_SEATS}</span></div>
-        <div className="mt-2 h-2.5 rounded-full bg-white/20 overflow-hidden">
-          <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${snap.reported}%`, background: 'rgb(var(--tv-accent2))' }} />
+        <div className="mt-2 h-2.5 rounded-full overflow-hidden" style={{ background: brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.2)' }}>
+          <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${snap.reported}%`, background: brand.cgPaper ? 'rgb(var(--tv-accent))' : 'rgb(var(--tv-accent2))' }} />
         </div>
         <div className="text-[16px] font-semibold mt-1.5 opacity-85">
           {majorityReached ? `${leader.legend} ${count === 'projecao' ? 'projeta maioria' : 'tem maioria'}` : `${fmtPct(snap.reported)} apurado`}
         </div>
       </div>
+      {brand.cgPaper && <PillStrip />}
     </div>
   );
 }
@@ -229,7 +235,7 @@ function TickerBar({ snap, brand }: { snap: ElectionSnapshot; brand: typeof BRAN
   return (
     <div className="absolute left-[104px] right-[104px] bottom-[68px] h-[56px] flex gap-3">
       <div className="w-[216px] shrink-0 rounded-[14px] bg-tv-accent text-white flex items-center justify-center text-[28px] font-extrabold tabular-nums">{clock}</div>
-      <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: tarjaBg(brand) }}>
+      <div className="flex-1 rounded-[14px] overflow-hidden flex items-center" style={{ background: tickerBg(brand) }}>
         <N8Seal size={28} />
         {d ? <DistrictLine key={d.id} d={d} brand={brand} /> : (
           <div className="px-6 text-[26px] font-bold text-white">{caseOf(brand, 'Aguardando as primeiras urnas')}</div>
@@ -278,21 +284,32 @@ function TextTarja({ text, brand, raised, front }: { text: CgText; brand: typeof
   return (
     <div className="absolute left-[104px] right-[104px] min-h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
       style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
-      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 text-white leading-[1.05]"
-        style={{ background: blockBg(brand) }}>
-        <span className="text-[44px] font-normal">{caseOf(brand, text.label1)}</span>
-        {text.label2 && <span className="text-[44px] font-normal">{caseOf(brand, text.label2)}</span>}
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 leading-[1.05]"
+        style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
+        <span className={`text-[44px] ${brand.cgPaper ? 'font-black' : 'font-normal'}`}>{caseOf(brand, text.label1)}</span>
+        {text.label2 && <span className={`text-[44px] ${brand.cgPaper ? 'font-black' : 'font-normal'}`}>{caseOf(brand, text.label2)}</span>}
       </div>
+      {brand.cgPaper && !front && <div className="w-[3px] my-6 shrink-0 rounded-full bg-tv-accent" />}
       {front && <div className="w-3 shrink-0" style={{ background: frontColor(front) }} />}
-      <div className="flex-1 min-w-0 flex flex-col justify-center px-10 py-5 text-white">
+      <div className="flex-1 min-w-0 flex flex-col justify-center px-10 py-5" style={{ color: tarjaInk(brand) }}>
         <div className={`${long ? 'text-[50px]' : 'text-[60px]'} font-extrabold uppercase leading-[1.05] line-clamp-2`}>{text.headline}</div>
-        {text.sub && <div className={`${text.sub.length > 55 ? 'text-[24px]' : 'text-[32px]'} font-semibold uppercase mt-2 text-white/90 truncate`}>{text.sub}</div>}
+        {text.sub && <div className={`${text.sub.length > 55 ? 'text-[24px]' : 'text-[32px]'} font-semibold uppercase mt-2 opacity-85 truncate`}>{text.sub}</div>}
       </div>
       {front && (
         <div className="shrink-0 flex items-center pr-8">
           <span className="rounded-full px-6 py-2 text-[36px] font-black" style={{ background: frontColor(front), color: textOn(frontColor(front)) }}>{front}</span>
         </div>
       )}
+      {brand.cgPaper && <PillStrip />}
+    </div>
+  );
+}
+
+/** Ponta da tarja com as pílulas vermelhas animadas sobre o marrom (grafismo da vinheta Smartv). */
+function PillStrip() {
+  return (
+    <div className="w-[130px] shrink-0 relative overflow-hidden" style={{ background: 'rgb(var(--tv-ink))' }}>
+      <PillGrid width={130} height={176} rows={[0.42, 0.58]} ratio={1.6} secondsPerColumn={2.6} gap={3} originX={-110} pool={10} className="absolute inset-0" />
     </div>
   );
 }
