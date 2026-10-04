@@ -1,14 +1,13 @@
-Fonte Posterama Text (licença comercial), declarada em app/globals.css (@font-face):
+Fonte Posterama Text (licença comercial), convertida dos .otf para .woff2 e
+declarada em app/globals.css (@font-face):
 
-  PosteramaTextW01-Thin.woff2      pesos 100–200
-  PosteramaTextW01-Regular.woff2   pesos 300–500 (Light e Medium usam o Regular)
-  PosteramaTextW07-Bold.woff2      pesos 600–700 (SemiBold usa o Bold)
-  PosteramaTextW07-Black.woff2     pesos 800–900 (ExtraBold usa o Black)
+  PosteramaTextThin.woff2       pesos 100–250
+  PosteramaTextLight.woff2      peso 300
+  PosteramaTextRegular.woff2    pesos 400–500 (não há Medium)
+  PosteramaTextSemibold.woff2   peso 600
+  PosteramaTextBold.woff2       peso 700
+  PosteramaTextBlack.woff2      pesos 800–900 (não há ExtraBold)
+  PosteramaTextUltra.woff2      pesos 950–1000 (use font-weight: 1000)
 
-Posterama1927W04-SemiBold.woff2  peso 600 só em texto MAIÚSCULO + seminegrito
-  (a Posterama 1927 desenha tudo em maiúsculas; ver app/globals.css)
-
-PosteramaTextW15-SemiBold.woff2 está aqui, mas NÃO é usado: o pacote "W15"
-não tem os acentos do português (ç, ã, õ, é...). Se conseguir o SemiBold,
-Light, Medium ou ExtraBold na versão W01 (Latin), coloque nesta pasta e
-ajuste as faixas de peso no app/globals.css.
+Para converter outro .otf: pip install fonttools brotli e
+  python3 -c "from fontTools.ttLib import TTFont; t=TTFont('X.otf'); t.flavor='woff2'; t.save('X.woff2')"

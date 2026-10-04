@@ -111,7 +111,7 @@ function Fact({ label, value, sub }: { label: string; value: React.ReactNode; su
   return (
     <div className="rounded-[18px] bg-tv-surface2/50 border border-tv-border/50 px-3.5 py-2.5 min-w-0">
       <div className="text-[11px] uppercase tracking-[0.12em] text-tv-muted font-bold truncate">{label}</div>
-      <div className="text-[20px] font-black mt-1 tabular-nums truncate">{value}</div>
+      <div className="text-[18px] font-black mt-1 tabular-nums truncate tracking-tight">{value}</div>
       {sub && <div className="text-[13px] text-tv-muted mt-0.5 truncate">{sub}</div>}
     </div>
   );

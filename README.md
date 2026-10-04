@@ -94,6 +94,6 @@ Telão, CG e controle leem o mesmo estado em `/api/2026/control` — podem estar
 
 Tudo em **`lib/brand.ts`**: cada marca define logo, cores, caixa dos títulos e grafismo de fundo. Os componentes do telão só usam as variáveis `tv-*` (Tailwind) geradas a partir dali.
 
-Fonte: **Posterama Text** (comercial), em `public/fonts/posterama/`: Thin, Regular, Bold e Black (W01/W07, com acentos). Os pesos que faltam usam o arquivo mais próximo (faixas no `@font-face` de `app/globals.css`); o SemiBold "W15" do pacote não tem os acentos do português e não é usado. Detalhes no `LEIA-ME.txt` da pasta. Sem os arquivos, o telão usa a Outfit.
+Fonte: **Posterama Text** (comercial), em `public/fonts/posterama/`: Thin, Light, Regular, Semibold, Bold, Black e Ultra (convertidos de .otf para .woff2, com acentos). Faixas de peso no `@font-face` de `app/globals.css`; detalhes e como converter no `LEIA-ME.txt` da pasta. Sem os arquivos, o telão usa a Outfit.
 
 Logos: em `public/brand/` — `smartv-eleicoes-branco.png` / `smartv-eleicoes-cor.png` (selo "◎ ELEIÇÕES" da Smartv) e `smartvnews-branco.png` ("news°"). Os brancos são usados como máscara, então podem ser pintados de qualquer cor; o colorido (com o til) entra em fundo claro. Para trocar, substitua o arquivo e ajuste `aspect` (largura/altura) em `lib/brand.ts`.
