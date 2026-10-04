@@ -1,12 +1,13 @@
-Coloque aqui os arquivos da fonte Posterama (licença comercial) em .woff2:
+Fonte Posterama Text (licença comercial), convertida dos .otf para .woff2 e
+declarada em app/globals.css (@font-face):
 
-  Posterama-Light.woff2      (300)
-  Posterama-Regular.woff2    (400)
-  Posterama-Medium.woff2     (500)
-  Posterama-SemiBold.woff2   (600)
-  Posterama-Bold.woff2       (700)
-  Posterama-ExtraBold.woff2  (800)
-  Posterama-Black.woff2      (900)
+  PosteramaTextThin.woff2       pesos 100–250
+  PosteramaTextLight.woff2      peso 300
+  PosteramaTextRegular.woff2    pesos 400–500 (não há Medium)
+  PosteramaTextSemibold.woff2   peso 600
+  PosteramaTextBold.woff2       peso 700
+  PosteramaTextBlack.woff2      pesos 800–900 (não há ExtraBold)
+  PosteramaTextUltra.woff2      pesos 950–1000 (use font-weight: 1000)
 
-Os nomes estão declarados em app/globals.css (@font-face). Pesos ausentes
-são simulados pelo navegador; sem nenhum arquivo, o telão usa a Outfit.
+Para converter outro .otf: pip install fonttools brotli e
+  python3 -c "from fontTools.ttLib import TTFont; t=TTFont('X.otf'); t.flavor='woff2'; t.save('X.woff2')"

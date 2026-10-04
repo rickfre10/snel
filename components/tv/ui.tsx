@@ -2,7 +2,7 @@
 "use client";
 // Peças visuais compartilhadas do telão 2026.
 import React, { useEffect, useRef, useState } from 'react';
-import type { BrandTheme } from '@/lib/brand';
+import type { BrandTheme, LogoFile } from '@/lib/brand';
 import { frontColor, frontName, readableOnDark, textOn } from '@/lib/haagar/rules';
 
 // ------------------------------------------------------------ Formatação --
@@ -28,12 +28,40 @@ export function TargetMark({ size = 40, color = 'currentColor' }: { size?: numbe
   );
 }
 
+/** Logo em arquivo usado como máscara: pinta o desenho com qualquer cor (padrão: cor do texto). */
+export function MaskLogo({ file, height, color, alt }: { file: LogoFile; height: number; color?: string; alt: string }) {
+  const url = `url("${file.src}")`;
+  return (
+    <span role="img" aria-label={alt} className="inline-block shrink-0 align-middle"
+      style={{ height, width: Math.round(height * file.aspect), backgroundColor: color ?? 'currentColor', WebkitMaskImage: url, maskImage: url, WebkitMaskSize: 'contain', maskSize: 'contain', WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', WebkitMaskPosition: 'left center', maskPosition: 'left center' }} />
+  );
+}
+
+/**
+ * Selo "◎ ELEIÇÕES" da cobertura. Usa o arquivo da marca quando existe
+ * (colorido em fundo claro, se pedido); senão, desenha o alvo + texto.
+ */
+export function ElectionLockup({ brand, height, color, colored = false, label = 'Eleições' }: { brand: BrandTheme; height: number; color?: string; colored?: boolean; label?: string }) {
+  const lockup = brand.logo.kind === 'target' ? brand.logo.lockup : undefined;
+  if (lockup && colored && lockup.color) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={lockup.color.src} alt={label} className="inline-block shrink-0" style={{ height, width: Math.round(height * lockup.color.aspect) }} />;
+  }
+  if (lockup) return <MaskLogo file={lockup.white} height={height} color={color} alt={label} />;
+  return (
+    <span className="inline-flex items-center gap-2.5 font-black leading-none" style={{ color, fontSize: height * 0.75 }}>
+      <TargetMark size={height * 0.85} />{label.toLocaleUpperCase('pt-BR')}
+    </span>
+  );
+}
+
 export function BrandLogo({ brand, size = 40, color }: { brand: BrandTheme; size?: number; color?: string }) {
   if (brand.logo.kind === 'image') {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={brand.logo.src} alt={brand.logo.alt} style={{ height: brand.logo.height }} />;
   }
   if (brand.logo.kind === 'superscript') {
+    if (brand.logo.image) return <MaskLogo file={brand.logo.image} height={Math.round(size * 1.05)} color={color} alt={brand.name} />;
     return (
       <span className="inline-flex items-start font-tv font-extrabold tracking-tight leading-none" style={{ color, fontSize: size * 1.05 }}>
         <span>{brand.logo.wordmark}</span>

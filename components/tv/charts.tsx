@@ -17,6 +17,19 @@ export function SeatRaceBar({ fronts, height = 56, showPrev = true }: { fronts: 
   const pct = (n: number) => (n / TOTAL_SEATS) * 100;
   const majorityLeft = pct(MAJORITY);
   const hovered = hover ? fronts[hover] : null;
+  const [prevHover, setPrevHover] = useState<string | null>(null);
+  const prevFront = prevHover ? fronts[prevHover] : null;
+  // centro do segmento (para posicionar o balão)
+  const prevCenter = (() => {
+    if (!prevFront) return 0;
+    let acc = 0;
+    for (const f of ordered) {
+      if (f.prev.total <= 0) continue;
+      if (f.legend === prevFront.legend) return pct(acc + f.prev.total / 2);
+      acc += f.prev.total;
+    }
+    return 0;
+  })();
 
   return (
     <div className="relative w-full select-none">
@@ -48,9 +61,12 @@ export function SeatRaceBar({ fronts, height = 56, showPrev = true }: { fronts: 
         Maioria · {MAJORITY}
       </div>
       {showPrev && (
-        <div className="mt-3 w-full flex gap-[3px] h-2.5 opacity-80" title="Composição 2022">
+        // Parlamento atual (eleito em 2022): passe o mouse ou toque para ver os números
+        <div className="mt-1.5 w-full flex gap-[3px] py-1.5 cursor-pointer" onMouseLeave={() => setPrevHover(null)}>
           {ordered.map(f => f.prev.total > 0 && (
-            <div key={f.legend} className="h-full rounded-full" style={{ width: `${pct(f.prev.total)}%`, background: frontColor(f.legend) }} />
+            <div key={f.legend} className="h-2.5 rounded-full transition-[height,opacity] duration-200"
+              style={{ width: `${pct(f.prev.total)}%`, background: frontColor(f.legend), opacity: prevHover && prevHover !== f.legend ? 0.45 : 0.85, height: prevHover === f.legend ? 14 : undefined, marginTop: prevHover === f.legend ? -2 : undefined }}
+              onMouseEnter={() => setPrevHover(f.legend)} onClick={() => setPrevHover(h => (h === f.legend ? null : f.legend))} />
           ))}
           <div className="flex-1" />
         </div>
@@ -59,6 +75,20 @@ export function SeatRaceBar({ fronts, height = 56, showPrev = true }: { fronts: 
         <div className="absolute z-20 top-full mt-4 rounded-2xl bg-tv-bg/95 border border-tv-border px-4 py-3 text-[15px] shadow-2xl pointer-events-none">
           <div className="font-extrabold text-[18px]">{hovered.legend} · {frontName(hovered.legend)}</div>
           <div className="text-tv-muted">Confirmadas {hovered.confirmed} · Projeção {hovered.projected} · 2022: {hovered.prev.total}</div>
+        </div>
+      )}
+      {prevFront && !hovered && (
+        // Balão compacto sobre a barra principal (o painel corta o que passa da borda)
+        <div className="absolute z-20 top-[-8px] rounded-2xl bg-tv-bg/95 border border-tv-border px-4 py-2 shadow-2xl pointer-events-none flex items-center gap-4 whitespace-nowrap"
+          style={{ left: `clamp(0px, calc(${prevCenter}% - 260px), calc(100% - 520px))`, width: 520, borderLeft: `6px solid ${frontColor(prevFront.legend)}` }}>
+          <span className="text-[44px] font-black leading-none tabular-nums">{prevFront.prev.total}</span>
+          <span className="flex flex-col min-w-0 text-[15px] leading-tight">
+            <span className="text-[11px] uppercase tracking-[0.16em] font-bold text-tv-muted">Parlamento atual · eleito em 2022</span>
+            <span className="truncate"><b className="font-extrabold">{prevFront.legend}</b> <span className="text-tv-muted">· {prevFront.prev.district} distr. + {prevFront.prev.pr} prop.</span></span>
+            <span className="text-tv-muted tabular-nums">
+              {prevFront.prev.total >= MAJORITY ? `maioria (+${prevFront.prev.total - MAJORITY})` : `faltavam ${MAJORITY - prevFront.prev.total} para a maioria`} · hoje: {prevFront.projected}
+            </span>
+          </span>
         </div>
       )}
     </div>

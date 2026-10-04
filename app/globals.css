@@ -9,17 +9,18 @@
 }
 
 /*
- * Posterama — fonte das marcas Smartv / SmartvNews (licença comercial).
- * Coloque os arquivos em public/fonts/posterama/ com estes nomes. Enquanto
- * não existirem, o telão usa a Outfit automaticamente.
+ * Posterama Text — fonte das marcas Smartv / SmartvNews (licença comercial),
+ * em public/fonts/posterama/ (convertida de .otf para .woff2). Família
+ * completa, com acentos; não há Medium (500 usa o Regular) nem ExtraBold
+ * (800 usa o Black). Sem os arquivos, o telão usa a Outfit.
  */
-@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Light.woff2') format('woff2'); font-weight: 300; font-display: swap; }
-@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Medium.woff2') format('woff2'); font-weight: 500; font-display: swap; }
-@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
-@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
-@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-ExtraBold.woff2') format('woff2'); font-weight: 800; font-display: swap; }
-@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/Posterama-Black.woff2') format('woff2'); font-weight: 900; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextThin.woff2') format('woff2'); font-weight: 100 250; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextLight.woff2') format('woff2'); font-weight: 300; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextRegular.woff2') format('woff2'); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextSemibold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextBold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextBlack.woff2') format('woff2'); font-weight: 800 900; font-display: swap; }
+@font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextUltra.woff2') format('woff2'); font-weight: 950 1000; font-display: swap; }
 
 /* Telão: oculta barras de rolagem */
 .tv-stage ::-webkit-scrollbar { display: none; }
