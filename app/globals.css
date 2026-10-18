@@ -28,6 +28,14 @@
 @keyframes tv-maj-intro { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
 .tv-maj-intro { animation: tv-maj-intro 0.45s ease-out both; }
 
+/* Selo de resultado definido (tarja de distrito): entra depois da tarja, pisca e
+   recebe um check "carimbado" (gira e encaixa). --glow = cor da frente translúcida. */
+@keyframes tv-badge-in { 0% { opacity: 0; transform: scale(0.6); } 60% { opacity: 1; transform: scale(1.1); } 100% { opacity: 1; transform: none; } }
+@keyframes tv-badge-blink { 0%, 100% { filter: none; box-shadow: 0 0 0 0 transparent; } 50% { filter: brightness(1.3); box-shadow: 0 0 0 7px var(--glow, transparent); } }
+.tv-badge-win { opacity: 0; transform-origin: left center; animation: tv-badge-in 0.45s cubic-bezier(.2,.9,.3,1.2) 0.7s forwards, tv-badge-blink 0.55s ease-in-out 1.25s 4; }
+@keyframes tv-stamp { 0% { opacity: 0; transform: scale(2.6) rotate(-30deg); } 70% { opacity: 1; transform: scale(0.88) rotate(6deg); } 100% { opacity: 1; transform: none; } }
+.tv-stamp { opacity: 0; animation: tv-stamp 0.42s cubic-bezier(.3,1.5,.5,1) 1.05s forwards; }
+
 /* Telão: oculta barras de rolagem */
 .tv-stage ::-webkit-scrollbar { display: none; }
 

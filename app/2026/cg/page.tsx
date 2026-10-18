@@ -124,7 +124,7 @@ export default function Cg2026() {
             <TextTarja text={text} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={districtOn && !urgentOn} from="bottom">
-            {manualDistrict && <DistrictTarja d={manualDistrict} brand={brand} raised={cg.ticker} />}
+            {manualDistrict && <DistrictTarja d={manualDistrict} brand={brand} raised={cg.ticker} active={districtOn && !urgentOn} />}
           </Slide>
           <Slide show={prOn && !urgentOn} from="bottom">
             <PrTarja snap={snap} uf={cg.pr?.uf ?? 'auto'} brand={brand} raised={cg.ticker} />
@@ -136,7 +136,7 @@ export default function Cg2026() {
           </Slide>
           {/* Urgência: sempre por cima de tudo */}
           <Slide show={urgentOn && lastUrgent?.kind === 'result'} from="bottom">
-            {urgentDistrict && <DistrictTarja key={lastUrgent!.id} d={urgentDistrict} brand={brand} raised={cg.ticker} urgent />}
+            {urgentDistrict && <DistrictTarja key={lastUrgent!.id} d={urgentDistrict} brand={brand} raised={cg.ticker} urgent active={urgentOn && lastUrgent?.kind === 'result'} />}
           </Slide>
           <Slide show={urgentOn && lastUrgent?.kind === 'majority'} from="bottom">
             {lastUrgent?.kind === 'majority' && lastUrgent.front && (
@@ -360,7 +360,7 @@ function districtSituation(d: DistrictSnapshot): { label: string; front: string 
 const DISTRICT_H = 214;
 
 /** Líder × 2º colocado de um distrito, com apuração e situação. */
-function DistrictTarja({ d, brand, raised, urgent }: { d: DistrictSnapshot; brand: typeof BRANDS.smartv; raised: boolean; urgent?: boolean }) {
+function DistrictTarja({ d, brand, raised, urgent, active = true }: { d: DistrictSnapshot; brand: typeof BRANDS.smartv; raised: boolean; urgent?: boolean; active?: boolean }) {
   const ink = tarjaInk(brand);
   const line = brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.16)';
   const [a, b] = d.leader ? [d.leader, d.runnerUp] : [d.candidates[0] ?? null, d.candidates[1] ?? null];
@@ -370,7 +370,7 @@ function DistrictTarja({ d, brand, raised, urgent }: { d: DistrictSnapshot; bran
   const blockColor = brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff';
   const ufLabel = caseOf(brand, d.ufName);
   // Espaço do nome: largura útil menos situação e apuração
-  const nameRoom = 1712 - 310 - 64 - (brand.cgPaper ? 133 : 0) - 260 - 32 - (sit.label.length * 15 + 30);
+  const nameRoom = 1712 - 310 - 64 - (brand.cgPaper ? 133 : 0) - 260 - 32 - (sit.label.length * 15 + 30) - (d.isFinal ? 34 : 0);
 
   return (
     <div className="absolute left-[104px] right-[104px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
@@ -390,7 +390,19 @@ function DistrictTarja({ d, brand, raised, urgent }: { d: DistrictSnapshot; bran
         {/* Linha 1: distrito, situação e apuração (com a vantagem) */}
         <div className="flex items-center gap-4 min-w-0 h-[56px]">
           <span className="font-extrabold uppercase leading-none whitespace-nowrap" style={{ fontSize: fitSize(d.name, nameRoom, 46) }}>{d.name}</span>
-          <span className="shrink-0 rounded-[10px] px-3 py-1 text-[22px] font-extrabold uppercase leading-tight whitespace-nowrap" style={{ background: sitBg, color: sitFg }}>{sit.label}</span>
+          {d.isFinal && sit.front ? (
+            // Resultado definido: o selo entra um pouco depois da tarja, pisca e
+            // ganha um check "carimbado". A chave reinicia a animação a cada entrada.
+            <span key={`${d.id}-${active}`} className="tv-badge-win shrink-0 rounded-[10px] pl-2 pr-3 py-1 text-[22px] font-extrabold uppercase leading-tight whitespace-nowrap inline-flex items-center gap-1.5"
+              style={{ background: sitBg, color: sitFg, ['--glow' as string]: `${frontColor(sit.front)}66` }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden className="tv-stamp shrink-0">
+                <path d="M4 12.5 L9.5 18 L20 6.5" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {sit.label}
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-[10px] px-3 py-1 text-[22px] font-extrabold uppercase leading-tight whitespace-nowrap" style={{ background: sitBg, color: sitFg }}>{sit.label}</span>
+          )}
           <span className="flex-1" />
           <div className="shrink-0 w-[260px]">
             <div className="flex items-baseline justify-between">
