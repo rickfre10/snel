@@ -6,7 +6,7 @@
 import type { BrandId } from '@/lib/brand';
 import type { Scenario } from './model';
 
-export type SceneId = 'geral' | 'parlamento' | 'proporcional' | 'estado' | 'distrito' | 'viradas' | 'comparativo' | 'idle';
+export type SceneId = 'geral' | 'parlamento' | 'proporcional' | 'pendulo' | 'estado' | 'distrito' | 'viradas' | 'comparativo' | 'idle';
 
 export interface ControlFocus {
   scene: SceneId;

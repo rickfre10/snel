@@ -14,6 +14,7 @@ export const SCENES: { id: SceneId; label: string }[] = [
   { id: 'geral', label: 'Visão geral' },
   { id: 'parlamento', label: 'Parlamento' },
   { id: 'proporcional', label: 'Proporcional' },
+  { id: 'pendulo', label: 'Pêndulo' },
   { id: 'estado', label: 'Estado' },
   { id: 'distrito', label: 'Distrito' },
   { id: 'viradas', label: 'Viradas' },

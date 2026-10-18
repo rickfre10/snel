@@ -353,7 +353,7 @@ function Shortcuts() {
   const rows: [string, string][] = [
     ['Espaço', 'iniciar / pausar a apuração'],
     ['← →', '−1% / +1%  (com Shift: ±5%)'],
-    ['1 – 8', 'cena do telão (na ordem dos botões)'],
+    ['1 – 9', 'cena do telão (na ordem dos botões)'],
     ['/', 'buscar distrito para o telão'],
     ['Esc', 'tirar as tarjas manuais do CG'],
     ['Shift + 1 – 9', 'pôr no ar o GC pronto daquela posição'],
