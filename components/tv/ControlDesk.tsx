@@ -11,7 +11,7 @@ import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER, frontColor } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
 import { parseScenarioCode, scenarioCode } from '@/lib/haagar2026/scenario';
-import { CgDistrictSection, CgPrSection, CgTextEditor, CgUrgentSection, DistrictSearch, MajorityToggle, PlaceInput, SCENES } from './ControlPanel';
+import { CgDistrictSection, CgLibrary, CgPrSection, CgTextEditor, CgUrgentSection, DistrictSearch, MajorityToggle, PlaceInput, SCENES } from './ControlPanel';
 
 interface DeskProps {
   state: ControlState;
@@ -54,6 +54,12 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      // Shift + 1…9: põe no ar o GC pronto daquela posição
+      if (e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
+        const p = state.cgPresets?.[parseInt(e.code.slice(5), 10) - 1];
+        if (p) { e.preventDefault(); dispatch({ type: 'cgPlay', item: p }); }
+        return;
+      }
       const n = parseInt(e.key, 10);
       if (e.key === ' ') { e.preventDefault(); dispatch({ type: state.running ? 'pause' : 'play' }); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); dispatch({ type: 'step', delta: e.shiftKey ? 5 : 1 }); }
@@ -208,6 +214,9 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
             </div>
           </div>
 
+          {/* Prontos e últimos no ar */}
+          <div className="mt-3"><CgLibrary state={state} dispatch={dispatch} snap={snap} shortcuts /></div>
+
           {/* Peças fixas */}
           <div className="grid grid-cols-5 gap-2 mt-3">
             <Toggle on={cg.seats} onClick={() => dispatch({ type: 'setCg', patch: { seats: !cg.seats } })}>Cadeiras</Toggle>
@@ -344,6 +353,7 @@ function Shortcuts() {
     ['1 – 8', 'cena do telão (na ordem dos botões)'],
     ['/', 'buscar distrito para o telão'],
     ['Esc', 'tirar as tarjas manuais do CG'],
+    ['Shift + 1 – 9', 'pôr no ar o GC pronto daquela posição'],
     ['U', 'soltar a vinheta "ÚLTIMA HORA" (tela cheia)'],
     ['?', 'mostrar / esconder esta ajuda'],
   ];

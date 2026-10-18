@@ -4,7 +4,7 @@
 // cenário (semente), cena do telão e marca.
 import React, { useEffect, useState } from 'react';
 import { BRANDS, BrandId } from '@/lib/brand';
-import { ControlAction, ControlState, DEFAULT_CG, DEFAULT_CG_TEXT, CgText, SceneId, SPEED_PRESETS } from '@/lib/haagar2026/control';
+import { ControlAction, ControlState, DEFAULT_CG, DEFAULT_CG_TEXT, CgItem, CgItemSpec, CgText, SceneId, SPEED_PRESETS, cgItemKey, currentCgItem } from '@/lib/haagar2026/control';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER, frontColor, textOn } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
@@ -162,6 +162,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
       <CgUrgentSection state={state} dispatch={dispatch} />
       <CgDistrictSection state={state} dispatch={dispatch} snap={snap} />
       <CgPrSection state={state} dispatch={dispatch} snap={snap} />
+      <CgLibrary state={state} dispatch={dispatch} snap={snap} />
       <CgTextEditor state={state} dispatch={dispatch} />
 
       <Section title="CG (sobre o vídeo)" right={<a href="/2026/cg?fundo=cena" target="_blank" rel="noreferrer" className="text-xs underline text-white/70">abrir CG ↗</a>}>
@@ -247,11 +248,114 @@ export function CgTextEditor({ state, dispatch }: { state: ControlState; dispatc
       <textarea className="w-full rounded-lg bg-black/40 border border-white/15 px-3 py-2 mt-2 resize-none" rows={2} maxLength={90}
         value={draft.headline} onChange={e => set({ headline: e.target.value })} placeholder="Manchete (até 2 linhas)" />
       <input className={`${input} mt-2`} maxLength={70} value={draft.sub} onChange={e => set({ sub: e.target.value })} placeholder="Subtítulo (opcional)" />
-      <div className="grid grid-cols-2 gap-2 mt-2">
+      <div className="grid grid-cols-3 gap-2 mt-2">
         <Btn active={onAir.show && !touched} onClick={() => send(true)}>{onAir.show ? (touched ? 'Atualizar no ar' : 'No ar') : 'Colocar no ar'}</Btn>
         <Btn onClick={() => send(false)} danger={onAir.show}>Tirar do ar</Btn>
+        {/* Guarda o rascunho na lista de prontos sem colocar no ar */}
+        <Btn onClick={() => { if (draft.headline.trim()) dispatch({ type: 'cgSave', item: { kind: 'texto', text: { ...draft, show: true } } }); }}
+          className={draft.headline.trim() ? '' : 'opacity-40 pointer-events-none'}>★ Salvar pronto</Btn>
       </div>
       <p className="text-[11px] text-white/50 mt-2">Enquanto o texto está no ar, ele ocupa o lugar da tarja de cadeiras (e tira a tarja de distrito). Resultados automáticos e última hora passam por cima. Com as duas linhas do bloco vazias, o bloco mostra o logo.</p>
+    </Section>
+  );
+}
+
+// ----------------------------------------- GCs prontos e histórico ----
+/** Nome curto de uma tarja manual (para listas de prontos e histórico). */
+export function cgItemLabel(item: CgItemSpec, snap: ElectionSnapshot | null): { kind: string; title: string; sub?: string } {
+  switch (item.kind) {
+    case 'distrito': return { kind: 'Distrito', title: districtsData.find(d => d.district_id === item.districtId)?.district_name ?? String(item.districtId), sub: snap && item.districtId ? snap.districtById[item.districtId]?.ufName : undefined };
+    case 'proporcional': return { kind: 'Proporcional', title: item.uf === 'auto' ? 'Rodízio' : item.uf === 'BR' ? 'Haagar' : snap?.states[item.uf ?? '']?.name ?? item.uf ?? '' };
+    case 'maioria': return { kind: 'Maioria', title: 'Maioria / minoria' };
+    default: {
+      const t = { ...DEFAULT_CG_TEXT, ...item.text };
+      return { kind: 'Texto', title: t.headline, sub: [t.label1, t.label2].filter(Boolean).join(' ') || t.sub || undefined };
+    }
+  }
+}
+
+const KIND_COLOR: Record<string, string> = { Texto: 'bg-sky-400/20 text-sky-200', Distrito: 'bg-violet-400/20 text-violet-200', Proporcional: 'bg-amber-400/20 text-amber-200', Maioria: 'bg-emerald-400/20 text-emerald-200' };
+const ago = (at: number) => {
+  const m = Math.max(0, Math.round((Date.now() - at) / 60000));
+  return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : `há ${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
+};
+
+/**
+ * Biblioteca de GCs: prontos salvos (um clique põe no ar; Shift+1…9 na mesa)
+ * e os últimos que foram ao ar. Fica no estado do controle, então aparece em
+ * todos os computadores.
+ */
+export function CgLibrary({ state, dispatch, snap, shortcuts = false }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null; shortcuts?: boolean }) {
+  const presets = state.cgPresets ?? [];
+  const history = state.cgHistory ?? [];
+  const live = currentCgItem(state.cg);
+  const liveKey = live ? cgItemKey(live) : null;
+  const saved = new Set(presets.map(cgItemKey));
+  const play = (item: CgItemSpec) => dispatch({ type: 'cgPlay', item });
+  const save = (item: CgItemSpec) => {
+    const label = cgItemLabel(item, snap);
+    const name = window.prompt('Nome do GC pronto:', item.kind === 'texto' ? label.title : `${label.kind} · ${label.title}`);
+    if (name === null) return;
+    dispatch({ type: 'cgSave', item: { ...item, name: name.trim() || undefined } });
+  };
+
+  const Card = ({ item, index, onDelete, onSave, when }: { item: CgItem; index?: number; onDelete?: () => void; onSave?: () => void; when?: string }) => {
+    const l = cgItemLabel(item, snap);
+    const on = liveKey === cgItemKey(item);
+    if (when) {
+      // Histórico: uma linha por item
+      return (
+        <div className={`rounded-lg border flex items-center min-w-0 ${on ? 'border-red-400/70 bg-red-500/10' : 'border-white/12 bg-white/[0.03] hover:bg-white/[0.07]'}`}>
+          <button onClick={() => play(item)} className="flex-1 min-w-0 flex items-center gap-2 text-left px-2.5 py-1.5" title="Colocar no ar de novo">
+            <span className={`shrink-0 text-[10px] font-black uppercase rounded px-1.5 py-0.5 ${KIND_COLOR[l.kind] ?? 'bg-white/10'}`}>{l.kind}</span>
+            {on && <span className="shrink-0 text-[10px] font-black rounded px-1.5 py-0.5 bg-red-500 text-white">NO AR</span>}
+            <span className="font-bold truncate">{l.title}</span>
+            <span className="shrink-0 ml-auto text-[10px] text-white/40">{when}</span>
+          </button>
+          {onSave && <button onClick={onSave} title="Salvar nos prontos" className="px-2 text-white/40 hover:text-amber-300">★</button>}
+        </div>
+      );
+    }
+    return (
+      <div className={`group relative rounded-lg border flex items-stretch min-w-0 ${on ? 'border-red-400/70 bg-red-500/10' : 'border-white/12 bg-white/[0.03] hover:bg-white/[0.07]'}`}>
+        <button onClick={() => play(item)} className="flex-1 min-w-0 text-left px-2.5 py-2" title="Colocar no ar">
+          <div className="flex items-center gap-1.5">
+            {shortcuts && index !== undefined && index < 9 && <kbd title={`Shift + ${index + 1}`} className="text-[10px] font-mono rounded bg-white/10 px-1.5 text-white/70">{index + 1}</kbd>}
+            <span className={`text-[10px] font-black uppercase rounded px-1.5 py-0.5 ${KIND_COLOR[l.kind] ?? 'bg-white/10'}`}>{l.kind}</span>
+            {on && <span className="text-[10px] font-black rounded px-1.5 py-0.5 bg-red-500 text-white">NO AR</span>}
+            {when && <span className="text-[10px] text-white/40 ml-auto">{when}</span>}
+          </div>
+          <div className="font-bold truncate mt-1">{item.name ?? l.title}</div>
+          {(item.name ? l.title : l.sub) && <div className="text-[11px] text-white/50 truncate">{item.name ? l.title : l.sub}</div>}
+        </button>
+        {onSave && <button onClick={onSave} title="Salvar nos prontos" className="px-2 text-white/40 hover:text-amber-300">★</button>}
+        {onDelete && <button onClick={onDelete} title="Apagar" className="px-2 text-white/30 hover:text-red-300 opacity-0 group-hover:opacity-100">×</button>}
+      </div>
+    );
+  };
+
+  return (
+    <Section title="GCs prontos" right={
+      <button disabled={!live || (!!liveKey && saved.has(liveKey))} onClick={() => live && save(live)}
+        className="text-[11px] font-bold px-2 py-1 rounded border border-white/15 hover:bg-white/10 disabled:opacity-30">★ Salvar o que está no ar</button>}>
+      {presets.length === 0
+        ? <p className="text-[11px] text-white/50">Nenhum pronto ainda. Salve o que está no ar (★ acima) ou monte um texto em &quot;Texto livre&quot; e use &quot;★ Salvar pronto&quot;.</p>
+        : (
+          <div className="grid grid-cols-2 gap-1.5">
+            {presets.map((p, i) => (
+              <Card key={p.id} item={p} index={i} onDelete={() => { if (confirm(`Apagar o GC pronto "${p.name ?? cgItemLabel(p, snap).title}"?`)) dispatch({ type: 'cgDelete', id: p.id }); }} />
+            ))}
+          </div>
+        )}
+      <div className="text-[11px] uppercase tracking-[0.18em] font-bold text-white/50 mt-4 mb-1.5">Últimos no ar</div>
+      {history.length === 0
+        ? <p className="text-[11px] text-white/50">Os 3 últimos GCs que forem ao ar aparecem aqui.</p>
+        : (
+          <div className="flex flex-col gap-1">
+            {history.map(h => <Card key={h.id} item={h} when={ago(h.at)} onSave={saved.has(cgItemKey(h)) ? undefined : () => save(h)} />)}
+          </div>
+        )}
+      <p className="text-[11px] text-white/45 mt-2">Um clique coloca no ar e tira a tarja manual anterior.{shortcuts ? ' Shift + 1…9 põe o pronto da posição.' : ''}</p>
     </Section>
   );
 }
