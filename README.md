@@ -37,8 +37,9 @@ GENERATED_PHOTOS_API_KEY=...     # opcional: rostos gerados para candidatos de 2
 
 Cenas (navegação no topo, tudo clicável/tocável):
 
-- **Visão geral** — mapa hexagonal (modos 2026, 2022, viradas, swing por frente e % apurado; botão **Expandir** deixa só o mapa, com o nome dos distritos), corrida pela maioria (passe o mouse/toque na faixa fina para ver o Parlamento atual, eleito em 2022) e projeção de cadeiras por frente com saldo vs 2022.
+- **Visão geral** — a cena que fica mais tempo no ar: mapa hexagonal grande (modos 2026, 2022, viradas, swing por frente e % apurado; **Expandir** deixa só o mapa, com o nome dos distritos) com a corrida pela maioria e os números rápidos embaixo; à direita, cadeiras por frente (distritais, proporcionais, total e saldo vs 2022) e o proporcional (cadeiras garantidas, % por frente com o traço de 2022 e cadeiras projetadas).
 - **Parlamento** — hemiciclo 2026 (confirmadas × projeção), simulador de coalizão e parlamento de 2022.
+- **Pêndulo** (estilo ABC) — cada distrito numa etiqueta, agrupado pela frente que venceu em 2022 (a maior à esquerda, a segunda à direita, as demais no centro). Quanto mais perto do centro, menor foi a vantagem em 2022. As etiquetas mostram o 2026: segurando, mantida ✓, outra frente na frente (listrada) e virou (na cor nova, com a frente antiga na borda).
 - **Proporcional** — as 93 cadeiras proporcionais: garantidas (cheias) × projetadas (contorno, ainda podem mudar), % por frente vs 2022 e um cartão por estado.
 - **Estados** — mapa do estado, voto proporcional 2026 × 2022 com as cadeiras garantidas/projetadas, bancada distrital + proporcional.
 - **Distrito** — candidatos (com selos de deputado atual e partido incumbente), status (manteve / ganhou / liderando), deputado atual, histórico 2018 · 2022 · 2026 por frente (com o voto proporcional estimado no distrito), margem e votos válidos.
