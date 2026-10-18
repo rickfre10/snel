@@ -65,7 +65,7 @@ export default function Telao2026() {
   useEffect(() => {
     if (!state.autoRotate) return;
     const seq: { scene: SceneId; uf?: string }[] = [
-      { scene: 'geral' }, { scene: 'parlamento' }, { scene: 'proporcional' },
+      { scene: 'geral' }, { scene: 'parlamento' }, { scene: 'proporcional' }, { scene: 'pendulo' },
       ...STATE_ORDER.filter(u => u !== 'TP').map(u => ({ scene: 'estado' as SceneId, uf: u })),
       { scene: 'viradas' }, { scene: 'comparativo' },
     ];

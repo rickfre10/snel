@@ -6,7 +6,7 @@
 import type { BrandId } from '@/lib/brand';
 import type { Scenario } from './model';
 
-export type SceneId = 'geral' | 'parlamento' | 'proporcional' | 'estado' | 'distrito' | 'viradas' | 'comparativo' | 'idle';
+export type SceneId = 'geral' | 'parlamento' | 'proporcional' | 'pendulo' | 'estado' | 'distrito' | 'viradas' | 'comparativo' | 'idle';
 
 export interface ControlFocus {
   scene: SceneId;
@@ -31,7 +31,16 @@ export interface ControlState {
   view?: TelaoView;               // o que o telão está mostrando agora (para o CG replicar)
   scenario?: Scenario | null;     // ajuste de votação do operador (null = só a semente)
   stinger?: StingerCue;           // vinheta "ÚLTIMA HORA" em tela cheia, disparada pelo operador
+  cgPresets?: CgItem[];           // GCs prontos salvos pelo operador
+  cgHistory?: CgItem[];           // últimos GCs que foram ao ar (mais recente primeiro)
 }
+
+/** Uma tarja manual do CG que pode ser salva, repetida e posta no ar com um clique. */
+export type CgItemKind = 'texto' | 'distrito' | 'proporcional' | 'apuracao' | 'maioria';
+export interface CgItemSpec { kind: CgItemKind; name?: string; text?: CgText; districtId?: number; uf?: string }
+export interface CgItem extends CgItemSpec { id: string; at: number }
+export const CG_HISTORY_MAX = 3;
+export const CG_PRESETS_MAX = 40;
 
 /** Disparo da vinheta de última hora: cada novo `rev` toca uma vez (telão e CG). */
 export interface StingerCue { rev: number; at: number }  // at = epoch (ms) no relógio do servidor
@@ -49,6 +58,7 @@ export interface CgVisibility {
   text?: CgText;     // tarja de texto livre (manchete)
   district?: CgDistrict; // tarja de um distrito escolhido pelo operador
   pr?: CgPr;             // tarja do voto proporcional
+  counting?: boolean;    // tarja do avanço da apuração por estado
   majority?: boolean;    // tarja de maioria (frente que forma/projeta maioria)
   autoResults?: boolean; // cada distrito definido entra sozinho no ar (15 s cada, fila)
   queueSkip?: number;    // incrementar = pula o item urgente atual
@@ -89,7 +99,10 @@ export type ControlAction =
   | { type: 'setCg'; patch: Partial<CgVisibility> }
   | { type: 'setCgText'; patch: Partial<CgText> }
   | { type: 'setView'; view: TelaoView }
-  | { type: 'stinger' };
+  | { type: 'stinger' }
+  | { type: 'cgSave'; item: CgItemSpec }
+  | { type: 'cgDelete'; id: string }
+  | { type: 'cgPlay'; item: CgItemSpec };
 
 export const SPEED_PRESETS = [
   { label: 'Lento', speed: 1 },      // ~1h40 até 100%
@@ -175,6 +188,17 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
     case 'setView':
       next = { ...prev, view: action.view };
       break;
+    case 'cgSave': {
+      const item: CgItem = { ...action.item, id: `${now.toString(36)}-${Math.random().toString(36).slice(2, 7)}`, at: now };
+      next = { ...prev, cgPresets: [...(prev.cgPresets ?? []), item].slice(-CG_PRESETS_MAX) };
+      break;
+    }
+    case 'cgDelete':
+      next = { ...prev, cgPresets: (prev.cgPresets ?? []).filter(p => p.id !== action.id) };
+      break;
+    case 'cgPlay':
+      next = { ...prev, cg: playCgItem({ ...DEFAULT_CG, ...prev.cg }, action.item) };
+      break;
     case 'stinger':
       next = { ...prev, stinger: { rev: (prev.stinger?.rev ?? 0) + 1, at: now } };
       break;
@@ -187,7 +211,61 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
       next = prev;
   }
   if (next.running && next.baseProgress >= 100) next.running = false;
+  // Histórico: registra toda tarja manual que entra no ar, venha de onde vier.
+  const before = currentCgItem(prev.cg);
+  const after = currentCgItem(next.cg);
+  if (after && (!before || cgItemKey(after) !== cgItemKey(before))) {
+    const entry: CgItem = { ...after, id: `h${now.toString(36)}`, at: now };
+    next = { ...next, cgHistory: [entry, ...(prev.cgHistory ?? []).filter(h => cgItemKey(h) !== cgItemKey(after))].slice(0, CG_HISTORY_MAX) };
+  }
   return { ...next, rev: prev.rev + 1, updatedAt: now };
+}
+
+// --------------------------------------------- Tarjas manuais (GCs) ----
+
+/** A tarja manual que está no ar (mesma prioridade do /2026/cg), ou null. */
+export function currentCgItem(cgIn: CgVisibility | undefined): CgItemSpec | null {
+  const cg = { ...DEFAULT_CG, ...cgIn };
+  const text = { ...DEFAULT_CG_TEXT, ...cg.text };
+  if (cg.majority) return { kind: 'maioria' };
+  if (cg.district?.show) return { kind: 'distrito', districtId: cg.district.id };
+  if (cg.pr?.show) return { kind: 'proporcional', uf: cg.pr.uf };
+  if (cg.counting) return { kind: 'apuracao' };
+  if (text.show && text.headline.trim()) return { kind: 'texto', text: { ...text, show: true } };
+  return null;
+}
+
+/** Identidade do conteúdo (ignora nome e datas) — para não repetir no histórico. */
+export function cgItemKey(item: CgItemSpec): string {
+  switch (item.kind) {
+    case 'distrito': return `d:${item.districtId}`;
+    case 'proporcional': return `p:${item.uf}`;
+    case 'maioria': return 'm';
+    case 'apuracao': return 'a';
+    default: {
+      const t = { ...DEFAULT_CG_TEXT, ...item.text };
+      return `t:${t.label1}|${t.label2}|${t.headline}|${t.sub}`;
+    }
+  }
+}
+
+/** Põe uma tarja no ar tirando as outras manuais (uma por vez). */
+export function playCgItem(cg: CgVisibility, item: CgItemSpec): CgVisibility {
+  const off: CgVisibility = {
+    ...cg,
+    majority: false,
+    district: cg.district ? { ...cg.district, show: false } : undefined,
+    pr: cg.pr ? { ...cg.pr, show: false } : undefined,
+    counting: false,
+    text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false },
+  };
+  switch (item.kind) {
+    case 'maioria': return { ...off, majority: true };
+    case 'distrito': return item.districtId ? { ...off, district: { show: true, id: item.districtId } } : off;
+    case 'proporcional': return { ...off, pr: { show: true, uf: item.uf ?? 'auto' } };
+    case 'apuracao': return { ...off, counting: true };
+    default: return { ...off, text: { ...DEFAULT_CG_TEXT, ...item.text, show: true } };
+  }
 }
 
 export function isControlState(v: unknown): v is ControlState {

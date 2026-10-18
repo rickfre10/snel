@@ -14,7 +14,7 @@ import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
-import { FRONT_ORDER, MAJORITY, PR_BARRIER_PERCENT, PR_SEATS_BY_STATE, STATE_ORDER, TOTAL_PR_SEATS, TOTAL_SEATS, frontColor, frontName, textOn } from '@/lib/haagar/rules';
+import { FRONT_ORDER, MAJORITY, PR_BARRIER_PERCENT, PR_SEATS_BY_STATE, STATE_ORDER, TOTAL_PR_SEATS, TOTAL_SEATS, frontColor, textOn } from '@/lib/haagar/rules';
 import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
 import TelaoScene from '@/components/tv/TelaoScene';
 import PillGrid from '@/components/tv/PillGrid';
@@ -61,6 +61,7 @@ export default function Cg2026() {
   useEffect(() => { if (majority) setLastMajority(majority); }, [majority?.front, majority?.kind, majority?.final]); // eslint-disable-line react-hooks/exhaustive-deps
   const districtOn = !majorityOn && !!cg.district?.show && !!snap?.districtById[cg.district.id];
   const prOn = !majorityOn && !districtOn && !!cg.pr?.show;
+  const countingOn = !majorityOn && !districtOn && !prOn && !!cg.counting;
   const [lastDistrictId, setLastDistrictId] = useState<number | null>(null);
   useEffect(() => { if (cg.district?.id) setLastDistrictId(cg.district.id); }, [cg.district?.id]);
 
@@ -117,30 +118,33 @@ export default function Cg2026() {
 
       {snap && (
         <>
-          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !prOn && !urgentOn} from="bottom">
+          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !prOn && !countingOn && !urgentOn} from="bottom">
             <SeatsTarja snap={snap} brand={brand} count={cg.count} raised={cg.ticker} />
           </Slide>
-          <Slide show={manualTextOn && !districtOn && !majorityOn && !prOn && !urgentOn} from="bottom">
+          <Slide show={manualTextOn && !districtOn && !majorityOn && !prOn && !countingOn && !urgentOn} from="bottom">
             <TextTarja text={text} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={districtOn && !urgentOn} from="bottom">
-            {manualDistrict && <DistrictTarja d={manualDistrict} brand={brand} raised={cg.ticker} />}
+            {manualDistrict && <DistrictTarja d={manualDistrict} brand={brand} raised={cg.ticker} active={districtOn && !urgentOn} />}
           </Slide>
           <Slide show={prOn && !urgentOn} from="bottom">
             <PrTarja snap={snap} uf={cg.pr?.uf ?? 'auto'} brand={brand} raised={cg.ticker} />
           </Slide>
+          <Slide show={countingOn && !urgentOn} from="bottom">
+            <CountingTarja snap={snap} brand={brand} raised={cg.ticker} />
+          </Slide>
           <Slide show={majorityOn && !urgentOn} from="bottom">
             {lastMajority && (lastMajority.kind === 'minority'
               ? <MinorityTarja snap={snap} front={lastMajority.front} final={lastMajority.final} brand={brand} raised={cg.ticker} />
-              : <MajorityTarja snap={snap} front={lastMajority.front} projected={lastMajority.kind === 'projected'} brand={brand} raised={cg.ticker} />)}
+              : <MajorityTarja snap={snap} front={lastMajority.front} projected={lastMajority.kind === 'projected'} brand={brand} raised={cg.ticker} active={majorityOn && !urgentOn} />)}
           </Slide>
           {/* Urgência: sempre por cima de tudo */}
           <Slide show={urgentOn && lastUrgent?.kind === 'result'} from="bottom">
-            {urgentDistrict && <DistrictTarja key={lastUrgent!.id} d={urgentDistrict} brand={brand} raised={cg.ticker} urgent />}
+            {urgentDistrict && <DistrictTarja key={lastUrgent!.id} d={urgentDistrict} brand={brand} raised={cg.ticker} urgent active={urgentOn && lastUrgent?.kind === 'result'} />}
           </Slide>
           <Slide show={urgentOn && lastUrgent?.kind === 'majority'} from="bottom">
             {lastUrgent?.kind === 'majority' && lastUrgent.front && (
-              <MajorityTarja key={lastUrgent.id} snap={snap} front={lastUrgent.front} projected={false} brand={brand} raised={cg.ticker} urgent />
+              <MajorityTarja key={lastUrgent.id} snap={snap} front={lastUrgent.front} projected={false} brand={brand} raised={cg.ticker} active={urgentOn} />
             )}
           </Slide>
           <Slide show={urgentOn && lastUrgent?.kind === 'flip'} from="bottom">
@@ -360,7 +364,7 @@ function districtSituation(d: DistrictSnapshot): { label: string; front: string 
 const DISTRICT_H = 214;
 
 /** Líder × 2º colocado de um distrito, com apuração e situação. */
-function DistrictTarja({ d, brand, raised, urgent }: { d: DistrictSnapshot; brand: typeof BRANDS.smartv; raised: boolean; urgent?: boolean }) {
+function DistrictTarja({ d, brand, raised, urgent, active = true }: { d: DistrictSnapshot; brand: typeof BRANDS.smartv; raised: boolean; urgent?: boolean; active?: boolean }) {
   const ink = tarjaInk(brand);
   const line = brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.16)';
   const [a, b] = d.leader ? [d.leader, d.runnerUp] : [d.candidates[0] ?? null, d.candidates[1] ?? null];
@@ -370,7 +374,7 @@ function DistrictTarja({ d, brand, raised, urgent }: { d: DistrictSnapshot; bran
   const blockColor = brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff';
   const ufLabel = caseOf(brand, d.ufName);
   // Espaço do nome: largura útil menos situação e apuração
-  const nameRoom = 1712 - 310 - 64 - (brand.cgPaper ? 133 : 0) - 260 - 32 - (sit.label.length * 15 + 30);
+  const nameRoom = 1712 - 310 - 64 - (brand.cgPaper ? 133 : 0) - 260 - 32 - (sit.label.length * 15 + 30) - (d.isFinal ? 34 : 0);
 
   return (
     <div className="absolute left-[104px] right-[104px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
@@ -390,7 +394,19 @@ function DistrictTarja({ d, brand, raised, urgent }: { d: DistrictSnapshot; bran
         {/* Linha 1: distrito, situação e apuração (com a vantagem) */}
         <div className="flex items-center gap-4 min-w-0 h-[56px]">
           <span className="font-extrabold uppercase leading-none whitespace-nowrap" style={{ fontSize: fitSize(d.name, nameRoom, 46) }}>{d.name}</span>
-          <span className="shrink-0 rounded-[10px] px-3 py-1 text-[22px] font-extrabold uppercase leading-tight whitespace-nowrap" style={{ background: sitBg, color: sitFg }}>{sit.label}</span>
+          {d.isFinal && sit.front ? (
+            // Resultado definido: o selo entra um pouco depois da tarja, pisca e
+            // ganha um check "carimbado". A chave reinicia a animação a cada entrada.
+            <span key={`${d.id}-${active}`} className="tv-badge-win shrink-0 rounded-[10px] pl-2 pr-3 py-1 text-[22px] font-extrabold uppercase leading-tight whitespace-nowrap inline-flex items-center gap-1.5"
+              style={{ background: sitBg, color: sitFg, ['--glow' as string]: `${frontColor(sit.front)}66` }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden className="tv-stamp shrink-0">
+                <path d="M4 12.5 L9.5 18 L20 6.5" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {sit.label}
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-[10px] px-3 py-1 text-[22px] font-extrabold uppercase leading-tight whitespace-nowrap" style={{ background: sitBg, color: sitFg }}>{sit.label}</span>
+          )}
           <span className="flex-1" />
           <div className="shrink-0 w-[260px]">
             <div className="flex items-baseline justify-between">
@@ -443,6 +459,65 @@ function CandidateBox({ c, first, final, brand, ink, line, counted }: { c: Candi
         <div className={`${first ? 'text-[50px]' : 'text-[42px]'} font-black leading-none tabular-nums`}>{counted ? fmtPct(c.pct) : '—'}</div>
         <div className="text-[16px] font-semibold opacity-70 tabular-nums mt-1">{counted ? `${fmtInt(c.votes)} votos` : ' '}</div>
       </div>
+    </div>
+  );
+}
+
+// ------------------------------------- Tarja da apuração por estado -----
+/** Avanço da apuração em cada estado: % apurado, distritos definidos e quem lidera. */
+function CountingTarja({ snap, brand, raised }: { snap: ElectionSnapshot; brand: typeof BRANDS.smartv; raised: boolean }) {
+  const ink = tarjaInk(brand);
+  const line = brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.18)';
+  const bar = brand.cgPaper ? 'rgb(var(--tv-accent))' : 'rgb(var(--tv-accent2))';
+  const label2 = caseOf(brand, 'Por estado');
+  // Largura útil de cada estado (a Smartv tem o filete e as pílulas na ponta)
+  const cellW = (1712 - 310 - (brand.cgPaper ? 133 : 0) - 250 - 40) / 6 - 24;
+  const pctSize = Math.min(44, Math.floor(cellW / 3.3));
+  return (
+    <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 pr-4"
+        style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
+        <span className={`text-[24px] leading-none ${brand.cgPaper ? 'text-tv-ink font-bold' : 'opacity-85 font-normal'}`}>{caseOf(brand, 'Apuração')}</span>
+        <span className={`mt-1.5 whitespace-nowrap leading-[1.05] ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(label2, 262, 50) }}>{label2}</span>
+      </div>
+      {brand.cgPaper && <div className="w-[3px] my-6 shrink-0 rounded-full bg-tv-accent" />}
+
+      <div className="flex-1 min-w-0 grid grid-cols-6 items-center px-5" style={{ color: ink }}>
+        {STATE_ORDER.map((uf, i) => {
+          const st = snap.states[uf];
+          const ds = st.districtIds.map(id => snap.districtById[id]);
+          const called = ds.filter(d => d.isFinal).length;
+          const lead = Object.entries(st.districtLeads).sort((a, b) => b[1] - a[1])[0]?.[0];
+          const done = st.reported >= 99.95;
+          const name = caseOf(brand, st.name);
+          return (
+            <div key={uf} className="min-w-0 h-full flex flex-col justify-center px-3" style={{ borderLeft: i ? `1px solid ${line}` : 'none' }}>
+              <div className="font-bold uppercase leading-none whitespace-nowrap" style={{ fontSize: Math.max(12, Math.min(20, Math.floor(cellW / (st.name.length * 0.74)))) }}>{name}</div>
+              <div className="font-black leading-none tabular-nums mt-1.5" style={{ fontSize: pctSize }}>{fmtPct(st.reported)}</div>
+              <div className="mt-2 h-2 rounded-full overflow-hidden" style={{ background: line }}>
+                <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${st.reported}%`, background: bar }} />
+              </div>
+              <div className="flex items-center gap-1.5 mt-2 text-[14px] font-semibold tabular-nums whitespace-nowrap">
+                {lead && <span className="rounded-[5px] px-1.5 font-extrabold text-[13px] leading-[1.45]" style={{ background: frontColor(lead), color: textOn(frontColor(lead)) }}>{lead}</span>}
+                {st.hold !== null && !done
+                  ? <span className="rounded-[5px] px-1.5 text-[12px] font-black uppercase leading-[1.5] bg-amber-300 text-black">retido</span>
+                  : <span className="opacity-75">{done ? 'concluída' : `${called}/${ds.length} def.`}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="w-[250px] shrink-0 flex flex-col justify-center px-6" style={{ color: ink, borderLeft: `1px solid ${line}` }}>
+        <div className="text-[18px] font-bold uppercase tracking-wider opacity-80">{caseOf(brand, 'Haagar')}</div>
+        <div className="text-[52px] font-black leading-none tabular-nums">{fmtPct(snap.reported)}</div>
+        <div className="mt-2 h-2.5 rounded-full overflow-hidden" style={{ background: line }}>
+          <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${snap.reported}%`, background: bar }} />
+        </div>
+        <div className="text-[16px] font-semibold mt-1.5 opacity-85 tabular-nums">{`${snap.calledCount}/120 distritos definidos`}</div>
+      </div>
+      {brand.cgPaper && <PillStrip />}
     </div>
   );
 }
@@ -591,48 +666,93 @@ function MinorityTarja({ snap, front, final, brand, raised }: { snap: ElectionSn
   );
 }
 
-/** Tarja na cor da frente: "X forma a maioria" (ou "projeta maioria"). */
-function MajorityTarja({ snap, front, projected, brand, raised, urgent }: { snap: ElectionSnapshot; front: string; projected: boolean; brand: typeof BRANDS.smartv; raised: boolean; urgent?: boolean }) {
+// Tempos da entrada da tarja de maioria (ms)
+const MAJ_INTRO_MS = 1600;   // logo grande + check sendo desenhado
+const MAJ_WIPE_MS = 650;     // faixa na cor da frente cobre a abertura
+
+/**
+ * Tarja na cor da frente: "X forma a maioria" (ou "projeta maioria").
+ * Ao entrar no ar: logo das eleições grande com um check sendo desenhado;
+ * em seguida uma faixa na cor da frente atravessa, cobre a abertura e vira
+ * o fundo da tarja, que então mostra o texto.
+ */
+function MajorityTarja({ snap, front, projected, brand, raised, active }: { snap: ElectionSnapshot; front: string; projected: boolean; brand: typeof BRANDS.smartv; raised: boolean; active: boolean }) {
   const col = frontColor(front);
   const fg = textOn(col);
   const f = snap.frontByLegend[front];
   const seats = f ? (projected ? f.projected : f.confirmed) : 0;
-  const name = frontName(front);
   const headline = `${front} ${projected ? 'projeta maioria' : 'forma a maioria'}`;
+
+  // intro → wipe → done; volta ao início sempre que sai do ar
+  const [phase, setPhase] = useState<'intro' | 'wipe' | 'done'>('intro');
+  useEffect(() => {
+    if (!active) { setPhase('intro'); return; }
+    setPhase('intro');
+    const t1 = setTimeout(() => setPhase('wipe'), MAJ_INTRO_MS);
+    const t2 = setTimeout(() => setPhase('done'), MAJ_INTRO_MS + MAJ_WIPE_MS);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [active, front, projected]);
+
   return (
     <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
       style={{ bottom: raised ? 138 : 68, background: col, color: fg, boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
-      {/* Bloco com o logo da cobertura */}
-      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 gap-2" style={{ background: 'rgba(0,0,0,0.18)' }}>
-        {brand.logo.kind === 'target' ? (
-          <ElectionLockup brand={brand} height={50} color={fg} />
-        ) : (
-          <BrandLogo brand={brand} size={60} color={fg} />
-        )}
-        <span className="text-[20px] font-bold uppercase tracking-wider opacity-85 flex items-center gap-2">
-          {urgent && <span className="w-3 h-3 rounded-full bg-current animate-pulse" />}
-          {projected ? 'Projeção' : 'Parlamento'}
-        </span>
-      </div>
-      <div className="flex-1 min-w-0 flex flex-col justify-center px-10">
-        <div className="text-[20px] font-bold uppercase tracking-[0.14em] opacity-85">{projected ? 'Maioria projetada no Parlamento' : 'Maioria no Parlamento'}</div>
-        <div className="font-black uppercase leading-[1.05] whitespace-nowrap mt-1" style={{ fontSize: fitSize(headline, 900, 72) }}>{headline}</div>
-        <div className="text-[26px] font-semibold uppercase mt-1.5 opacity-90 truncate">{name}</div>
-      </div>
-      <div className="w-[300px] shrink-0 flex flex-col justify-center px-7" style={{ background: 'rgba(0,0,0,0.12)' }}>
-        <div className="flex items-baseline gap-2">
-          <span className="text-[76px] font-black leading-none tabular-nums"><AnimatedNumber value={seats} /></span>
-          <span className="text-[22px] font-bold uppercase opacity-85">cadeiras</span>
+      {/* Tarja (aparece depois da faixa) */}
+      <div className="absolute inset-0 flex transition-all duration-500 ease-out"
+        style={{ opacity: phase === 'done' ? 1 : 0, transform: phase === 'done' ? 'none' : 'translateX(-24px)' }}>
+        {/* Bloco com o logo da cobertura */}
+        <div className="w-[310px] shrink-0 flex items-center pl-8" style={{ background: 'rgba(0,0,0,0.18)' }}>
+          {brand.logo.kind === 'target' ? <ElectionLockup brand={brand} height={54} color={fg} /> : <BrandLogo brand={brand} size={64} color={fg} />}
         </div>
-        {/* barra das cadeiras com a marca da maioria */}
-        <div className="relative mt-3 h-3 rounded-full" style={{ background: 'rgba(255,255,255,0.25)' }}>
-          <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (seats / TOTAL_SEATS) * 100)}%`, background: fg }} />
-          <div className="absolute -top-1.5 -bottom-1.5 w-[3px] rounded" style={{ left: `${(MAJORITY / TOTAL_SEATS) * 100}%`, background: fg, opacity: 0.9 }} />
+        <div className="flex-1 min-w-0 flex flex-col justify-center px-10">
+          <div className="text-[20px] font-bold uppercase tracking-[0.14em] opacity-85">{projected ? 'Maioria projetada no Parlamento' : 'Maioria no Parlamento'}</div>
+          <div className="font-black uppercase leading-[1.05] whitespace-nowrap mt-1.5" style={{ fontSize: fitSize(headline, 900, 76) }}>{headline}</div>
         </div>
-        <div className="text-[16px] font-semibold mt-2 opacity-85 tabular-nums uppercase">{`maioria: ${MAJORITY} de ${TOTAL_SEATS}`}</div>
+        <div className="w-[300px] shrink-0 flex flex-col justify-center px-7" style={{ background: 'rgba(0,0,0,0.12)' }}>
+          <div className="flex items-baseline gap-2">
+            <span className="text-[76px] font-black leading-none tabular-nums"><AnimatedNumber value={seats} /></span>
+            <span className="text-[22px] font-bold uppercase opacity-85">cadeiras</span>
+          </div>
+          {/* barra das cadeiras com a marca da maioria */}
+          <div className="relative mt-3 h-3 rounded-full" style={{ background: 'rgba(255,255,255,0.25)' }}>
+            <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (seats / TOTAL_SEATS) * 100)}%`, background: fg }} />
+            <div className="absolute -top-1.5 -bottom-1.5 w-[3px] rounded" style={{ left: `${(MAJORITY / TOTAL_SEATS) * 100}%`, background: fg, opacity: 0.9 }} />
+          </div>
+          <div className="text-[16px] font-semibold mt-2 opacity-85 tabular-nums uppercase">{`maioria: ${MAJORITY} de ${TOTAL_SEATS}`}</div>
+        </div>
+        {brand.cgPaper && <PillStrip />}
       </div>
-      {brand.cgPaper && <PillStrip />}
+
+      {/* Abertura: logo grande + check; depois a faixa da frente cobre tudo */}
+      {phase !== 'done' && (
+        <div className="absolute inset-0 z-10 overflow-hidden" style={{ background: tarjaBg(brand) }}>
+          <div key={`${front}-${active}`} className="absolute inset-0 tv-maj-intro"
+            style={{ color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
+            <div className="absolute inset-y-0 left-[120px] flex items-center">
+              {brand.logo.kind === 'target'
+                ? <ElectionLockup brand={brand} height={112} colored={brand.cgPaper} />
+                : <span className="flex items-center gap-6"><BrandLogo brand={brand} size={96} color="#ffffff" /><span className="text-[84px] font-light leading-none">{caseOf(brand, 'Eleições')}</span></span>}
+            </div>
+            {/* check enorme, cortado pela tarja em cima e embaixo */}
+            <div className="absolute right-[150px] top-1/2 -translate-y-1/2"><CheckMark color={col} size={420} /></div>
+          </div>
+          <div className="absolute inset-0" style={{
+            background: col,
+            transform: phase === 'wipe' ? 'translateX(0)' : 'translateX(-101%)',
+            transition: phase === 'wipe' ? `transform ${MAJ_WIPE_MS}ms cubic-bezier(.7,0,.25,1)` : 'none',
+          }} />
+        </div>
+      )}
     </div>
+  );
+}
+
+/** Check (só o "v") sendo desenhado. */
+function CheckMark({ color, size }: { color: string; size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="shrink-0 overflow-visible">
+      <path d="M14 54 L40 80 L88 22" fill="none" stroke={color} strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"
+        className="tv-draw" style={{ ['--len' as string]: 112, ['--delay' as string]: '0.3s', ['--draw' as string]: '0.75s' }} />
+    </svg>
   );
 }
 
