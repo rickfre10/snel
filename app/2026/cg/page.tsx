@@ -650,12 +650,15 @@ function MajorityTarja({ snap, front, projected, brand, raised, active }: { snap
       {/* Abertura: logo grande + check; depois a faixa da frente cobre tudo */}
       {phase !== 'done' && (
         <div className="absolute inset-0 z-10 overflow-hidden" style={{ background: tarjaBg(brand) }}>
-          <div key={`${front}-${active}`} className="absolute inset-0 flex items-center justify-center gap-10 tv-maj-intro"
+          <div key={`${front}-${active}`} className="absolute inset-0 tv-maj-intro"
             style={{ color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
-            {brand.logo.kind === 'target'
-              ? <ElectionLockup brand={brand} height={112} colored={brand.cgPaper} />
-              : <span className="flex items-center gap-6"><BrandLogo brand={brand} size={96} color="#ffffff" /><span className="text-[84px] font-light leading-none">{caseOf(brand, 'Eleições')}</span></span>}
-            <CheckMark color={col} size={124} />
+            <div className="absolute inset-y-0 left-[120px] flex items-center">
+              {brand.logo.kind === 'target'
+                ? <ElectionLockup brand={brand} height={112} colored={brand.cgPaper} />
+                : <span className="flex items-center gap-6"><BrandLogo brand={brand} size={96} color="#ffffff" /><span className="text-[84px] font-light leading-none">{caseOf(brand, 'Eleições')}</span></span>}
+            </div>
+            {/* check enorme, cortado pela tarja em cima e embaixo */}
+            <div className="absolute right-[150px] top-1/2 -translate-y-1/2"><CheckMark color={col} size={420} /></div>
           </div>
           <div className="absolute inset-0" style={{
             background: col,
@@ -668,14 +671,12 @@ function MajorityTarja({ snap, front, projected, brand, raised, active }: { snap
   );
 }
 
-/** Check desenhado: círculo e o traço do "v" aparecem em sequência. */
+/** Check (só o "v") sendo desenhado. */
 function CheckMark({ color, size }: { color: string; size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="shrink-0">
-      <circle cx="50" cy="50" r="44" fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"
-        className="tv-draw" style={{ ['--len' as string]: 277, ['--delay' as string]: '0.25s', transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }} />
-      <path d="M29 52 L44 67 L72 36" fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round"
-        className="tv-draw" style={{ ['--len' as string]: 70, ['--delay' as string]: '0.8s' }} />
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="shrink-0 overflow-visible">
+      <path d="M14 54 L40 80 L88 22" fill="none" stroke={color} strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"
+        className="tv-draw" style={{ ['--len' as string]: 112, ['--delay' as string]: '0.3s', ['--draw' as string]: '0.75s' }} />
     </svg>
   );
 }
