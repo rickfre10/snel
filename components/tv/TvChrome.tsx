@@ -76,15 +76,13 @@ export function TopBar({ brand, snap, nav, onLogoLongPress }: { brand: BrandThem
       <div className="flex items-center gap-5 shrink-0 select-none" onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel}>
         {/* Smartv: só o símbolo ◎; News: o logo "news°" */}
         {brand.logo.kind === 'target' ? (
-          // Smartv: selo "◎ ELEIÇÕES" + ano
-          <div className="flex items-center gap-3 text-tv-text">
-            <ElectionLockup brand={brand} height={50} color="rgb(var(--tv-text))" />
-            <span className="text-[34px] font-black leading-none tracking-tight">2026</span>
-          </div>
+          // Smartv: só o selo "◎ ELEIÇÕES"
+          <div className="text-tv-text"><ElectionLockup brand={brand} height={52} color="rgb(var(--tv-text))" /></div>
         ) : (
+          // News: logo + "eleições" (maior e leve)
           <>
             <div className="text-tv-text"><BrandLogo brand={brand} size={44} color="rgb(var(--tv-text))" /></div>
-            <div className="text-[30px] font-black leading-none tracking-tight">{caseOf(brand, brand.programTitle)} 2026</div>
+            <div className="text-[44px] font-light leading-none tracking-tight -mt-1">{caseOf(brand, brand.programTitle)}</div>
           </>
         )}
       </div>

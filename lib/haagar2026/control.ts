@@ -36,7 +36,7 @@ export interface ControlState {
 }
 
 /** Uma tarja manual do CG que pode ser salva, repetida e posta no ar com um clique. */
-export type CgItemKind = 'texto' | 'distrito' | 'proporcional' | 'maioria';
+export type CgItemKind = 'texto' | 'distrito' | 'proporcional' | 'apuracao' | 'maioria';
 export interface CgItemSpec { kind: CgItemKind; name?: string; text?: CgText; districtId?: number; uf?: string }
 export interface CgItem extends CgItemSpec { id: string; at: number }
 export const CG_HISTORY_MAX = 3;
@@ -58,6 +58,7 @@ export interface CgVisibility {
   text?: CgText;     // tarja de texto livre (manchete)
   district?: CgDistrict; // tarja de um distrito escolhido pelo operador
   pr?: CgPr;             // tarja do voto proporcional
+  counting?: boolean;    // tarja do avanço da apuração por estado
   majority?: boolean;    // tarja de maioria (frente que forma/projeta maioria)
   autoResults?: boolean; // cada distrito definido entra sozinho no ar (15 s cada, fila)
   queueSkip?: number;    // incrementar = pula o item urgente atual
@@ -229,6 +230,7 @@ export function currentCgItem(cgIn: CgVisibility | undefined): CgItemSpec | null
   if (cg.majority) return { kind: 'maioria' };
   if (cg.district?.show) return { kind: 'distrito', districtId: cg.district.id };
   if (cg.pr?.show) return { kind: 'proporcional', uf: cg.pr.uf };
+  if (cg.counting) return { kind: 'apuracao' };
   if (text.show && text.headline.trim()) return { kind: 'texto', text: { ...text, show: true } };
   return null;
 }
@@ -239,6 +241,7 @@ export function cgItemKey(item: CgItemSpec): string {
     case 'distrito': return `d:${item.districtId}`;
     case 'proporcional': return `p:${item.uf}`;
     case 'maioria': return 'm';
+    case 'apuracao': return 'a';
     default: {
       const t = { ...DEFAULT_CG_TEXT, ...item.text };
       return `t:${t.label1}|${t.label2}|${t.headline}|${t.sub}`;
@@ -253,12 +256,14 @@ export function playCgItem(cg: CgVisibility, item: CgItemSpec): CgVisibility {
     majority: false,
     district: cg.district ? { ...cg.district, show: false } : undefined,
     pr: cg.pr ? { ...cg.pr, show: false } : undefined,
+    counting: false,
     text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false },
   };
   switch (item.kind) {
     case 'maioria': return { ...off, majority: true };
     case 'distrito': return item.districtId ? { ...off, district: { show: true, id: item.districtId } } : off;
     case 'proporcional': return { ...off, pr: { show: true, uf: item.uf ?? 'auto' } };
+    case 'apuracao': return { ...off, counting: true };
     default: return { ...off, text: { ...DEFAULT_CG_TEXT, ...item.text, show: true } };
   }
 }

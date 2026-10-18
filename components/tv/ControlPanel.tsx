@@ -162,6 +162,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
       <CgUrgentSection state={state} dispatch={dispatch} />
       <CgDistrictSection state={state} dispatch={dispatch} snap={snap} />
       <CgPrSection state={state} dispatch={dispatch} snap={snap} />
+      <CgCountingSection state={state} dispatch={dispatch} snap={snap} />
       <CgLibrary state={state} dispatch={dispatch} snap={snap} />
       <CgTextEditor state={state} dispatch={dispatch} />
 
@@ -228,7 +229,7 @@ export function CgTextEditor({ state, dispatch }: { state: ControlState; dispatc
   const set = (patch: Partial<CgText>) => { setTouched(true); setDraft(d => ({ ...d, ...patch })); };
   const send = (show: boolean) => {
     const district = state.cg?.district;
-    if (show && (district?.show || state.cg?.majority || state.cg?.pr?.show)) dispatch({ type: 'setCg', patch: { majority: false, pr: { uf: state.cg?.pr?.uf ?? 'auto', show: false }, ...(district ? { district: { ...district, show: false } } : {}) } });
+    if (show && (district?.show || state.cg?.majority || state.cg?.pr?.show || state.cg?.counting)) dispatch({ type: 'setCg', patch: { majority: false, counting: false, pr: { uf: state.cg?.pr?.uf ?? 'auto', show: false }, ...(district ? { district: { ...district, show: false } } : {}) } });
     dispatch({ type: 'setCgText', patch: { ...draft, show } });
     setTouched(false);
   };
@@ -267,6 +268,7 @@ export function cgItemLabel(item: CgItemSpec, snap: ElectionSnapshot | null): { 
     case 'distrito': return { kind: 'Distrito', title: districtsData.find(d => d.district_id === item.districtId)?.district_name ?? String(item.districtId), sub: snap && item.districtId ? snap.districtById[item.districtId]?.ufName : undefined };
     case 'proporcional': return { kind: 'Proporcional', title: item.uf === 'auto' ? 'Rodízio' : item.uf === 'BR' ? 'Haagar' : snap?.states[item.uf ?? '']?.name ?? item.uf ?? '' };
     case 'maioria': return { kind: 'Maioria', title: 'Maioria / minoria' };
+    case 'apuracao': return { kind: 'Apuração', title: 'Avanço por estado' };
     default: {
       const t = { ...DEFAULT_CG_TEXT, ...item.text };
       return { kind: 'Texto', title: t.headline, sub: [t.label1, t.label2].filter(Boolean).join(' ') || t.sub || undefined };
@@ -274,7 +276,7 @@ export function cgItemLabel(item: CgItemSpec, snap: ElectionSnapshot | null): { 
   }
 }
 
-const KIND_COLOR: Record<string, string> = { Texto: 'bg-sky-400/20 text-sky-200', Distrito: 'bg-violet-400/20 text-violet-200', Proporcional: 'bg-amber-400/20 text-amber-200', Maioria: 'bg-emerald-400/20 text-emerald-200' };
+const KIND_COLOR: Record<string, string> = { Texto: 'bg-sky-400/20 text-sky-200', Distrito: 'bg-violet-400/20 text-violet-200', Proporcional: 'bg-amber-400/20 text-amber-200', Maioria: 'bg-emerald-400/20 text-emerald-200', 'Apuração': 'bg-rose-400/20 text-rose-200' };
 const ago = (at: number) => {
   const m = Math.max(0, Math.round((Date.now() - at) / 60000));
   return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : `há ${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
@@ -408,20 +410,44 @@ export function MajorityToggle({ cg, snap, dispatch }: { cg: typeof DEFAULT_CG; 
     : 'aguardando apuração';
   return (
     <div className="flex items-center gap-2 mt-2">
-      <Btn active={!!cg.majority} onClick={() => dispatch({ type: 'setCg', patch: { majority: !cg.majority, ...(!cg.majority && cg.pr?.show ? { pr: { ...cg.pr, show: false } } : {}) } })}>Tarja de maioria / minoria</Btn>
+      <Btn active={!!cg.majority} onClick={() => dispatch({ type: 'setCg', patch: { majority: !cg.majority, ...(!cg.majority ? { counting: false } : {}), ...(!cg.majority && cg.pr?.show ? { pr: { ...cg.pr, show: false } } : {}) } })}>Tarja de maioria / minoria</Btn>
       <span className="text-[11px] text-white/60 min-w-0 truncate">{who}</span>
     </div>
   );
 }
 
 // ----------------------------------------------- CG · proporcional -------
+// --------------------------------------- CG · apuração por estado -------
+export function CgCountingSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
+  const on = !!state.cg?.counting;
+  return (
+    <Section title="CG · apuração por estado" right={on ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/25 text-red-200">NO AR</span> : null}>
+      <div className="grid grid-cols-3 gap-1.5 mb-3">
+        {STATE_ORDER.map(uf => {
+          const st = snap?.states[uf];
+          return (
+            <div key={uf} className="rounded-lg bg-white/[0.04] px-2 py-1.5 min-w-0">
+              <div className="flex justify-between text-[11px]"><b className="truncate">{st?.name ?? uf}</b><span className="tabular-nums text-white/70">{st ? `${st.reported.toFixed(1)}%` : ''}</span></div>
+              <div className="h-1 rounded-full bg-white/10 overflow-hidden mt-1"><div className={`h-full ${st?.hold !== null && st?.hold !== undefined ? 'bg-amber-300' : 'bg-white/70'}`} style={{ width: `${st?.reported ?? 0}%` }} /></div>
+            </div>
+          );
+        })}
+      </div>
+      {on
+        ? <Btn danger onClick={() => dispatch({ type: 'setCg', patch: { counting: false } })} className="w-full">Tirar do ar</Btn>
+        : <Btn onClick={() => dispatch({ type: 'cgPlay', item: { kind: 'apuracao' } })} className="w-full">Colocar no ar</Btn>}
+      <p className="text-[11px] text-white/50 mt-2">Os 6 estados lado a lado: % apurado, distritos definidos, quem lidera e se o estado está retido; à direita, Haagar inteiro.</p>
+    </Section>
+  );
+}
+
 export function CgPrSection({ state, dispatch, snap }: { state: ControlState; dispatch: (a: ControlAction) => void; snap: ElectionSnapshot | null }) {
   const cg = { ...DEFAULT_CG, ...state.cg };
   const cur = cg.pr ?? { show: false, uf: 'auto' };
   const put = (uf: string) => dispatch({
     type: 'setCg',
     // Uma tarja manual por vez
-    patch: { pr: { show: true, uf }, majority: false, ...(cg.district ? { district: { ...cg.district, show: false } } : {}), text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
+    patch: { pr: { show: true, uf }, majority: false, counting: false, ...(cg.district ? { district: { ...cg.district, show: false } } : {}), text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
   });
   const options = [{ id: 'auto', label: 'Rodízio' }, { id: 'BR', label: 'Haagar' }, ...STATE_ORDER.map(u => ({ id: u, label: snap?.states[u]?.name ?? u }))];
   const guaranteed = snap ? STATE_ORDER.reduce((a, u) => a + Object.values(snap.states[u].prGuaranteed).reduce((x, y) => x + y, 0), 0) : 0;
@@ -450,7 +476,7 @@ export function CgDistrictSection({ state, dispatch, snap }: { state: ControlSta
   const put = (id: number) => dispatch({
     type: 'setCg',
     // Colocar o distrito tira o texto livre do ar (uma tarja por vez)
-    patch: { district: { show: true, id }, majority: false, pr: { uf: cg.pr?.uf ?? 'auto', show: false }, text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
+    patch: { district: { show: true, id }, majority: false, counting: false, pr: { uf: cg.pr?.uf ?? 'auto', show: false }, text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false } },
   });
   return (
     <Section title="CG · distrito" right={cur?.show ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/25 text-red-200">NO AR</span> : null}>

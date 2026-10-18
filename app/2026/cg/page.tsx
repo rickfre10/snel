@@ -61,6 +61,7 @@ export default function Cg2026() {
   useEffect(() => { if (majority) setLastMajority(majority); }, [majority?.front, majority?.kind, majority?.final]); // eslint-disable-line react-hooks/exhaustive-deps
   const districtOn = !majorityOn && !!cg.district?.show && !!snap?.districtById[cg.district.id];
   const prOn = !majorityOn && !districtOn && !!cg.pr?.show;
+  const countingOn = !majorityOn && !districtOn && !prOn && !!cg.counting;
   const [lastDistrictId, setLastDistrictId] = useState<number | null>(null);
   useEffect(() => { if (cg.district?.id) setLastDistrictId(cg.district.id); }, [cg.district?.id]);
 
@@ -117,10 +118,10 @@ export default function Cg2026() {
 
       {snap && (
         <>
-          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !prOn && !urgentOn} from="bottom">
+          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !prOn && !countingOn && !urgentOn} from="bottom">
             <SeatsTarja snap={snap} brand={brand} count={cg.count} raised={cg.ticker} />
           </Slide>
-          <Slide show={manualTextOn && !districtOn && !majorityOn && !prOn && !urgentOn} from="bottom">
+          <Slide show={manualTextOn && !districtOn && !majorityOn && !prOn && !countingOn && !urgentOn} from="bottom">
             <TextTarja text={text} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={districtOn && !urgentOn} from="bottom">
@@ -128,6 +129,9 @@ export default function Cg2026() {
           </Slide>
           <Slide show={prOn && !urgentOn} from="bottom">
             <PrTarja snap={snap} uf={cg.pr?.uf ?? 'auto'} brand={brand} raised={cg.ticker} />
+          </Slide>
+          <Slide show={countingOn && !urgentOn} from="bottom">
+            <CountingTarja snap={snap} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={majorityOn && !urgentOn} from="bottom">
             {lastMajority && (lastMajority.kind === 'minority'
@@ -455,6 +459,65 @@ function CandidateBox({ c, first, final, brand, ink, line, counted }: { c: Candi
         <div className={`${first ? 'text-[50px]' : 'text-[42px]'} font-black leading-none tabular-nums`}>{counted ? fmtPct(c.pct) : '—'}</div>
         <div className="text-[16px] font-semibold opacity-70 tabular-nums mt-1">{counted ? `${fmtInt(c.votes)} votos` : ' '}</div>
       </div>
+    </div>
+  );
+}
+
+// ------------------------------------- Tarja da apuração por estado -----
+/** Avanço da apuração em cada estado: % apurado, distritos definidos e quem lidera. */
+function CountingTarja({ snap, brand, raised }: { snap: ElectionSnapshot; brand: typeof BRANDS.smartv; raised: boolean }) {
+  const ink = tarjaInk(brand);
+  const line = brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.18)';
+  const bar = brand.cgPaper ? 'rgb(var(--tv-accent))' : 'rgb(var(--tv-accent2))';
+  const label2 = caseOf(brand, 'Por estado');
+  // Largura útil de cada estado (a Smartv tem o filete e as pílulas na ponta)
+  const cellW = (1712 - 310 - (brand.cgPaper ? 133 : 0) - 250 - 40) / 6 - 24;
+  const pctSize = Math.min(44, Math.floor(cellW / 3.3));
+  return (
+    <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 pr-4"
+        style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
+        <span className={`text-[24px] leading-none ${brand.cgPaper ? 'text-tv-ink font-bold' : 'opacity-85 font-normal'}`}>{caseOf(brand, 'Apuração')}</span>
+        <span className={`mt-1.5 whitespace-nowrap leading-[1.05] ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(label2, 262, 50) }}>{label2}</span>
+      </div>
+      {brand.cgPaper && <div className="w-[3px] my-6 shrink-0 rounded-full bg-tv-accent" />}
+
+      <div className="flex-1 min-w-0 grid grid-cols-6 items-center px-5" style={{ color: ink }}>
+        {STATE_ORDER.map((uf, i) => {
+          const st = snap.states[uf];
+          const ds = st.districtIds.map(id => snap.districtById[id]);
+          const called = ds.filter(d => d.isFinal).length;
+          const lead = Object.entries(st.districtLeads).sort((a, b) => b[1] - a[1])[0]?.[0];
+          const done = st.reported >= 99.95;
+          const name = caseOf(brand, st.name);
+          return (
+            <div key={uf} className="min-w-0 h-full flex flex-col justify-center px-3" style={{ borderLeft: i ? `1px solid ${line}` : 'none' }}>
+              <div className="font-bold uppercase leading-none whitespace-nowrap" style={{ fontSize: Math.max(12, Math.min(20, Math.floor(cellW / (st.name.length * 0.74)))) }}>{name}</div>
+              <div className="font-black leading-none tabular-nums mt-1.5" style={{ fontSize: pctSize }}>{fmtPct(st.reported)}</div>
+              <div className="mt-2 h-2 rounded-full overflow-hidden" style={{ background: line }}>
+                <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${st.reported}%`, background: bar }} />
+              </div>
+              <div className="flex items-center gap-1.5 mt-2 text-[14px] font-semibold tabular-nums whitespace-nowrap">
+                {lead && <span className="rounded-[5px] px-1.5 font-extrabold text-[13px] leading-[1.45]" style={{ background: frontColor(lead), color: textOn(frontColor(lead)) }}>{lead}</span>}
+                {st.hold !== null && !done
+                  ? <span className="rounded-[5px] px-1.5 text-[12px] font-black uppercase leading-[1.5] bg-amber-300 text-black">retido</span>
+                  : <span className="opacity-75">{done ? 'concluída' : `${called}/${ds.length} def.`}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="w-[250px] shrink-0 flex flex-col justify-center px-6" style={{ color: ink, borderLeft: `1px solid ${line}` }}>
+        <div className="text-[18px] font-bold uppercase tracking-wider opacity-80">{caseOf(brand, 'Haagar')}</div>
+        <div className="text-[52px] font-black leading-none tabular-nums">{fmtPct(snap.reported)}</div>
+        <div className="mt-2 h-2.5 rounded-full overflow-hidden" style={{ background: line }}>
+          <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${snap.reported}%`, background: bar }} />
+        </div>
+        <div className="text-[16px] font-semibold mt-1.5 opacity-85 tabular-nums">{`${snap.calledCount}/120 distritos definidos`}</div>
+      </div>
+      {brand.cgPaper && <PillStrip />}
     </div>
   );
 }
