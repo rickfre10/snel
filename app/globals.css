@@ -22,6 +22,12 @@
 @font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextBlack.woff2') format('woff2'); font-weight: 800 900; font-display: swap; }
 @font-face { font-family: 'Posterama'; src: url('/fonts/posterama/PosteramaTextUltra.woff2') format('woff2'); font-weight: 950 1000; font-display: swap; }
 
+/* Desenho de traço (check da tarja de maioria): --len = comprimento, --delay = espera */
+@keyframes tv-draw { to { stroke-dashoffset: 0; } }
+.tv-draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: tv-draw 0.6s ease-out var(--delay, 0s) forwards; }
+@keyframes tv-maj-intro { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+.tv-maj-intro { animation: tv-maj-intro 0.45s ease-out both; }
+
 /* Telão: oculta barras de rolagem */
 .tv-stage ::-webkit-scrollbar { display: none; }
 
