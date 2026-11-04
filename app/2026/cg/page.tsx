@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
+import { useAudioBed, useQueueSound, useProjectionSound, useStingerSound } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
@@ -48,6 +49,10 @@ export default function Cg2026() {
     results: autoResults, ready, skipRev: cg.queueSkip ?? 0, clearRev: cg.queueClear ?? 0,
   });
   const urgentOn = !!urgent && (urgent.kind === 'result' ? autoResults : !!cg.breaking);
+  // Som da urna: uma vez quando a fila de cadeiras decididas começa
+  useAudioBed('cg', brand.id, state.audio);
+  useQueueSound(urgentOn ? urgent : null, brand.id);
+  useProjectionSound(snap, state.seed, ready);
   // Mantém o último item montado durante a animação de saída
   const [lastUrgent, setLastUrgent] = useState<Breaking | null>(null);
   useEffect(() => { if (urgent) setLastUrgent(urgent); }, [urgent]);
@@ -67,6 +72,7 @@ export default function Cg2026() {
 
   // ---- Vinheta "ÚLTIMA HORA" em tela cheia (por cima de tudo, só quando o operador solta)
   const stinger = useStinger(state.stinger, clockOffset, ready);
+  useStingerSound(stinger, brand.id);
 
   const [fundo, setFundo] = useState('transparente');
   useEffect(() => {
@@ -92,11 +98,14 @@ export default function Cg2026() {
           )}
         </TvFrame>
       )}
-      {/* Selo de local + AO VIVO no canto superior esquerdo (News); texto editável no controle */}
+      {/* AO VIVO no canto superior esquerdo (News); o selo de local (azul) acima dele
+          só aparece quando o operador escreve um local no controle */}
       {brand.cgPlaceBadge && (
         <Slide show={cg.bug} from="top">
           <div className="absolute left-[104px] top-[84px] flex flex-col items-start gap-1.5" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))' }}>
-            <span className="rounded-[10px] bg-tv-accent2 text-white px-3 py-1 text-[30px] font-extrabold leading-tight uppercase">{cg.place?.trim() || 'Haagar · Eleições 2026'}</span>
+            {!!cg.place?.trim() && (
+              <span className="rounded-[10px] bg-tv-accent2 text-white px-3 py-1 text-[30px] font-extrabold leading-tight uppercase">{cg.place.trim()}</span>
+            )}
             <span className="rounded-[8px] bg-tv-tarja text-white px-2.5 py-0.5 text-[19px] font-bold leading-tight uppercase">Ao vivo</span>
           </div>
         </Slide>

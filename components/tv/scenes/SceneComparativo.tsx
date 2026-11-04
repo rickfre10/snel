@@ -4,8 +4,10 @@ import React, { useMemo, useState } from 'react';
 import type { ElectionSnapshot, DistrictSnapshot } from '@/lib/haagar2026/model';
 import { FRONT_ORDER, STATE_ORDER, frontColor, frontName } from '@/lib/haagar/rules';
 import { Chip, Delta, Panel, fmtPct, GAIN, LOSS } from '../ui';
+import HexMap, { type ArrowSpec } from '../HexMap';
 
 type Metric = 'share' | 'margin';
+type View = 'mapa' | 'pontos';
 
 const W = 860, H = 620, PAD = 64;
 
@@ -14,6 +16,7 @@ export default function SceneComparativo({ snap, onDistrict }: { snap: ElectionS
   const [metric, setMetric] = useState<Metric>('share');
   const [ufFilter, setUfFilter] = useState<string | null>(null);
   const [hover, setHover] = useState<number | null>(null);
+  const [view, setView] = useState<View>('mapa');
 
   const pts = useMemo(() => snap.districts
     .filter(d => d.counted > 0 && (!ufFilter || d.uf === ufFilter))
@@ -38,21 +41,61 @@ export default function SceneComparativo({ snap, onDistrict }: { snap: ElectionS
   const hovered = pts.find(p => p.d.id === hover);
 
   const metricLabel = metric === 'share' ? `% de ${front}` : 'Margem do vencedor';
+
+  // Mapa de setas: em "Votação da frente", a variação da frente escolhida
+  // (verde = alta, rosa = queda); em "Margem", a frente que mais cresceu no
+  // distrito, na cor dela.
+  const arrows = useMemo(() => {
+    const out: Record<number, ArrowSpec> = {};
+    snap.districts.forEach(d => {
+      if (d.counted <= 0 || (ufFilter && d.uf !== ufFilter)) return;
+      if (metric === 'share') {
+        const v = (d.shares[front] ?? 0) - (d.prev.shares[front] ?? 0);
+        out[d.id] = { value: v, color: v >= 0 ? GAIN : LOSS, label: `${front} vs 2022` };
+      } else {
+        let best: string | null = null, bestV = -Infinity;
+        Object.keys(d.shares).forEach(f => {
+          const v = (d.shares[f] ?? 0) - (d.prev.shares[f] ?? 0);
+          if (v > bestV) { bestV = v; best = f; }
+        });
+        if (best) out[d.id] = { value: bestV, color: frontColor(best), label: `${best} cresceu` };
+      }
+    });
+    return out;
+  }, [snap, metric, front, ufFilter]);
   const dotColor = (d: DistrictSnapshot) => metric === 'share' ? frontColor(front) : frontColor(d.leader?.front ?? null);
 
   return (
     <div className="h-full flex flex-col gap-5">
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-nowrap">
+        <Chip active={view === 'mapa'} onClick={() => setView('mapa')}>Mapa de setas</Chip>
+        <Chip active={view === 'pontos'} onClick={() => setView('pontos')}>Dispersão</Chip>
+        <span className="w-px h-8 bg-tv-border mx-1" />
         <Chip active={metric === 'share'} onClick={() => setMetric('share')}>Votação da frente</Chip>
-        <Chip active={metric === 'margin'} onClick={() => setMetric('margin')}>Margem</Chip>
-        <span className="w-px h-8 bg-tv-border mx-2" />
+        <Chip active={metric === 'margin'} onClick={() => setMetric('margin')}>{view === 'mapa' ? 'Quem mais cresceu' : 'Margem'}</Chip>
+        <span className="w-px h-8 bg-tv-border mx-1" />
         {metric === 'share' && FRONT_ORDER.map(f => <Chip key={f} active={front === f} color={frontColor(f)} onClick={() => setFront(f)}>{f}</Chip>)}
-        <span className="w-px h-8 bg-tv-border mx-2" />
+        <span className="w-px h-8 bg-tv-border mx-1" />
         <Chip active={!ufFilter} onClick={() => setUfFilter(null)}>Todos</Chip>
         {STATE_ORDER.map(u => <Chip key={u} active={ufFilter === u} onClick={() => setUfFilter(u)}>{u}</Chip>)}
       </div>
 
       <div className="flex-1 min-h-0 grid grid-cols-[minmax(0,1fr)_620px] gap-6">
+        {view === 'mapa' ? (
+          <Panel kicker="Cada seta é um distrito · tamanho = variação"
+            title={metric === 'share' ? `${frontName(front)}: 2022 → 2026` : 'Frente que mais cresceu em cada distrito'}
+            right={pts.length > 0 && metric === 'share' && <div className="text-right"><div className="text-[13px] uppercase tracking-wider text-tv-muted font-bold">Variação média</div><Delta value={avgDelta} className="text-[26px]" /></div>}
+            bodyClassName="relative flex flex-col gap-2">
+            {Object.keys(arrows).length === 0 ? (
+              <div className="h-full flex items-center justify-center text-tv-muted text-[20px]">Aguardando votos apurados para comparar.</div>
+            ) : (
+              <>
+                <div className="flex-1 min-h-0"><HexMap districts={snap.districtById} uf={ufFilter} arrows={arrows} onSelect={onDistrict} /></div>
+                <ArrowLegend metric={metric} front={front} />
+              </>
+            )}
+          </Panel>
+        ) : (
         <Panel kicker="Cada ponto é um distrito" title={`${metricLabel}: 2022 × 2026`}
           right={pts.length > 0 && <div className="text-right"><div className="text-[13px] uppercase tracking-wider text-tv-muted font-bold">Variação média</div><Delta value={avgDelta} className="text-[26px]" /></div>}
           bodyClassName="relative">
@@ -96,12 +139,51 @@ export default function SceneComparativo({ snap, onDistrict }: { snap: ElectionS
             </div>
           )}
         </Panel>
+        )}
 
         <div className="grid grid-rows-2 gap-6 min-h-0">
           <MoversPanel title="Maiores avanços" kicker={metricLabel} rows={ups} onDistrict={onDistrict} />
           <MoversPanel title="Maiores quedas" kicker={metric === 'share' ? frontName(front) : metricLabel} rows={downs} onDistrict={onDistrict} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Seta de legenda no mesmo ângulo do mapa; `pp` define o comprimento (escala fixa). */
+function MiniArrow({ color, dir, pp }: { color: string; dir: 1 | -1; pp: number }) {
+  const len = 6 + pp * 4, a = 24 * Math.PI / 180;
+  const w = Math.cos(a) * len + 8, h = Math.sin(a) * len + 8;
+  const x1 = dir > 0 ? 4 : w - 4, x2 = dir > 0 ? w - 4 : 4, y1 = h - 4, y2 = 4;
+  const ux = (x2 - x1) / len, uy = (y2 - y1) / len, hb = 7, hw = 4;
+  const bx = x2 - ux * hb, by = y2 - uy * hb;
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0">
+      <line x1={x1} y1={y1} x2={bx} y2={by} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+      <polygon points={`${x2},${y2} ${bx - uy * hw},${by + ux * hw} ${bx + uy * hw},${by - ux * hw}`} fill={color} />
+    </svg>
+  );
+}
+
+function ArrowLegend({ metric, front }: { metric: Metric; front: string }) {
+  return (
+    <div className="flex items-center gap-5 text-[15px] text-tv-muted">
+      {metric === 'share' ? (
+        <>
+          <span className="inline-flex items-end gap-1.5 font-bold" style={{ color: LOSS }}><MiniArrow color={LOSS} dir={-1} pp={10} />{front} −10</span>
+          <span className="inline-flex items-end gap-1.5 font-bold" style={{ color: LOSS }}><MiniArrow color={LOSS} dir={-1} pp={5} />−5</span>
+          <span className="inline-flex items-end gap-1.5 font-bold" style={{ color: GAIN }}>+5<MiniArrow color={GAIN} dir={1} pp={5} /></span>
+          <span className="inline-flex items-end gap-1.5 font-bold" style={{ color: GAIN }}>{front} +10<MiniArrow color={GAIN} dir={1} pp={10} /></span>
+        </>
+      ) : (
+        <>
+          {FRONT_ORDER.map(f => (
+            <span key={f} className="inline-flex items-end gap-1 font-bold text-tv-text"><MiniArrow color={frontColor(f)} dir={1} pp={5} />{f}</span>
+          ))}
+          <span>· tamanho: +5 / +10 p.p.</span>
+        </>
+      )}
+      <span className="ml-auto">Variação em p.p. vs 2022 · toque no distrito para abrir</span>
     </div>
   );
 }

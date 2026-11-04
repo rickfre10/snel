@@ -33,7 +33,17 @@ export interface ControlState {
   stinger?: StingerCue;           // vinheta "ÚLTIMA HORA" em tela cheia, disparada pelo operador
   cgPresets?: CgItem[];           // GCs prontos salvos pelo operador
   cgHistory?: CgItem[];           // últimos GCs que foram ao ar (mais recente primeiro)
+  audio?: AudioSettings;          // trilha de fundo e volumes (telão e CG)
 }
+
+/** Trilha de fundo (por canal) e volumes; os trechos de cada marca ficam em audio.ts. */
+export interface AudioSettings {
+  bgTelao: boolean;   // trilha de fundo tocando no telão
+  bgCg: boolean;      // trilha de fundo tocando no CG
+  bgVolume: number;   // 0–1
+  sfxVolume: number;  // 0–1 (urna, plantão, vinheta)
+}
+export const DEFAULT_AUDIO: AudioSettings = { bgTelao: false, bgCg: false, bgVolume: 0.35, sfxVolume: 1 };
 
 /** Uma tarja manual do CG que pode ser salva, repetida e posta no ar com um clique. */
 export type CgItemKind = 'texto' | 'distrito' | 'proporcional' | 'apuracao' | 'maioria';
@@ -99,6 +109,7 @@ export type ControlAction =
   | { type: 'setCg'; patch: Partial<CgVisibility> }
   | { type: 'setCgText'; patch: Partial<CgText> }
   | { type: 'setView'; view: TelaoView }
+  | { type: 'setAudio'; patch: Partial<AudioSettings> }
   | { type: 'stinger' }
   | { type: 'cgSave'; item: CgItemSpec }
   | { type: 'cgDelete'; id: string }
@@ -188,6 +199,11 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
     case 'setView':
       next = { ...prev, view: action.view };
       break;
+    case 'setAudio': {
+      const a = { ...DEFAULT_AUDIO, ...prev.audio, ...action.patch };
+      next = { ...prev, audio: { ...a, bgVolume: clamp(a.bgVolume, 0, 1), sfxVolume: clamp(a.sfxVolume, 0, 1) } };
+      break;
+    }
     case 'cgSave': {
       const item: CgItem = { ...action.item, id: `${now.toString(36)}-${Math.random().toString(36).slice(2, 7)}`, at: now };
       next = { ...prev, cgPresets: [...(prev.cgPresets ?? []), item].slice(-CG_PRESETS_MAX) };

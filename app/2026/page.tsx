@@ -15,6 +15,7 @@ import { Stage, Ticker, LowerThird } from '@/components/tv/TvChrome';
 import { fmtPct } from '@/components/tv/ui';
 import ControlPanel from '@/components/tv/ControlPanel';
 import { useBreaking } from '@/lib/haagar2026/useBreaking';
+import { useTelaoSounds } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import IdleScreen from '@/components/tv/IdleScreen';
 import TelaoScene from '@/components/tv/TelaoScene';
@@ -98,6 +99,8 @@ export default function Telao2026() {
   const breaking = useBreaking(snap, state.seed, { ready: el.ready });
   // ---- Vinheta "ÚLTIMA HORA" (disparada pelo operador)
   const stinger = useStinger(state.stinger, el.clockOffset, el.ready);
+  // ---- Sons: urna, plantão, vinheta e trilha de fundo
+  useTelaoSounds(snap, state.seed, el.ready, state.brand, state.audio, stinger);
   const tickerItems = useMemo(() => (snap ? buildTicker(snap) : []), [snap]);
 
   return (

@@ -4,11 +4,12 @@
 // cenário (semente), cena do telão e marca.
 import React, { useEffect, useState } from 'react';
 import { BRANDS, BrandId } from '@/lib/brand';
-import { ControlAction, ControlState, DEFAULT_CG, DEFAULT_CG_TEXT, CgItem, CgItemSpec, CgText, SceneId, SPEED_PRESETS, cgItemKey, currentCgItem } from '@/lib/haagar2026/control';
+import { ControlAction, ControlState, DEFAULT_AUDIO, DEFAULT_CG, DEFAULT_CG_TEXT, CgItem, CgItemSpec, CgText, SceneId, SPEED_PRESETS, cgItemKey, currentCgItem } from '@/lib/haagar2026/control';
 import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER, frontColor, textOn } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
 import { parseScenarioCode, scenarioCode } from '@/lib/haagar2026/scenario';
+import { BRAND_AUDIO } from '@/lib/haagar2026/audio';
 
 export const SCENES: { id: SceneId; label: string }[] = [
   { id: 'geral', label: 'Visão geral' },
@@ -166,6 +167,8 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
       <CgCountingSection state={state} dispatch={dispatch} snap={snap} />
       <CgLibrary state={state} dispatch={dispatch} snap={snap} />
       <CgTextEditor state={state} dispatch={dispatch} />
+
+      <AudioSection state={state} dispatch={dispatch} />
 
       <Section title="CG (sobre o vídeo)" right={<a href="/2026/cg?fundo=cena" target="_blank" rel="noreferrer" className="text-xs underline text-white/70">abrir CG ↗</a>}>
         {(() => {
@@ -552,13 +555,51 @@ export function PlaceInput({ value, onSave }: { value: string; onSave: (v: strin
   const save = () => { setEditing(false); if (draft !== value) onSave(draft.trim()); };
   return (
     <div className="mt-2">
-      <div className="text-[11px] text-white/50 mb-1">Selo acima do &quot;AO VIVO&quot; (SmartvNews) — vazio = &quot;Haagar · Eleições 2026&quot;</div>
+      <div className="text-[11px] text-white/50 mb-1">Selo de local acima do &quot;AO VIVO&quot; (SmartvNews) — vazio = só o &quot;AO VIVO&quot;</div>
       <div className="flex gap-2">
         <input value={draft} onChange={e => { setEditing(true); setDraft(e.target.value); }} onBlur={save}
           onKeyDown={e => { if (e.key === 'Enter') save(); }} maxLength={40} placeholder="Ex.: São Pedro, MA"
           className="flex-1 min-w-0 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
         <Btn onClick={save}>Aplicar</Btn>
+        {value && <Btn onClick={() => { setEditing(false); setDraft(''); onSave(''); }}>Tirar</Btn>}
       </div>
     </div>
+  );
+}
+
+// ------------------------------------------------------------- Áudio ----
+function VolumeSlider({ label, value, onCommit }: { label: string; value: number; onCommit: (v: number) => void }) {
+  const [drag, setDrag] = useState<number | null>(null);
+  const v = drag ?? value;
+  const commit = () => { if (drag !== null) { onCommit(drag); setDrag(null); } };
+  return (
+    <label className="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-xs mt-2">
+      <span className="text-white/70">{label}</span>
+      <input type="range" min={0} max={100} step={1} value={Math.round(v * 100)}
+        onChange={e => setDrag(Number(e.target.value) / 100)} onPointerUp={commit} onKeyUp={commit} onBlur={commit} className="w-full" />
+      <span className="tabular-nums text-right text-white/60">{Math.round(v * 100)}%</span>
+    </label>
+  );
+}
+
+/** Trilha de fundo (por canal) e volumes. Os trechos de cada marca ficam em lib/haagar2026/audio.ts. */
+export function AudioSection({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
+  const a = { ...DEFAULT_AUDIO, ...state.audio };
+  const hasBed = !!BRAND_AUDIO[state.brand];
+  return (
+    <Section title="Áudio">
+      <div className="grid grid-cols-2 gap-2">
+        <Btn active={a.bgTelao} onClick={() => dispatch({ type: 'setAudio', patch: { bgTelao: !a.bgTelao } })}>Trilha no telão</Btn>
+        <Btn active={a.bgCg} onClick={() => dispatch({ type: 'setAudio', patch: { bgCg: !a.bgCg } })}>Trilha no CG</Btn>
+      </div>
+      <VolumeSlider label="Volume da trilha" value={a.bgVolume} onCommit={v => dispatch({ type: 'setAudio', patch: { bgVolume: v } })} />
+      <VolumeSlider label="Volume dos efeitos" value={a.sfxVolume} onCommit={v => dispatch({ type: 'setAudio', patch: { sfxVolume: v } })} />
+      <p className="text-[11px] text-white/50 mt-2">
+        {hasBed
+          ? 'A trilha abaixa sozinha enquanto toca a urna, o plantão ou a vinheta.'
+          : 'Esta marca ainda não tem trilha/vinheta configurada: só o som da urna toca.'}{' '}
+        O navegador só libera o som depois de um toque ou tecla na página do telão/CG.
+      </p>
+    </Section>
   );
 }

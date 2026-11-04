@@ -11,7 +11,7 @@ import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER, frontColor } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
 import { parseScenarioCode, scenarioCode } from '@/lib/haagar2026/scenario';
-import { CgCountingSection, CgDistrictSection, CgLibrary, CgPrSection, CgTextEditor, CgUrgentSection, DistrictSearch, MajorityToggle, PlaceInput, SCENES } from './ControlPanel';
+import { AudioSection, CgCountingSection, CgDistrictSection, CgLibrary, CgPrSection, CgTextEditor, CgUrgentSection, DistrictSearch, MajorityToggle, PlaceInput, SCENES } from './ControlPanel';
 
 interface DeskProps {
   state: ControlState;
@@ -281,6 +281,9 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
 
           <Label>Cenário</Label>
           <ScenarioBox state={state} dispatch={dispatch} />
+
+          <Label>Áudio</Label>
+          <AudioSection state={state} dispatch={dispatch} />
 
           <Label>Selo de local (SmartvNews)</Label>
           <PlaceInput value={cg.place ?? ''} onSave={place => dispatch({ type: 'setCg', patch: { place } })} />
