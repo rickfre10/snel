@@ -97,10 +97,10 @@ export default function Telao2026() {
 
   // ---- Última hora: viradas confirmadas e maioria
   const breaking = useBreaking(snap, state.seed, { ready: el.ready });
-  // ---- Som da urna: fila de cadeiras decididas e projeção de maioria
-  useTelaoSounds(snap, state.seed, el.ready);
   // ---- Vinheta "ÚLTIMA HORA" (disparada pelo operador)
   const stinger = useStinger(state.stinger, el.clockOffset, el.ready);
+  // ---- Sons: urna, plantão, vinheta e trilha de fundo
+  useTelaoSounds(snap, state.seed, el.ready, state.brand, state.audio, stinger);
   const tickerItems = useMemo(() => (snap ? buildTicker(snap) : []), [snap]);
 
   return (

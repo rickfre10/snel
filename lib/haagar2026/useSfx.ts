@@ -1,61 +1,78 @@
 // lib/haagar2026/useSfx.ts
 "use client";
-// Efeitos sonoros do CG. `useQueueSound` toca o som da urna UMA vez quando a
-// fila de resultados começa (primeira cadeira decidida). Se a fila esvazia e
-// volta depois, toca de novo.
-import { useEffect, useRef } from 'react';
+// Sons do telão e do CG:
+//  • urna.mp3 (3–5 s): uma vez no começo de cada fila de cadeiras decididas
+//    (se a fila esvazia e volta, toca de novo) e quando uma frente passa a
+//    projetar maioria;
+//  • plantão (virada / maioria): trecho "breaking" da marca, com fade;
+//  • vinheta de última hora: trecho "stinger" da marca;
+//  • trilha de fundo em loop, ligada e com volume pelo painel (por canal).
+import { useEffect, useRef, useState } from 'react';
+import type { BrandId } from '@/lib/brand';
+import type { AudioSettings } from './control';
+import { DEFAULT_AUDIO } from './control';
 import type { ElectionSnapshot } from './model';
 import { MAJORITY } from '@/lib/haagar/rules';
+import { BRAND_AUDIO, URNA } from './audio';
+import { audioRunning, initAudio, onAudioState, playClip, preload, setVolumes, startBg, stopBg } from './sfx';
 import { useBreaking, type Breaking } from './useBreaking';
 
-export const URNA_SRC = '/audio/urna.mp3';
-export const URNA_FROM_S = 3;
-export const URNA_TO_S = 5;
+export type Channel = 'telao' | 'cg';
 
-/** Toca um trecho [from, to] (segundos) de um arquivo. Devolve função que para. */
-function playClip(src: string, from: number, to: number): () => void {
-  const a = new Audio(src);
-  a.preload = 'auto';
-  let stopped = false;
-  const stop = () => { if (stopped) return; stopped = true; a.pause(); a.removeEventListener('timeupdate', onTime); };
-  const onTime = () => { if (a.currentTime >= to) stop(); };
-  a.addEventListener('timeupdate', onTime);
-  const start = () => { a.currentTime = from; a.play().catch(() => {}); };
-  if (a.readyState >= 1) start(); else a.addEventListener('loadedmetadata', start, { once: true });
-  // garante o corte mesmo se o timeupdate demorar
-  const t = setTimeout(stop, (to - from) * 1000 + 300);
-  return () => { clearTimeout(t); stop(); };
-}
-
-export function useQueueSound(urgent: Breaking | null, enabled = true) {
-  const inRun = useRef(false);   // já tocou nesta fila?
-  const unlocked = useRef(false);
-
-  // Navegadores só liberam áudio depois de um gesto na página: destrava no primeiro toque/tecla.
+/** Trilha de fundo + volumes + pré-carga dos arquivos. Chamar uma vez por tela. */
+export function useAudioBed(channel: Channel, brand: BrandId, audio: AudioSettings | undefined) {
+  const a = { ...DEFAULT_AUDIO, ...audio };
+  const cfg = BRAND_AUDIO[brand];
+  const [running, setRunning] = useState(false);
   useEffect(() => {
-    const unlock = () => {
-      if (unlocked.current) return;
-      unlocked.current = true;
-      const a = new Audio(URNA_SRC); a.volume = 0;
-      a.play().then(() => a.pause()).catch(() => {});
-    };
-    window.addEventListener('pointerdown', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
-    return () => { window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
+    initAudio();
+    setRunning(audioRunning());
+    preload(URNA.src);
+    return onAudioState(() => setRunning(audioRunning()));
   }, []);
-
+  useEffect(() => { if (cfg) preload(cfg.src); }, [cfg]);
+  useEffect(() => { setVolumes({ bg: a.bgVolume, sfx: a.sfxVolume }); }, [a.bgVolume, a.sfxVolume]);
+  const on = channel === 'telao' ? a.bgTelao : a.bgCg;
   useEffect(() => {
-    if (!urgent) { inRun.current = false; return; }          // fila saiu: o próximo item é uma fila nova
-    if (inRun.current || !enabled) return;
-    // cadeira decidida (resultado ou virada) ou maioria confirmada
-    if (urgent.kind !== 'result' && urgent.kind !== 'flip' && urgent.kind !== 'majority') return;
-    inRun.current = true;
-    playClip(URNA_SRC, URNA_FROM_S, URNA_TO_S);
-  }, [urgent, enabled]);
+    if (on && cfg && running) startBg(cfg.src, cfg.bg);
+    else stopBg();
+    return () => stopBg(0.3);
+  }, [on, cfg, running]);
 }
 
-/** Toca quando uma frente passa a PROJETAR maioria (ainda sem estar confirmada). */
-export function useProjectionSound(snap: ElectionSnapshot | null, seed: number, ready = true, enabled = true) {
+/** Som da fila de resultados e do plantão (flip/maioria). */
+export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
+  const cfg = BRAND_AUDIO[brand];
+  const inRun = useRef(false);        // já tocou nesta fila?
+  const lastId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!urgent) { inRun.current = false; lastId.current = null; return; } // fila saiu: a próxima é nova
+    if (urgent.id === lastId.current) return;
+    lastId.current = urgent.id;
+    const breaking = urgent.kind === 'flip' || urgent.kind === 'majority';
+    if (!breaking && urgent.kind !== 'result') return;
+    if (breaking && cfg) {                       // plantão: trecho de breaking da marca
+      inRun.current = true;
+      playClip(cfg.src, cfg.breaking, { fadeOutS: cfg.fadeOutS, duckBg: true });
+      return;
+    }
+    if (inRun.current) return;                   // uma vez só por fila
+    inRun.current = true;
+    playClip(URNA.src, URNA.clip, { duckBg: true });
+  }, [urgent, cfg]);
+}
+
+/** Vinheta de última hora em tela cheia (disparada pelo operador). */
+export function useStingerSound(stingerKey: number | null, brand: BrandId) {
+  const cfg = BRAND_AUDIO[brand];
+  useEffect(() => {
+    if (stingerKey === null || !cfg) return;
+    playClip(cfg.src, cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true });
+  }, [stingerKey]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** Toca a urna quando uma frente passa a PROJETAR maioria (ainda sem confirmar). */
+export function useProjectionSound(snap: ElectionSnapshot | null, seed: number, ready = true) {
   const seen = useRef<{ seed: number; progress: number; fronts: Set<string> } | null>(null);
   useEffect(() => {
     if (!snap || !ready) return;
@@ -67,13 +84,15 @@ export function useProjectionSound(snap: ElectionSnapshot | null, seed: number, 
     }
     const fresh = Array.from(now).some(f => !seen.current!.fronts.has(f));
     seen.current = { seed, progress: Math.max(seen.current.progress, snap.progress), fronts: now };
-    if (fresh && enabled) playClip(URNA_SRC, URNA_FROM_S, URNA_TO_S);
-  }, [snap, seed, ready, enabled]);
+    if (fresh) playClip(URNA.src, URNA.clip, { duckBg: true });
+  }, [snap, seed, ready]);
 }
 
-/** Telão: mesma regra do CG (fila de resultados + projeção de maioria), com fila própria só para o som. */
-export function useTelaoSounds(snap: ElectionSnapshot | null, seed: number, ready = true) {
+/** Telão: mesma regra do CG, com fila própria só para o som. */
+export function useTelaoSounds(snap: ElectionSnapshot | null, seed: number, ready: boolean, brand: BrandId, audio: AudioSettings | undefined, stingerKey: number | null) {
   const queue = useBreaking(snap, seed, { results: true, ready });
-  useQueueSound(queue);
+  useAudioBed('telao', brand, audio);
+  useQueueSound(queue, brand);
+  useStingerSound(stingerKey, brand);
   useProjectionSound(snap, seed, ready);
 }
