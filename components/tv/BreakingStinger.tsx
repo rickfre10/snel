@@ -5,7 +5,7 @@
 // e no CG. Cobre a tela inteira no meio da animação (ponto bom para o corte).
 //  • Smartv: círculos concêntricos do símbolo ◎ abrem do centro (íris).
 //  • SmartvNews: retângulos arredondados (os cartões da vinheta) sobem em cascata.
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BrandTheme } from '@/lib/brand';
 import type { StingerCue } from '@/lib/haagar2026/control';
 import { BrandLogo, TargetMark } from './ui';
@@ -32,6 +32,18 @@ export function useStinger(cue: StingerCue | undefined, clockOffset: number, rea
     return () => clearTimeout(t);
   }, [playing]);
   return playing;
+}
+
+/** Vinheta disparada pela própria tela (maioria / projeção de maioria), sem passar pelo operador. */
+export function useLocalStinger(): [number | null, () => void] {
+  const [key, setKey] = useState<number | null>(null);
+  const fire = useCallback(() => setKey(Date.now()), []);
+  useEffect(() => {
+    if (key === null) return;
+    const t = setTimeout(() => setKey(null), STINGER_MS + 100);
+    return () => clearTimeout(t);
+  }, [key]);
+  return [key, fire];
 }
 
 export default function BreakingStinger({ brand }: { brand: BrandTheme }) {

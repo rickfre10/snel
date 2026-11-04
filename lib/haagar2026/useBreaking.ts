@@ -13,7 +13,7 @@ export interface Breaking {
   headline: string;
   sub: string;
   front?: string | null;
-  kind?: 'flip' | 'majority' | 'result';
+  kind?: 'flip' | 'majority' | 'projection' | 'result';
   districtId?: number;
 }
 
@@ -34,6 +34,8 @@ interface Options {
   skipRev?: number;
   /** Mudar este valor esvazia a fila (e tira o item atual). */
   clearRev?: number;
+  /** Antes de um item de maioria / projeção de maioria: dispara a vinheta (gráfico) e segura o item por `leadMs`. */
+  preStinger?: { fire: () => void; leadMs?: number };
 }
 
 export function useBreaking(snap: ElectionSnapshot | null, seed: number, opts: Options | number = {}): Breaking | null {
@@ -44,18 +46,38 @@ export function useBreaking(snap: ElectionSnapshot | null, seed: number, opts: O
   const ready = o.ready ?? true;
 
   // `announced`: distritos já anunciados (não repete se a definição oscilar).
-  const seen = useRef<{ seed: number; progress: number; announced: Set<number>; majority: string | null } | null>(null);
+  const seen = useRef<{ seed: number; progress: number; announced: Set<number>; majority: string | null; projected: Set<string> } | null>(null);
   const queue = useRef<Breaking[]>([]);
   const [current, setCurrent] = useState<Breaking | null>(null);
+  const preRef = useRef(o.preStinger);
+  preRef.current = o.preStinger;
+  const busy = useRef(false);                                   // item de maioria à espera da vinheta
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Próximo da fila. Maioria / projeção: a vinheta (gráfico) entra primeiro e o item só aparece depois. */
+  const advance = () => {
+    const next = queue.current.shift() ?? null;
+    const pre = preRef.current;
+    if (next && pre && (next.kind === 'majority' || next.kind === 'projection')) {
+      busy.current = true;
+      pre.fire();
+      setCurrent(null);
+      holdTimer.current = setTimeout(() => { busy.current = false; setCurrent(next); }, pre.leadMs ?? 2000);
+      return;
+    }
+    setCurrent(next);
+  };
 
   useEffect(() => {
     if (!snap || !ready) return;
     const finals = snap.districts.filter(d => d.isFinal);
     const majorityFront = snap.fronts.find(f => f.confirmed >= MAJORITY)?.legend ?? null;
+    // frentes que PROJETAM maioria sem tê-la confirmada
+    const projNow = snap.fronts.filter(f => f.projected >= MAJORITY && f.confirmed < MAJORITY).map(f => f.legend);
     // Primeira leitura, novo cenário ou volta clara no tempo: só memoriza.
     // (Pequenas oscilações do relógio não zeram a fila.)
     if (!seen.current || seen.current.seed !== seed || snap.progress < seen.current.progress - 1) {
-      seen.current = { seed, progress: snap.progress, announced: new Set(finals.map(d => d.id)), majority: majorityFront };
+      seen.current = { seed, progress: snap.progress, announced: new Set(finals.map(d => d.id)), majority: majorityFront, projected: new Set(projNow) };
       queue.current = [];
       setCurrent(null);
       return;
@@ -89,6 +111,18 @@ export function useBreaking(snap: ElectionSnapshot | null, seed: number, opts: O
         front: majorityFront,
       });
     }
+    // Projeção de maioria: cada frente é anunciada uma vez por cenário
+    projNow.forEach(legend => {
+      if (prev.projected.has(legend)) return;
+      prev.projected.add(legend);
+      const f = snap.frontByLegend[legend];
+      queue.current.unshift({
+        id: `proj-${seed}-${legend}`, kind: 'projection',
+        headline: `${legend} projeta maioria`,
+        sub: `${frontName(legend)} chega a ${f.projected} cadeiras projetadas (maioria: ${MAJORITY})`,
+        front: legend,
+      });
+    });
     // Evita fila gigante em saltos grandes de apuração: descarta os mais
     // antigos, mas preserva a maioria e as viradas.
     while (queue.current.length > maxQueue) {
@@ -110,25 +144,27 @@ export function useBreaking(snap: ElectionSnapshot | null, seed: number, opts: O
   useEffect(() => {
     if (o.skipRev === lastSkip.current) return;
     lastSkip.current = o.skipRev;
-    setCurrent(queue.current.shift() ?? null);
+    advance();
   }, [o.skipRev]);
   const lastClear = useRef(o.clearRev);
   useEffect(() => {
     if (o.clearRev === lastClear.current) return;
     lastClear.current = o.clearRev;
     queue.current = [];
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    busy.current = false;
     setCurrent(null);
   }, [o.clearRev]);
 
   useEffect(() => {
     if (current) {
       const ms = current.kind === 'result' || current.kind === 'majority' ? resultMs : durationMs;
-      const t = setTimeout(() => setCurrent(queue.current.shift() ?? null), ms);
+      const t = setTimeout(advance, ms);
       return () => clearTimeout(t);
     }
     const poll = setInterval(() => {
-      const next = queue.current.shift();
-      if (next) setCurrent(next);
+      if (busy.current || queue.current.length === 0) return;
+      advance();
     }, 500);
     return () => clearInterval(poll);
   }, [current, durationMs, resultMs]);

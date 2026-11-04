@@ -11,7 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
-import { useAudioBed, useAudioCue, useQueueSound, useProjectionSound, useStingerSound } from '@/lib/haagar2026/useSfx';
+import { useAudioBed, useAudioCue, useQueueSound, useStingerSound } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
@@ -20,7 +20,7 @@ import { Backdrop, Stage, caseOf } from '@/components/tv/TvChrome';
 import TelaoScene from '@/components/tv/TelaoScene';
 import PillGrid from '@/components/tv/PillGrid';
 import IdleScreen from '@/components/tv/IdleScreen';
-import BreakingStinger, { useStinger } from '@/components/tv/BreakingStinger';
+import BreakingStinger, { useLocalStinger, useStinger } from '@/components/tv/BreakingStinger';
 import { AnimatedNumber, Avatar, BrandLogo, ElectionLockup, N8Seal, TargetMark, fmtInt, fmtPct, g } from '@/components/tv/ui';
 
 const TICKER_MS = 6000;
@@ -45,14 +45,14 @@ export default function Cg2026() {
   // ---- Urgência (sobrepõe QUALQUER outra tarja): resultados de distrito
   // definidos (15 s cada, em fila) e plantão de última hora (viradas, maioria).
   // O CG detecta sozinho — não depende do telão estar aberto.
+  const [localStinger, fireStinger] = useLocalStinger();   // vinheta automática antes da maioria / projeção
   const urgent = useBreaking(snap, state.seed, {
-    results: autoResults, ready, skipRev: cg.queueSkip ?? 0, clearRev: cg.queueClear ?? 0,
+    results: autoResults, ready, skipRev: cg.queueSkip ?? 0, clearRev: cg.queueClear ?? 0, preStinger: { fire: fireStinger },
   });
   const urgentOn = !!urgent && (urgent.kind === 'result' ? autoResults : !!cg.breaking);
   // Som da urna: uma vez quando a fila de cadeiras decididas começa
   useAudioBed('cg', brand.id, state.audio);
   useQueueSound(urgentOn ? urgent : null, brand.id);
-  useProjectionSound(snap, state.seed, ready);
   // Mantém o último item montado durante a animação de saída
   const [lastUrgent, setLastUrgent] = useState<Breaking | null>(null);
   useEffect(() => { if (urgent) setLastUrgent(urgent); }, [urgent]);
@@ -72,7 +72,7 @@ export default function Cg2026() {
   useEffect(() => { if (cg.district?.id) setLastDistrictId(cg.district.id); }, [cg.district?.id]);
 
   // ---- Vinheta "ÚLTIMA HORA" em tela cheia (por cima de tudo, só quando o operador solta)
-  const stinger = useStinger(state.stinger, clockOffset, ready);
+  const stinger = useStinger(state.stinger, clockOffset, ready) ?? localStinger;
   useStingerSound(stinger, brand.id);
   useAudioCue(state.audioCue, clockOffset, ready, brand.id);
 
@@ -156,9 +156,9 @@ export default function Cg2026() {
           <Slide show={urgentOn && lastUrgent?.kind === 'result'} from="bottom">
             {urgentDistrict && <DistrictTarja key={lastUrgent!.id} d={urgentDistrict} brand={brand} raised={cg.ticker} urgent active={urgentOn && lastUrgent?.kind === 'result'} />}
           </Slide>
-          <Slide show={urgentOn && lastUrgent?.kind === 'majority'} from="bottom">
-            {lastUrgent?.kind === 'majority' && lastUrgent.front && (
-              <MajorityTarja key={lastUrgent.id} snap={snap} front={lastUrgent.front} projected={false} brand={brand} raised={cg.ticker} active={urgentOn} />
+          <Slide show={urgentOn && (lastUrgent?.kind === 'majority' || lastUrgent?.kind === 'projection')} from="bottom">
+            {(lastUrgent?.kind === 'majority' || lastUrgent?.kind === 'projection') && lastUrgent.front && (
+              <MajorityTarja key={lastUrgent.id} snap={snap} front={lastUrgent.front} projected={lastUrgent.kind === 'projection'} brand={brand} raised={cg.ticker} active={urgentOn} />
             )}
           </Slide>
           <Slide show={urgentOn && lastUrgent?.kind === 'flip'} from="bottom">
