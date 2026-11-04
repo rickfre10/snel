@@ -8,7 +8,6 @@ let ctx: AudioContext | null = null;
 let bgVol: GainNode, bgDuck: GainNode, bgFade: GainNode, sfxVol: GainNode;
 const buffers = new Map<string, Promise<AudioBuffer>>();
 const listeners = new Set<() => void>();
-let bg: { src: string; from: number; to: number; node: AudioBufferSourceNode } | null = null;
 let ducks = 0;
 let vols = { bg: 0.35, sfx: 1 };
 
@@ -45,16 +44,18 @@ function load(src: string): Promise<AudioBuffer> {
 }
 export const preload = (src: string) => { if (ensure()) load(src).catch(() => {}); };
 
-function duck(on: boolean) {
+/** A trilha abaixa rápido quando um efeito entra e VOLTA devagar (`releaseS`, rampa linear) quando todos acabam. */
+function duck(on: boolean, releaseS = 1.5) {
   const c = ctx; if (!c) return;
   ducks = Math.max(0, ducks + (on ? 1 : -1));
-  const target = ducks > 0 ? 0.2 : 1;
   bgDuck.gain.cancelScheduledValues(c.currentTime);
-  bgDuck.gain.setTargetAtTime(target, c.currentTime, ducks > 0 ? 0.08 : 0.35);
+  if (ducks > 0) { bgDuck.gain.setTargetAtTime(0.2, c.currentTime, 0.08); return; }
+  bgDuck.gain.setValueAtTime(bgDuck.gain.value, c.currentTime);
+  bgDuck.gain.linearRampToValueAtTime(1, c.currentTime + releaseS);
 }
 
 /** Toca [from, to] segundos de `src`, com fade no último `fadeOutS`. */
-export function playClip({ src, from, to }: Clip, opts: { fadeOutS?: number; duckBg?: boolean } = {}) {
+export function playClip({ src, from, to }: Clip, opts: { fadeOutS?: number; duckBg?: boolean; releaseS?: number } = {}) {
   const c = ensure();
   if (!c || c.state !== 'running') return;   // sem gesto ainda: não enfileira som velho
   load(src).then(buf => {
@@ -66,39 +67,74 @@ export function playClip({ src, from, to }: Clip, opts: { fadeOutS?: number; duc
     const t0 = c.currentTime + 0.02;
     const fade = Math.min(opts.fadeOutS ?? 0, dur);
     g.gain.setValueAtTime(1, t0);
-    if (fade > 0) { g.gain.setValueAtTime(1, t0 + dur - fade); g.gain.linearRampToValueAtTime(0, t0 + dur); }
+    if (fade > 0) { g.gain.setValueAtTime(1, t0 + dur - fade); g.gain.setValueCurveAtTime(curve(false), t0 + dur - fade, fade); } // curva suave (cosseno)
     s.start(t0, from, dur);
-    if (opts.duckBg) { duck(true); s.onended = () => duck(false); }
+    if (opts.duckBg) { duck(true); s.onended = () => duck(false, opts.releaseS); }
   }).catch(() => {});
 }
 
-/** Liga a trilha de fundo em loop (sem emenda) no trecho [from, to]. */
+// ---- Trilha de fundo: loop com crossfade (a volta seguinte entra por baixo do fim da anterior)
+const BG_XFADE_S = 3;
+interface BgLayer { node: AudioBufferSourceNode; gain: GainNode }
+let bgState: { src: string; from: number; to: number; layers: BgLayer[]; timer: ReturnType<typeof setInterval>; nextAt: number } | null = null;
+
+const curve = (up: boolean) => Float32Array.from({ length: 64 }, (_, i) => { const t = i / 63; return up ? Math.sin(t * Math.PI / 2) : Math.cos(t * Math.PI / 2); });
+
+/** Uma volta do trecho a partir de `at`; sobe em curva de potência constante (exceto a 1ª) e desce no fim. */
+function bgLayer(c: AudioContext, buf: AudioBuffer, from: number, to: number, at: number, fadeIn: boolean): { layer: BgLayer; nextAt: number } {
+  const dur = to - from;
+  const x = Math.min(BG_XFADE_S, dur / 3);
+  const g = c.createGain();
+  const node = c.createBufferSource();
+  node.buffer = buf; node.connect(g); g.connect(bgFade);
+  g.gain.setValueAtTime(fadeIn ? 0 : 1, at);
+  if (fadeIn) g.gain.setValueCurveAtTime(curve(true), at, x);
+  g.gain.setValueAtTime(1, at + dur - x);
+  g.gain.setValueCurveAtTime(curve(false), at + dur - x, x);
+  node.start(at, from, dur);
+  node.stop(at + dur + 0.05);
+  return { layer: { node, gain: g }, nextAt: at + dur - x };
+}
+
+/** Liga a trilha de fundo em loop (com crossfade) no trecho [from, to]. */
 export function startBg({ src, from, to }: Clip) {
   const c = ensure();
   if (!c || c.state !== 'running') return;
-  if (bg && bg.src === src && bg.from === from && bg.to === to) return;
+  if (bgState && bgState.src === src && bgState.from === from && bgState.to === to) return;
   stopBg(0.3);
+  const key = {} as object;
+  bgKey = key;
   load(src).then(buf => {
-    if (bg) return; // outro start ganhou a corrida
-    const s = c.createBufferSource();
-    s.buffer = buf; s.loop = true; s.loopStart = from; s.loopEnd = to;
-    s.connect(bgFade);
+    if (bgKey !== key) return; // outro start/stop ganhou a corrida
+    const first = bgLayer(c, buf, from, to, c.currentTime + 0.05, false);
+    const st = { src, from, to, layers: [first.layer], nextAt: first.nextAt, timer: 0 as unknown as ReturnType<typeof setInterval> };
     bgFade.gain.cancelScheduledValues(c.currentTime);
     bgFade.gain.setValueAtTime(0, c.currentTime);
     bgFade.gain.linearRampToValueAtTime(1, c.currentTime + 1);
-    s.start(0, from);
-    bg = { src, from, to, node: s };
+    // agenda a próxima volta um pouco antes de ela entrar (relógio de áudio = sem emenda)
+    st.timer = setInterval(() => {
+      if (bgState !== st) return;
+      if (st.nextAt - c.currentTime < 1.5) {
+        const nx = bgLayer(c, buf, from, to, st.nextAt, true);
+        st.layers = st.layers.filter(l => l.node !== undefined).slice(-2).concat(nx.layer);
+        st.nextAt = nx.nextAt;
+      }
+    }, 250);
+    bgState = st;
   }).catch(() => {});
 }
+let bgKey: object | null = null;
 
 export function stopBg(fadeS = 0.6) {
-  const c = ctx; const cur = bg;
+  bgKey = null;
+  const c = ctx; const cur = bgState;
   if (!c || !cur) return;
-  bg = null;
+  bgState = null;
+  clearInterval(cur.timer);
   bgFade.gain.cancelScheduledValues(c.currentTime);
   bgFade.gain.setValueAtTime(bgFade.gain.value, c.currentTime);
   bgFade.gain.linearRampToValueAtTime(0, c.currentTime + fadeS);
-  cur.node.stop(c.currentTime + fadeS + 0.05);
+  cur.layers.forEach(l => { try { l.node.stop(c.currentTime + fadeS + 0.05); } catch { /* já parou */ } });
 }
 
 export function setVolumes(v: { bg: number; sfx: number }) {

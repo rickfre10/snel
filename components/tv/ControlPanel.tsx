@@ -165,6 +165,7 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
       <CgDistrictSection state={state} dispatch={dispatch} snap={snap} />
       <CgPrSection state={state} dispatch={dispatch} snap={snap} />
       <CgCountingSection state={state} dispatch={dispatch} snap={snap} />
+      <CgCountdownSection state={state} dispatch={dispatch} />
       <CgLibrary state={state} dispatch={dispatch} snap={snap} />
       <CgTextEditor state={state} dispatch={dispatch} />
 
@@ -600,6 +601,77 @@ export function AudioSection({ state, dispatch }: { state: ControlState; dispatc
           : 'Esta marca ainda não tem trilha/vinheta configurada: só o som da urna toca.'}{' '}
         O navegador só libera o som depois de um toque ou tecla na página do telão/CG.
       </p>
+    </Section>
+  );
+}
+
+// ------------------------------------------ Contagem das urnas (CG) -----
+const fmtLeft = (sec: number) => {
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+};
+
+/** Contagem regressiva para o fechamento das urnas: por duração ou por horário. */
+export function CgCountdownSection({ state, dispatch }: { state: ControlState; dispatch: (a: ControlAction) => void }) {
+  const cd = state.cg?.countdown;
+  const on = !!cd?.show;
+  const [label, setLabel] = useState(cd?.label ?? '');
+  const [minutes, setMinutes] = useState('');
+  const [clock, setClock] = useState('');
+  const [, tick] = useState(0);
+  useEffect(() => { const id = setInterval(() => tick(n => n + 1), 500); return () => clearInterval(id); }, []);
+  const left = cd ? Math.max(0, Math.ceil((cd.endsAt - Date.now()) / 1000)) : 0;
+
+  const start = (seconds: number) => { if (seconds > 0) dispatch({ type: 'setCountdown', inSeconds: Math.round(seconds), label: label.trim() }); };
+  const startMinutes = () => { const v = parseFloat(minutes.replace(',', '.')); if (v > 0) start(v * 60); };
+  const startClock = () => {
+    const m = /^(\d{1,2})[:h](\d{2})$/.exec(clock.trim());
+    if (!m) return;
+    const t = new Date(); t.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    if (t.getTime() <= Date.now()) t.setDate(t.getDate() + 1);   // horário já passou hoje: amanhã
+    start((t.getTime() - Date.now()) / 1000);
+  };
+
+  return (
+    <Section title="CG · contagem das urnas" right={on ? <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/25 text-red-200">NO AR</span> : null}>
+      {cd && (
+        <div className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 mb-3 flex items-center justify-between">
+          <span className="text-[11px] uppercase tracking-wider text-white/50">{on ? 'Faltam' : 'Última contagem'}</span>
+          <b className="text-2xl tabular-nums">{left > 0 ? fmtLeft(left) : 'Urnas fechadas'}</b>
+        </div>
+      )}
+      <div className="text-[11px] text-white/50 mb-1">Texto ao lado do relógio (vazio = &quot;Encerramento da votação em Haagar&quot;)</div>
+      <input value={label} onChange={e => setLabel(e.target.value)} onBlur={() => { if (cd && (cd.label ?? '') !== label.trim()) dispatch({ type: 'setCountdown', show: cd.show ? undefined : false, label: label.trim() }); }}
+        maxLength={60} placeholder="Ex.: Fechamento das urnas às 17h" className="w-full h-10 rounded-lg bg-black/40 border border-white/15 px-3 mb-3" />
+
+      <div className="text-[11px] text-white/50 mb-1">Começar a contar agora</div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {[5, 10, 15, 30, 60].map(m => <Btn key={m} onClick={() => start(m * 60)}>{m} min</Btn>)}
+      </div>
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        <div className="flex gap-1.5">
+          <input value={minutes} onChange={e => setMinutes(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') startMinutes(); }} inputMode="decimal" placeholder="minutos"
+            className="flex-1 min-w-0 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
+          <Btn onClick={startMinutes}>Iniciar</Btn>
+        </div>
+        <div className="flex gap-1.5">
+          <input value={clock} onChange={e => setClock(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') startClock(); }} placeholder="até 17:00"
+            className="flex-1 min-w-0 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
+          <Btn onClick={startClock}>Iniciar</Btn>
+        </div>
+      </div>
+
+      {cd && (
+        <div className="grid grid-cols-3 gap-1.5 mt-3">
+          <Btn onClick={() => dispatch({ type: 'setCountdown', addSeconds: -60 })}>− 1 min</Btn>
+          <Btn onClick={() => dispatch({ type: 'setCountdown', addSeconds: 60 })}>+ 1 min</Btn>
+          {on
+            ? <Btn danger onClick={() => dispatch({ type: 'setCountdown', show: false })}>Tirar do ar</Btn>
+            : <Btn onClick={() => dispatch({ type: 'setCountdown', addSeconds: 0 })}>Pôr no ar</Btn>}
+        </div>
+      )}
+      <p className="text-[11px] text-white/50 mt-2">A tarja entra no lugar das outras tarjas manuais. Ao chegar em zero, mostra &quot;Urnas fechadas&quot; até você tirar do ar. O horário usa o relógio deste computador.</p>
     </Section>
   );
 }

@@ -53,7 +53,7 @@ export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
     if (!breaking && urgent.kind !== 'result') return;
     if (breaking && cfg) {                       // plantão: trecho de breaking da marca
       inRun.current = true;
-      playClip(cfg.breaking, { fadeOutS: cfg.fadeOutS, duckBg: true });
+      playClip(cfg.breaking, { fadeOutS: cfg.breakingFadeS, duckBg: true, releaseS: 4 }); // trilha volta com fade-in longo
       return;
     }
     if (inRun.current) return;                   // uma vez só por fila
@@ -67,7 +67,7 @@ export function useStingerSound(stingerKey: number | null, brand: BrandId) {
   const cfg = BRAND_AUDIO[brand];
   useEffect(() => {
     if (stingerKey === null || !cfg) return;
-    playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true });
+    playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true, releaseS: 3 });
   }, [stingerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 

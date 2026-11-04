@@ -69,11 +69,15 @@ export interface CgVisibility {
   district?: CgDistrict; // tarja de um distrito escolhido pelo operador
   pr?: CgPr;             // tarja do voto proporcional
   counting?: boolean;    // tarja do avanço da apuração por estado
+  countdown?: CgCountdown; // contagem regressiva para o fechamento das urnas
   majority?: boolean;    // tarja de maioria (frente que forma/projeta maioria)
   autoResults?: boolean; // cada distrito definido entra sozinho no ar (15 s cada, fila)
   queueSkip?: number;    // incrementar = pula o item urgente atual
   queueClear?: number;   // incrementar = esvazia a fila urgente
 }
+
+/** Contagem regressiva: `endsAt` em epoch (ms) no relógio do servidor. */
+export interface CgCountdown { show: boolean; endsAt: number; label?: string }
 
 /** Tarja do proporcional: 'auto' = rodízio (nacional + estados), 'BR' = nacional, ou a UF. */
 export interface CgPr { show: boolean; uf: string }
@@ -110,6 +114,9 @@ export type ControlAction =
   | { type: 'setCgText'; patch: Partial<CgText> }
   | { type: 'setView'; view: TelaoView }
   | { type: 'setAudio'; patch: Partial<AudioSettings> }
+  // Contagem regressiva do CG: `inSeconds` reinicia a partir de agora; `addSeconds`
+  // ajusta a atual; `label` troca o texto; `show: false` tira do ar.
+  | { type: 'setCountdown'; show?: boolean; inSeconds?: number; addSeconds?: number; label?: string }
   | { type: 'stinger' }
   | { type: 'cgSave'; item: CgItemSpec }
   | { type: 'cgDelete'; id: string }
@@ -199,6 +206,18 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
     case 'setView':
       next = { ...prev, view: action.view };
       break;
+    case 'setCountdown': {
+      const cg = { ...DEFAULT_CG, ...prev.cg };
+      const cur = cg.countdown;
+      if (action.show === false) {
+        next = { ...prev, cg: { ...cg, countdown: cur ? { ...cur, show: false, label: action.label ?? cur.label } : undefined } };
+        break;
+      }
+      const endsAt = action.inSeconds !== undefined ? now + action.inSeconds * 1000 : (cur?.endsAt ?? now) + (action.addSeconds ?? 0) * 1000;
+      const off = clearManualCg(cg); // uma tarja manual por vez
+      next = { ...prev, cg: { ...off, countdown: { show: true, endsAt, label: action.label ?? cur?.label ?? '' } } };
+      break;
+    }
     case 'setAudio': {
       const a = { ...DEFAULT_AUDIO, ...prev.audio, ...action.patch };
       next = { ...prev, audio: { ...a, bgVolume: clamp(a.bgVolume, 0, 1), sfxVolume: clamp(a.sfxVolume, 0, 1) } };
@@ -265,16 +284,22 @@ export function cgItemKey(item: CgItemSpec): string {
   }
 }
 
-/** Põe uma tarja no ar tirando as outras manuais (uma por vez). */
-export function playCgItem(cg: CgVisibility, item: CgItemSpec): CgVisibility {
-  const off: CgVisibility = {
+/** Tira do ar todas as tarjas manuais. */
+export function clearManualCg(cg: CgVisibility): CgVisibility {
+  return {
     ...cg,
     majority: false,
     district: cg.district ? { ...cg.district, show: false } : undefined,
     pr: cg.pr ? { ...cg.pr, show: false } : undefined,
     counting: false,
+    countdown: cg.countdown ? { ...cg.countdown, show: false } : undefined,
     text: { ...DEFAULT_CG_TEXT, ...cg.text, show: false },
   };
+}
+
+/** Põe uma tarja no ar tirando as outras manuais (uma por vez). */
+export function playCgItem(cg: CgVisibility, item: CgItemSpec): CgVisibility {
+  const off = clearManualCg(cg);
   switch (item.kind) {
     case 'maioria': return { ...off, majority: true };
     case 'distrito': return item.districtId ? { ...off, district: { show: true, id: item.districtId } } : off;

@@ -11,7 +11,7 @@ import type { ElectionSnapshot } from '@/lib/haagar2026/model';
 import { MAJORITY, STATE_ORDER, frontColor } from '@/lib/haagar/rules';
 import { districtsData } from '@/lib/staticData';
 import { parseScenarioCode, scenarioCode } from '@/lib/haagar2026/scenario';
-import { AudioSection, CgCountingSection, CgDistrictSection, CgLibrary, CgPrSection, CgTextEditor, CgUrgentSection, DistrictSearch, MajorityToggle, PlaceInput, SCENES } from './ControlPanel';
+import { AudioSection, CgCountdownSection, CgCountingSection, CgDistrictSection, CgLibrary, CgPrSection, CgTextEditor, CgUrgentSection, DistrictSearch, MajorityToggle, PlaceInput, SCENES } from './ControlPanel';
 
 interface DeskProps {
   state: ControlState;
@@ -23,7 +23,7 @@ interface DeskProps {
   error?: string | null;
 }
 
-type CgTab = 'distrito' | 'proporcional' | 'apuracao' | 'maioria' | 'texto';
+type CgTab = 'distrito' | 'proporcional' | 'apuracao' | 'contagem' | 'maioria' | 'texto';
 
 const districtName = (id?: number) => (id ? districtsData.find(d => d.district_id === id)?.district_name ?? String(id) : '');
 const isTyping = (t: EventTarget | null) => {
@@ -44,9 +44,9 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
   const showScene = (scene: SceneId) => dispatch({ type: 'focus', scene, uf: scene === 'estado' ? uf : undefined, districtId: scene === 'distrito' ? lastDistrict : undefined });
   const showUf = (u: string) => { setUf(u); dispatch({ type: 'focus', scene: 'estado', uf: u }); };
   const showDistrict = (id: number) => { setLastDistrict(id); dispatch({ type: 'focus', scene: 'distrito', districtId: id }); };
-  const manualOn = !!cg.majority || !!cg.district?.show || !!cg.pr?.show || !!cg.counting || (text.show && !!text.headline.trim());
+  const manualOn = !!cg.majority || !!cg.district?.show || !!cg.pr?.show || !!cg.counting || !!cg.countdown?.show || (text.show && !!text.headline.trim());
   const clearTarjas = () => {
-    dispatch({ type: 'setCg', patch: { majority: false, counting: false, ...(cg.district ? { district: { ...cg.district, show: false } } : {}), ...(cg.pr ? { pr: { ...cg.pr, show: false } } : {}) } });
+    dispatch({ type: 'setCg', patch: { majority: false, counting: false, ...(cg.countdown ? { countdown: { ...cg.countdown, show: false } } : {}), ...(cg.district ? { district: { ...cg.district, show: false } } : {}), ...(cg.pr ? { pr: { ...cg.pr, show: false } } : {}) } });
     if (text.show) dispatch({ type: 'setCgText', patch: { show: false } });
   };
 
@@ -81,9 +81,10 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
     if (cg.district?.show) items.push({ label: 'Distrito', detail: districtName(cg.district.id), off: () => dispatch({ type: 'setCg', patch: { district: { ...cg.district!, show: false } } }) });
     if (cg.pr?.show) items.push({ label: 'Proporcional', detail: cg.pr.uf === 'auto' ? 'rodízio' : cg.pr.uf === 'BR' ? 'Haagar' : snap?.states[cg.pr.uf]?.name ?? cg.pr.uf, off: () => dispatch({ type: 'setCg', patch: { pr: { ...cg.pr!, show: false } } }) });
     if (cg.counting) items.push({ label: 'Apuração', detail: 'avanço por estado', off: () => dispatch({ type: 'setCg', patch: { counting: false } }) });
+    if (cg.countdown?.show) items.push({ label: 'Contagem das urnas', detail: cg.countdown.label?.trim() || 'fechamento da votação', off: () => dispatch({ type: 'setCountdown', show: false }) });
     if (text.show && text.headline.trim()) items.push({ label: 'Texto livre', detail: text.headline, off: () => dispatch({ type: 'setCgText', patch: { show: false } }) });
     return items;
-  }, [cg.majority, cg.district, cg.pr, cg.counting, text.show, text.headline, snap, dispatch]);
+  }, [cg.majority, cg.district, cg.pr, cg.counting, cg.countdown, text.show, text.headline, snap, dispatch]);
 
   const view = state.view;
   const viewLabel = view ? `${SCENES.find(s => s.id === view.scene)?.label ?? view.scene}${view.scene === 'estado' && view.uf ? ` · ${snap?.states[view.uf]?.name ?? view.uf}` : ''}${view.scene === 'distrito' && view.districtId ? ` · ${districtName(view.districtId)}` : ''}` : 'telão fechado';
@@ -233,6 +234,7 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
               ['distrito', 'Distrito', !!cg.district?.show],
               ['proporcional', 'Proporcional', !!cg.pr?.show],
               ['apuracao', 'Apuração', !!cg.counting],
+              ['contagem', 'Contagem', !!cg.countdown?.show],
               ['maioria', 'Maioria', !!cg.majority],
               ['texto', 'Texto livre', text.show && !!text.headline.trim()],
             ] as [CgTab, string, boolean][]).map(([id, label, live]) => (
@@ -246,6 +248,7 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
             {tab === 'distrito' && <CgDistrictSection state={state} dispatch={dispatch} snap={snap} />}
             {tab === 'proporcional' && <CgPrSection state={state} dispatch={dispatch} snap={snap} />}
             {tab === 'apuracao' && <CgCountingSection state={state} dispatch={dispatch} snap={snap} />}
+            {tab === 'contagem' && <CgCountdownSection state={state} dispatch={dispatch} />}
             {tab === 'maioria' && (
               <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4">
                 <MajorityToggle cg={cg} snap={snap} dispatch={dispatch} />
