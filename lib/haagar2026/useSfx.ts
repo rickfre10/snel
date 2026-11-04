@@ -58,7 +58,7 @@ export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
     }
     if (inRun.current) return;                   // uma vez só por fila
     inRun.current = true;
-    playClip(URNA, { fadeInS: 0.15, duckBg: true });
+    playClip(URNA, { fadeInS: 0.15 }); // por cima da trilha, sem abaixá-la
   }, [urgent, cfg]);
 }
 
@@ -84,7 +84,7 @@ export function useProjectionSound(snap: ElectionSnapshot | null, seed: number, 
     }
     const fresh = Array.from(now).some(f => !seen.current!.fronts.has(f));
     seen.current = { seed, progress: Math.max(seen.current.progress, snap.progress), fronts: now };
-    if (fresh) playClip(URNA, { fadeInS: 0.15, duckBg: true });
+    if (fresh) playClip(URNA, { fadeInS: 0.15 }); // por cima da trilha, sem abaixá-la
   }, [snap, seed, ready]);
 }
 

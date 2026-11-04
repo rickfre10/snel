@@ -597,7 +597,7 @@ export function AudioSection({ state, dispatch }: { state: ControlState; dispatc
       <VolumeSlider label="Volume dos efeitos" value={a.sfxVolume} onCommit={v => dispatch({ type: 'setAudio', patch: { sfxVolume: v } })} />
       <p className="text-[11px] text-white/50 mt-2">
         {hasBed
-          ? 'A trilha abaixa sozinha enquanto toca a urna, o plantão ou a vinheta.'
+          ? 'A trilha abaixa sozinha durante o plantão e a vinheta (a urna toca por cima, sem abaixar).'
           : 'Esta marca ainda não tem trilha/vinheta configurada: só o som da urna toca.'}{' '}
         O navegador só libera o som depois de um toque ou tecla na página do telão/CG.
       </p>
