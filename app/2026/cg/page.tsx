@@ -11,7 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
-import { useAudioBed, useQueueSound, useProjectionSound, useStingerSound } from '@/lib/haagar2026/useSfx';
+import { useAudioBed, useAudioCue, useQueueSound, useProjectionSound, useStingerSound } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
@@ -67,12 +67,14 @@ export default function Cg2026() {
   const districtOn = !majorityOn && !!cg.district?.show && !!snap?.districtById[cg.district.id];
   const prOn = !majorityOn && !districtOn && !!cg.pr?.show;
   const countingOn = !majorityOn && !districtOn && !prOn && !!cg.counting;
+  const countdownOn = !majorityOn && !districtOn && !prOn && !countingOn && !!cg.countdown?.show;
   const [lastDistrictId, setLastDistrictId] = useState<number | null>(null);
   useEffect(() => { if (cg.district?.id) setLastDistrictId(cg.district.id); }, [cg.district?.id]);
 
   // ---- Vinheta "ÚLTIMA HORA" em tela cheia (por cima de tudo, só quando o operador solta)
   const stinger = useStinger(state.stinger, clockOffset, ready);
   useStingerSound(stinger, brand.id);
+  useAudioCue(state.audioCue, clockOffset, ready, brand.id);
 
   const [fundo, setFundo] = useState('transparente');
   useEffect(() => {
@@ -127,10 +129,10 @@ export default function Cg2026() {
 
       {snap && (
         <>
-          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !prOn && !countingOn && !urgentOn} from="bottom">
+          <Slide show={cg.seats && !manualTextOn && !districtOn && !majorityOn && !prOn && !countingOn && !countdownOn && !urgentOn} from="bottom">
             <SeatsTarja snap={snap} brand={brand} count={cg.count} raised={cg.ticker} />
           </Slide>
-          <Slide show={manualTextOn && !districtOn && !majorityOn && !prOn && !countingOn && !urgentOn} from="bottom">
+          <Slide show={manualTextOn && !districtOn && !majorityOn && !prOn && !countingOn && !countdownOn && !urgentOn} from="bottom">
             <TextTarja text={text} brand={brand} raised={cg.ticker} />
           </Slide>
           <Slide show={districtOn && !urgentOn} from="bottom">
@@ -141,6 +143,9 @@ export default function Cg2026() {
           </Slide>
           <Slide show={countingOn && !urgentOn} from="bottom">
             <CountingTarja snap={snap} brand={brand} raised={cg.ticker} />
+          </Slide>
+          <Slide show={countdownOn && !urgentOn} from="bottom">
+            {cg.countdown && <CountdownTarja endsAt={cg.countdown.endsAt} label={cg.countdown.label} clockOffset={clockOffset} brand={brand} raised={cg.ticker} />}
           </Slide>
           <Slide show={majorityOn && !urgentOn} from="bottom">
             {lastMajority && (lastMajority.kind === 'minority'
@@ -468,6 +473,50 @@ function CandidateBox({ c, first, final, brand, ink, line, counted }: { c: Candi
         <div className={`${first ? 'text-[50px]' : 'text-[42px]'} font-black leading-none tabular-nums`}>{counted ? fmtPct(c.pct) : '—'}</div>
         <div className="text-[16px] font-semibold opacity-70 tabular-nums mt-1">{counted ? `${fmtInt(c.votes)} votos` : ' '}</div>
       </div>
+    </div>
+  );
+}
+
+// ------------------------------------ Tarja da contagem das urnas -------
+const pad2 = (n: number) => String(n).padStart(2, '0');
+function fmtCountdown(sec: number) {
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return h > 0 ? `${h}:${pad2(m)}:${pad2(s)}` : `${pad2(m)}:${pad2(s)}`;
+}
+
+/** Contagem regressiva para o fechamento das urnas (o operador define no controle). */
+function CountdownTarja({ endsAt, label, clockOffset, brand, raised }: { endsAt: number; label?: string; clockOffset: number; brand: typeof BRANDS.smartv; raised: boolean }) {
+  const [now, setNow] = useState(() => Date.now() + clockOffset);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now() + clockOffset), 250);
+    return () => clearInterval(id);
+  }, [clockOffset]);
+  const left = Math.max(0, Math.ceil((endsAt - now) / 1000));
+  const closed = left <= 0;
+  const ink = tarjaInk(brand);
+  const line = brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.18)';
+  const l1 = caseOf(brand, 'Urnas');
+  const l2 = caseOf(brand, closed ? 'fechadas' : 'fecham em');
+  const text = fmtCountdown(left);
+  const sub = label?.trim() || (closed ? 'Votação encerrada em Haagar' : 'Encerramento da votação em Haagar');
+  return (
+    <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
+      style={{ bottom: raised ? 138 : 68, background: tarjaBg(brand), boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+      <div className="w-[310px] shrink-0 flex flex-col justify-center pl-8 pr-4"
+        style={{ background: blockBg(brand), color: brand.cgPaper ? 'rgb(var(--tv-accent))' : '#ffffff' }}>
+        <span className={`text-[24px] leading-none ${brand.cgPaper ? 'text-tv-ink font-bold' : 'opacity-85 font-normal'}`}>{l1}</span>
+        <span className={`mt-1.5 whitespace-nowrap leading-[1.05] ${brand.cgBlockFade ? 'font-medium' : 'font-extrabold'}`} style={{ fontSize: fitSize(l2, 262, 50) }}>{l2}</span>
+      </div>
+      {brand.cgPaper && <div className="w-[3px] my-6 shrink-0 rounded-full bg-tv-accent" />}
+      <div className="flex-1 min-w-0 flex items-center justify-center gap-10 px-8" style={{ color: ink }}>
+        <div className="font-black leading-none tabular-nums whitespace-nowrap" style={{ fontSize: 108, letterSpacing: '-0.02em' }}>{text}</div>
+        <div className="w-px self-stretch my-8" style={{ background: line }} />
+        <div className="min-w-0 max-w-[420px]">
+          <div className="text-[30px] font-extrabold leading-tight">{sub}</div>
+          {!closed && <div className="text-[18px] font-semibold opacity-75 mt-1">{left >= 3600 ? 'horas : minutos : segundos' : 'minutos : segundos'}</div>}
+        </div>
+      </div>
+      {brand.cgPaper && <PillStrip />}
     </div>
   );
 }

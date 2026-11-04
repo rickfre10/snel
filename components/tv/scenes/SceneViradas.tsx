@@ -6,7 +6,7 @@ import { FRONT_ORDER, frontColor, textOn } from '@/lib/haagar/rules';
 import { Chip, Panel, fmtPct, GAIN, LOSS } from '../ui';
 
 type Tab = 'confirmadas' | 'andamento';
-const PAGE = 15; // 3 colunas × 5 linhas
+const PAGE = 12; // 3 colunas × 4 linhas
 
 export default function SceneViradas({ snap, onDistrict }: { snap: ElectionSnapshot; onDistrict: (id: number) => void }) {
   const finals = snap.districts.filter(d => d.isFinal && d.leader && d.prev.front);

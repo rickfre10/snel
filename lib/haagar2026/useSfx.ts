@@ -9,12 +9,12 @@
 //  • trilha de fundo em loop, ligada e com volume pelo painel (por canal).
 import { useEffect, useRef, useState } from 'react';
 import type { BrandId } from '@/lib/brand';
-import type { AudioSettings } from './control';
+import type { AudioCue, AudioSettings } from './control';
 import { DEFAULT_AUDIO } from './control';
 import type { ElectionSnapshot } from './model';
 import { MAJORITY } from '@/lib/haagar/rules';
 import { BRAND_AUDIO, URNA } from './audio';
-import { audioRunning, initAudio, onAudioState, playClip, preload, setVolumes, startBg, stopBg } from './sfx';
+import { audioRunning, initAudio, onAudioState, playClip, preload, setVolumes, startBg, stopBg, stopClips } from './sfx';
 import { useBreaking, type Breaking } from './useBreaking';
 
 export type Channel = 'telao' | 'cg';
@@ -53,12 +53,12 @@ export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
     if (!breaking && urgent.kind !== 'result') return;
     if (breaking && cfg) {                       // plantão: trecho de breaking da marca
       inRun.current = true;
-      playClip(cfg.breaking, { fadeOutS: cfg.fadeOutS, duckBg: true });
+      playClip(cfg.breaking, { fadeOutS: cfg.breakingFadeS, duckBg: true, releaseS: 4 }); // trilha volta com fade-in longo
       return;
     }
     if (inRun.current) return;                   // uma vez só por fila
     inRun.current = true;
-    playClip(URNA, { duckBg: true });
+    playClip(URNA, { fadeInS: 0.15 }); // por cima da trilha, sem abaixá-la
   }, [urgent, cfg]);
 }
 
@@ -67,8 +67,21 @@ export function useStingerSound(stingerKey: number | null, brand: BrandId) {
   const cfg = BRAND_AUDIO[brand];
   useEffect(() => {
     if (stingerKey === null || !cfg) return;
-    playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true });
+    playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true, releaseS: 3 });
   }, [stingerKey]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** Música da vinheta solta à mão pelo operador (botão "Tocar vinheta"), ou parada com fade. */
+export function useAudioCue(cue: AudioCue | undefined, clockOffset: number, ready: boolean, brand: BrandId) {
+  const cfg = BRAND_AUDIO[brand];
+  const lastRev = useRef<number | null>(null);
+  useEffect(() => {
+    if (!ready || !cue || cue.rev === lastRev.current) return;
+    lastRev.current = cue.rev;
+    if (Date.now() + clockOffset - cue.at > 3000) return;   // disparo velho (tela aberta depois): não toca
+    if (cue.kind === 'stop') stopClips(1.5);
+    else if (cfg) playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true, releaseS: 3 });
+  }, [cue?.rev, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /** Toca a urna quando uma frente passa a PROJETAR maioria (ainda sem confirmar). */
@@ -84,15 +97,16 @@ export function useProjectionSound(snap: ElectionSnapshot | null, seed: number, 
     }
     const fresh = Array.from(now).some(f => !seen.current!.fronts.has(f));
     seen.current = { seed, progress: Math.max(seen.current.progress, snap.progress), fronts: now };
-    if (fresh) playClip(URNA, { duckBg: true });
+    if (fresh) playClip(URNA, { fadeInS: 0.15 }); // por cima da trilha, sem abaixá-la
   }, [snap, seed, ready]);
 }
 
 /** Telão: mesma regra do CG, com fila própria só para o som. */
-export function useTelaoSounds(snap: ElectionSnapshot | null, seed: number, ready: boolean, brand: BrandId, audio: AudioSettings | undefined, stingerKey: number | null) {
+export function useTelaoSounds(snap: ElectionSnapshot | null, seed: number, ready: boolean, brand: BrandId, audio: AudioSettings | undefined, stingerKey: number | null, cue: AudioCue | undefined, clockOffset: number) {
   const queue = useBreaking(snap, seed, { results: true, ready });
   useAudioBed('telao', brand, audio);
   useQueueSound(queue, brand);
   useStingerSound(stingerKey, brand);
+  useAudioCue(cue, clockOffset, ready, brand);
   useProjectionSound(snap, seed, ready);
 }

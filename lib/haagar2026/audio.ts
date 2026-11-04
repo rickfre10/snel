@@ -10,7 +10,8 @@ export interface BrandAudio {
   stinger: Clip;      // vinheta de última hora em tela cheia (disparada pelo operador)
   breaking: Clip;     // plantão automático (virada / maioria)
   bg: Clip;           // trilha de fundo em loop
-  fadeOutS: number;   // fade no último trecho da vinheta e do plantão
+  fadeOutS: number;   // fade no fim da vinheta de última hora
+  breakingFadeS: number; // fade no fim do plantão (maior, para a saída ficar suave)
 }
 
 export const BRAND_AUDIO: Partial<Record<BrandId, BrandAudio>> = {
@@ -19,6 +20,7 @@ export const BRAND_AUDIO: Partial<Record<BrandId, BrandAudio>> = {
     breaking: { src: '/audio/smartv.mp3', from: 6, to: 11 },
     bg: { src: '/audio/smartv.mp3', from: 12, to: 50 },
     fadeOutS: 1,
+    breakingFadeS: 2.5,
   },
   // snews.mp3 tem ~25 min (decodificar inteiro custaria ~570 MB de memória no
   // navegador), então os trechos foram cortados em arquivos próprios:
@@ -28,6 +30,7 @@ export const BRAND_AUDIO: Partial<Record<BrandId, BrandAudio>> = {
     breaking: { src: '/audio/snews-breaking.mp3', from: 0, to: 12 },
     bg: { src: '/audio/snews-bg.mp3', from: 0, to: 173 },
     fadeOutS: 1,
+    breakingFadeS: 3,
   },
 };
 
