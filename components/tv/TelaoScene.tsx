@@ -39,7 +39,7 @@ export default function TelaoScene({ brand, snap, scene, uf, districtId, onScene
     { id: 'pendulo', label: caseOf(brand, 'Pêndulo') },
     { id: 'estado', label: caseOf(brand, 'Estados') },
     { id: 'viradas', label: caseOf(brand, 'Viradas') },
-    { id: 'comparativo', label: '2022 × 2026' },
+    { id: 'comparativo', label: '22 × 26' },
     ...(scene === 'distrito' && snap ? [{ id: 'distrito', label: snap.districtById[districtId]?.name ?? 'Distrito' }] : []),
   ].map(n => ({ ...n, active: scene === n.id, onClick: () => onScene(n.id as SceneId) }));
 

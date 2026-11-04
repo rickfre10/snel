@@ -83,9 +83,35 @@ interface HexMapProps {
   onSelect?: (id: number) => void;
   showLabels?: boolean;
   className?: string;
+  /** Mapa de setas: uma seta por distrito (direita = alta, esquerda = queda), tamanho ∝ |valor|. */
+  arrows?: Record<number, ArrowSpec>;
 }
 
-export default function HexMap({ districts, mode = 'resultado', swingFront = 'TDS', uf = null, selectedId = null, onSelect, showLabels = false, className = '' }: HexMapProps) {
+export interface ArrowSpec { value: number; color: string; label?: string }
+
+/** Escala fixa: cada ponto percentual = 230 unidades do mapa (um hexágono ≈ 1850). */
+export const ARROW_PER_PP = 230;
+const ARROW_ANGLE = 24 * Math.PI / 180;
+
+function Arrow({ cx, cy, spec, scale }: { cx: number; cy: number; spec: ArrowSpec; scale: number }) {
+  const len = Math.max(180, Math.abs(spec.value) * scale);
+  const dir = spec.value >= 0 ? 1 : -1;
+  const dx = Math.cos(ARROW_ANGLE) * len * dir;
+  const dy = -Math.sin(ARROW_ANGLE) * len;
+  const x2 = cx + dx, y2 = cy + dy;
+  const ux = dx / len, uy = dy / len;              // direção unitária
+  const head = 240, wing = 120;
+  const bx = x2 - ux * head, by = y2 - uy * head;  // base da ponta
+  const px = -uy * wing, py = ux * wing;           // perpendicular
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      <line x1={cx} y1={cy} x2={bx} y2={by} stroke={spec.color} strokeWidth={62} strokeLinecap="round" />
+      <polygon points={`${x2},${y2} ${bx + px},${by + py} ${bx - px},${by - py}`} fill={spec.color} />
+    </g>
+  );
+}
+
+export default function HexMap({ districts, mode = 'resultado', swingFront = 'TDS', uf = null, selectedId = null, onSelect, showLabels = false, className = '', arrows }: HexMapProps) {
   const [hover, setHover] = useState<{ id: number; x: number; y: number; w: number; h: number } | null>(null);
 
   const visible = useMemo(() => (uf ? HEXES.filter(h => ufOf(h.id) === uf) : HEXES), [uf]);
@@ -97,6 +123,7 @@ export default function HexMap({ districts, mode = 'resultado', swingFront = 'TD
   }, [visible, uf]);
 
   const hovered = hover ? districts[hover.id] : undefined;
+  const arrowScale = ARROW_PER_PP;
 
   return (
     <div className={`relative w-full h-full ${className}`} onMouseLeave={() => setHover(null)}>
@@ -113,7 +140,10 @@ export default function HexMap({ districts, mode = 'resultado', swingFront = 'TD
         ))}
         {visible.map(h => {
           const d = districts[h.id];
-          const { fill, opacity } = fillFor(d, mode, swingFront);
+          // no mapa de setas os hexágonos ficam apagados para as setas aparecerem
+          const { fill, opacity } = arrows
+            ? { fill: NEUTRAL, opacity: 0.75 }
+            : fillFor(d, mode, swingFront);
           const isSel = selectedId === h.id;
           return (
             <g key={h.id}
@@ -129,7 +159,7 @@ export default function HexMap({ districts, mode = 'resultado', swingFront = 'TD
               <path d={h.d} fill={fill} fillOpacity={opacity}
                 stroke="rgb(var(--tv-bg))" strokeWidth={90} strokeLinejoin="round"
                 style={{ transition: 'fill 600ms ease, fill-opacity 600ms ease' }} />
-              {mode === 'resultado' && d?.flipped && (
+              {!arrows && mode === 'resultado' && d?.flipped && (
                 <circle cx={h.cx} cy={h.cy} r={150} fill="rgb(var(--tv-text))" opacity={0.95} />
               )}
               {isSel && <path d={h.d} fill="none" stroke="rgb(var(--tv-text))" strokeWidth={110} strokeLinejoin="round" filter="url(#hexGlow)" />}
@@ -148,6 +178,11 @@ export default function HexMap({ districts, mode = 'resultado', swingFront = 'TD
         {STATE_OUTLINES.filter(s => !uf || s.uf === uf).map(s => (
           <path key={`ol-${s.uf}`} d={s.d} fill="none" stroke="rgb(var(--tv-text))" strokeOpacity={0.55} strokeWidth={45} strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
         ))}
+        {/* Setas por cima de tudo (as menores primeiro, as maiores ficam visíveis) */}
+        {arrows && visible
+          .filter(h => arrows[h.id])
+          .sort((a, b) => Math.abs(arrows[a.id].value) - Math.abs(arrows[b.id].value))
+          .map(h => <Arrow key={`ar-${h.id}`} cx={h.cx} cy={h.cy} spec={arrows[h.id]} scale={arrowScale} />)}
       </svg>
 
       {hovered && hover && (
@@ -164,7 +199,12 @@ export default function HexMap({ districts, mode = 'resultado', swingFront = 'TD
           <div className="mt-3 grid grid-cols-2 gap-2 text-[14px]">
             <div><div className="text-tv-muted">Apurado</div><div className="font-bold">{fmtPct(hovered.reported)}</div></div>
             <div><div className="text-tv-muted">2022</div><div className="flex items-center gap-1.5"><FrontPill legend={hovered.prev.front} size="sm" /></div></div>
-            {mode === 'swing' && hovered.leader && (
+            {arrows?.[hovered.id] && (
+              <div className="col-span-2"><span className="text-tv-muted">{arrows[hovered.id].label ?? 'Variação'}: </span>
+                <Delta value={arrows[hovered.id].value} />
+              </div>
+            )}
+            {!arrows && mode === 'swing' && hovered.leader && (
               <div className="col-span-2"><span className="text-tv-muted">{frontName(swingFront)}: </span>
                 <Delta value={(hovered.shares[swingFront] ?? 0) - (hovered.prev.shares[swingFront] ?? 0)} />
               </div>
