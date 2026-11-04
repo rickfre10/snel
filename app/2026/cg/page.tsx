@@ -235,8 +235,11 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
   // Ordem por cadeiras (maior primeiro); empate segue a ordem fixa das frentes.
   const fronts = FRONT_ORDER.map(f => snap.frontByLegend[f]).filter(Boolean)
     .sort((a, b) => value(b) - value(a) || FRONT_ORDER.indexOf(a.legend) - FRONT_ORDER.indexOf(b.legend));
-  const leader = fronts[0];
-  const majorityReached = leader && value(leader) >= MAJORITY;
+  // Maioria: confirmada (já eleitos) ou só projetada (eleitos + liderando + proporcional), em qualquer modo de contagem
+  const confirmedMaj = snap.fronts.find(f => f.confirmed >= MAJORITY);
+  const projectedMaj = confirmedMaj ? null : snap.fronts.find(f => f.projected >= MAJORITY);
+  const majFront = (confirmedMaj ?? projectedMaj)?.legend ?? null;
+  const majColor = majFront ? frontColor(majFront) : null;
 
   return (
     <div className="absolute left-[104px] right-[104px] h-[176px] flex rounded-[26px] overflow-hidden transition-[bottom] duration-500"
@@ -268,9 +271,13 @@ function SeatsTarja({ snap, brand, count, raised }: { snap: ElectionSnapshot; br
         <div className="mt-2 h-2.5 rounded-full overflow-hidden" style={{ background: brand.cgPaper ? 'rgb(var(--tv-ink) / 0.15)' : 'rgba(255,255,255,0.2)' }}>
           <div className="h-full rounded-full transition-[width] duration-1000" style={{ width: `${snap.reported}%`, background: brand.cgPaper ? 'rgb(var(--tv-accent))' : 'rgb(var(--tv-accent2))' }} />
         </div>
-        <div className="text-[16px] font-semibold mt-1.5 opacity-85">
-          {majorityReached ? `${leader.legend} ${count === 'projecao' ? 'projeta maioria' : 'tem maioria'}` : `${fmtPct(snap.reported)} apurado`}
-        </div>
+        <div className="text-[16px] font-semibold mt-1.5 opacity-85">{fmtPct(snap.reported)} apurado</div>
+        {majFront && majColor && (
+          <div className="mt-1.5 self-start inline-flex items-center gap-1.5 rounded-[8px] px-2 py-[3px] text-[13px] font-black uppercase tracking-wide leading-none whitespace-nowrap"
+            style={{ background: majColor, color: textOn(majColor) }}>
+            <span>✓</span><span>{majFront} {confirmedMaj ? 'tem maioria' : 'projeta maioria'}</span>
+          </div>
+        )}
       </div>
       {brand.cgPaper && <PillStrip />}
     </div>
