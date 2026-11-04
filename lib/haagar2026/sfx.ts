@@ -55,7 +55,7 @@ function duck(on: boolean, releaseS = 1.5) {
 }
 
 /** Toca [from, to] segundos de `src`, com fade no último `fadeOutS`. */
-export function playClip({ src, from, to }: Clip, opts: { fadeOutS?: number; duckBg?: boolean; releaseS?: number } = {}) {
+export function playClip({ src, from, to }: Clip, opts: { fadeInS?: number; fadeOutS?: number; duckBg?: boolean; releaseS?: number } = {}) {
   const c = ensure();
   if (!c || c.state !== 'running') return;   // sem gesto ainda: não enfileira som velho
   load(src).then(buf => {
@@ -66,7 +66,8 @@ export function playClip({ src, from, to }: Clip, opts: { fadeOutS?: number; duc
     s.connect(g); g.connect(sfxVol);
     const t0 = c.currentTime + 0.02;
     const fade = Math.min(opts.fadeOutS ?? 0, dur);
-    g.gain.setValueAtTime(1, t0);
+    const fin = Math.min(opts.fadeInS ?? 0, dur / 2);
+    if (fin > 0) { g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(1, t0 + fin); } else g.gain.setValueAtTime(1, t0);
     if (fade > 0) { g.gain.setValueAtTime(1, t0 + dur - fade); g.gain.setValueCurveAtTime(curve(false), t0 + dur - fade, fade); } // curva suave (cosseno)
     s.start(t0, from, dur);
     if (opts.duckBg) { duck(true); s.onended = () => duck(false, opts.releaseS); }
