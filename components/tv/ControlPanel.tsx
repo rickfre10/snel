@@ -552,12 +552,13 @@ export function PlaceInput({ value, onSave }: { value: string; onSave: (v: strin
   const save = () => { setEditing(false); if (draft !== value) onSave(draft.trim()); };
   return (
     <div className="mt-2">
-      <div className="text-[11px] text-white/50 mb-1">Selo acima do &quot;AO VIVO&quot; (SmartvNews) — vazio = &quot;Haagar · Eleições 2026&quot;</div>
+      <div className="text-[11px] text-white/50 mb-1">Selo de local acima do &quot;AO VIVO&quot; (SmartvNews) — vazio = só o &quot;AO VIVO&quot;</div>
       <div className="flex gap-2">
         <input value={draft} onChange={e => { setEditing(true); setDraft(e.target.value); }} onBlur={save}
           onKeyDown={e => { if (e.key === 'Enter') save(); }} maxLength={40} placeholder="Ex.: São Pedro, MA"
           className="flex-1 min-w-0 h-10 rounded-lg bg-black/40 border border-white/15 px-3" />
         <Btn onClick={save}>Aplicar</Btn>
+        {value && <Btn onClick={() => { setEditing(false); setDraft(''); onSave(''); }}>Tirar</Btn>}
       </div>
     </div>
   );

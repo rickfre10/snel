@@ -92,11 +92,14 @@ export default function Cg2026() {
           )}
         </TvFrame>
       )}
-      {/* Selo de local + AO VIVO no canto superior esquerdo (News); texto editável no controle */}
+      {/* AO VIVO no canto superior esquerdo (News); o selo de local (azul) acima dele
+          só aparece quando o operador escreve um local no controle */}
       {brand.cgPlaceBadge && (
         <Slide show={cg.bug} from="top">
           <div className="absolute left-[104px] top-[84px] flex flex-col items-start gap-1.5" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))' }}>
-            <span className="rounded-[10px] bg-tv-accent2 text-white px-3 py-1 text-[30px] font-extrabold leading-tight uppercase">{cg.place?.trim() || 'Haagar · Eleições 2026'}</span>
+            {!!cg.place?.trim() && (
+              <span className="rounded-[10px] bg-tv-accent2 text-white px-3 py-1 text-[30px] font-extrabold leading-tight uppercase">{cg.place.trim()}</span>
+            )}
             <span className="rounded-[8px] bg-tv-tarja text-white px-2.5 py-0.5 text-[19px] font-bold leading-tight uppercase">Ao vivo</span>
           </div>
         </Slide>
