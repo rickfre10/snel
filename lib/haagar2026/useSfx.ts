@@ -12,7 +12,6 @@ import type { BrandId } from '@/lib/brand';
 import type { AudioCue, AudioSettings } from './control';
 import { DEFAULT_AUDIO } from './control';
 import type { ElectionSnapshot } from './model';
-import { MAJORITY } from '@/lib/haagar/rules';
 import { BRAND_AUDIO, URNA } from './audio';
 import { audioRunning, initAudio, onAudioState, playClip, preload, setVolumes, startBg, stopBg, stopClips } from './sfx';
 import { useBreaking, type Breaking } from './useBreaking';
@@ -49,11 +48,13 @@ export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
     if (!urgent) { inRun.current = false; lastId.current = null; return; } // fila saiu: a próxima é nova
     if (urgent.id === lastId.current) return;
     lastId.current = urgent.id;
-    const breaking = urgent.kind === 'flip' || urgent.kind === 'majority';
+    // Maioria / projeção de maioria: a vinheta em tela cheia (com a música da vinheta) já toca antes — aqui fica quieto
+    if ((urgent.kind === 'majority' || urgent.kind === 'projection') && cfg) return;
+    const breaking = urgent.kind === 'flip' || urgent.kind === 'majority' || urgent.kind === 'projection';
     if (!breaking && urgent.kind !== 'result') return;
-    if (breaking && cfg) {                       // plantão: trecho de breaking da marca
+    if (urgent.kind === 'flip' && cfg) {                       // plantão: trecho de breaking da marca
       inRun.current = true;
-      playClip(cfg.breaking, { fadeOutS: cfg.breakingFadeS, duckBg: true, releaseS: 4 }); // trilha volta com fade-in longo
+      playClip(cfg.breaking, { fadeInS: cfg.breakingFadeInS, fadeOutS: cfg.breakingFadeS, duckBg: true, releaseS: 4 }); // trilha volta com fade-in longo
       return;
     }
     if (inRun.current) return;                   // uma vez só por fila
@@ -84,23 +85,6 @@ export function useAudioCue(cue: AudioCue | undefined, clockOffset: number, read
   }, [cue?.rev, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
-/** Toca a urna quando uma frente passa a PROJETAR maioria (ainda sem confirmar). */
-export function useProjectionSound(snap: ElectionSnapshot | null, seed: number, ready = true) {
-  const seen = useRef<{ seed: number; progress: number; fronts: Set<string> } | null>(null);
-  useEffect(() => {
-    if (!snap || !ready) return;
-    const now = new Set(snap.fronts.filter(f => f.projected >= MAJORITY && f.confirmed < MAJORITY).map(f => f.legend));
-    // primeira leitura, novo cenário ou volta no tempo: só memoriza
-    if (!seen.current || seen.current.seed !== seed || snap.progress < seen.current.progress - 1) {
-      seen.current = { seed, progress: snap.progress, fronts: now };
-      return;
-    }
-    const fresh = Array.from(now).some(f => !seen.current!.fronts.has(f));
-    seen.current = { seed, progress: Math.max(seen.current.progress, snap.progress), fronts: now };
-    if (fresh) playClip(URNA, { fadeInS: 0.15 }); // por cima da trilha, sem abaixá-la
-  }, [snap, seed, ready]);
-}
-
 /** Telão: mesma regra do CG, com fila própria só para o som. */
 export function useTelaoSounds(snap: ElectionSnapshot | null, seed: number, ready: boolean, brand: BrandId, audio: AudioSettings | undefined, stingerKey: number | null, cue: AudioCue | undefined, clockOffset: number) {
   const queue = useBreaking(snap, seed, { results: true, ready });
@@ -108,5 +92,4 @@ export function useTelaoSounds(snap: ElectionSnapshot | null, seed: number, read
   useQueueSound(queue, brand);
   useStingerSound(stingerKey, brand);
   useAudioCue(cue, clockOffset, ready, brand);
-  useProjectionSound(snap, seed, ready);
 }

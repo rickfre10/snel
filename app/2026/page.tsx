@@ -19,7 +19,7 @@ import { useTelaoSounds } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import IdleScreen from '@/components/tv/IdleScreen';
 import TelaoScene from '@/components/tv/TelaoScene';
-import BreakingStinger, { useStinger } from '@/components/tv/BreakingStinger';
+import BreakingStinger, { useLocalStinger, useStinger } from '@/components/tv/BreakingStinger';
 
 const ROTATE_MS = 15000;
 
@@ -96,9 +96,10 @@ export default function Telao2026() {
   }, []);
 
   // ---- Última hora: viradas confirmadas e maioria
-  const breaking = useBreaking(snap, state.seed, { ready: el.ready });
+  const [localStinger, fireStinger] = useLocalStinger();   // vinheta automática antes da maioria / projeção
+  const breaking = useBreaking(snap, state.seed, { ready: el.ready, preStinger: { fire: fireStinger } });
   // ---- Vinheta "ÚLTIMA HORA" (disparada pelo operador)
-  const stinger = useStinger(state.stinger, el.clockOffset, el.ready);
+  const stinger = useStinger(state.stinger, el.clockOffset, el.ready) ?? localStinger;
   // ---- Sons: urna, plantão, vinheta e trilha de fundo
   useTelaoSounds(snap, state.seed, el.ready, state.brand, state.audio, stinger, state.audioCue, el.clockOffset);
   const tickerItems = useMemo(() => (snap ? buildTicker(snap) : []), [snap]);
