@@ -63,7 +63,7 @@ export default function TelaoScene({ brand, snap, scene, uf, districtId, onScene
             {scene === 'estado' && <SceneEstado snap={snap} uf={uf} onUf={onUf} onDistrict={onDistrict} />}
             {scene === 'distrito' && <SceneDistrito snap={snap} districtId={districtId} onDistrict={onDistrict} onUf={openUf} />}
             {scene === 'viradas' && <SceneViradas snap={snap} onDistrict={onDistrict} />}
-            {scene === 'comparativo' && <SceneComparativo snap={snap} onDistrict={onDistrict} />}
+            {scene === 'comparativo' && <SceneComparativo snap={snap} onDistrict={onDistrict} brandId={brand.id} />}
           </div>
         )}
       </main>
