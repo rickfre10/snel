@@ -53,7 +53,7 @@ export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
     if (!breaking && urgent.kind !== 'result') return;
     if (breaking && cfg) {                       // plantão: trecho de breaking da marca
       inRun.current = true;
-      playClip(cfg.breaking, { fadeOutS: cfg.breakingFadeS, duckBg: true, releaseS: 4 }); // trilha volta com fade-in longo
+      playClip(cfg.breaking, { fadeInS: cfg.breakingFadeInS, fadeOutS: cfg.breakingFadeS, duckBg: true, releaseS: 4 }); // trilha volta com fade-in longo
       return;
     }
     if (inRun.current) return;                   // uma vez só por fila
