@@ -66,6 +66,7 @@ export interface CgVisibility {
   seats: boolean;    // caixas de cadeiras por frente
   ticker: boolean;   // faixa de distritos
   bug: boolean;      // logo da emissora no topo
+  tv?: boolean;      // telão (TV) visível no CG com fundo=telao; false = sobe e sai da tela (padrão: visível)
   count: 'confirmadas' | 'projecao';
   breaking?: boolean; // plantão automático de última hora (viradas, maioria)
   place?: string;     // texto do selo acima do "AO VIVO" (ex.: "São Pedro, MA")

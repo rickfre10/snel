@@ -221,10 +221,11 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
           <div className="mt-3"><CgLibrary state={state} dispatch={dispatch} snap={snap} shortcuts /></div>
 
           {/* Peças fixas */}
-          <div className="grid grid-cols-5 gap-2 mt-3">
+          <div className="grid grid-cols-3 gap-2 mt-3">
             <Toggle on={cg.seats} onClick={() => dispatch({ type: 'setCg', patch: { seats: !cg.seats } })}>Cadeiras</Toggle>
             <Toggle on={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa</Toggle>
             <Toggle on={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Logo</Toggle>
+            <Toggle on={cg.tv !== false} onClick={() => dispatch({ type: 'setCg', patch: { tv: cg.tv === false } })}>Telão</Toggle>
             <Toggle on={cg.count === 'confirmadas'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'confirmadas' } })}>Eleitos</Toggle>
             <Toggle on={cg.count === 'projecao'} onClick={() => dispatch({ type: 'setCg', patch: { count: 'projecao' } })}>Projeção</Toggle>
           </div>
