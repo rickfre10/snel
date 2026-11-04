@@ -35,8 +35,11 @@ const BACKGROUNDS: Record<string, string> = {
   telao: 'telao',
 };
 
-/** Fundo do telão no CG da SmartvNews: o estúdio (a TV entra por cima). */
-const STUDIO_NEWS = "#0b1b3a url('/brand/studio-snews.jpg') center / cover no-repeat";
+/** Fundo do telão no CG: o estúdio de cada marca (a TV entra por cima). */
+const STUDIO: Partial<Record<string, string>> = {
+  smartv: "#1a0a0a url('/brand/studio-smartv.jpg') center / cover no-repeat",
+  smartvnews: "#0b1b3a url('/brand/studio-snews.jpg') center / cover no-repeat",
+};
 
 export default function Cg2026() {
   const { state, snapshot: snap, ready, clockOffset } = useElection2026();
@@ -92,7 +95,7 @@ export default function Cg2026() {
   const manualDistrict = lastDistrictId ? snap?.districtById[lastDistrictId] : null;
 
   return (
-    <Stage brand={brand} background={fundo === 'telao' ? (brand.id === 'smartvnews' ? STUDIO_NEWS : undefined) : BACKGROUNDS[fundo]}>
+    <Stage brand={brand} background={fundo === 'telao' ? STUDIO[brand.id] : BACKGROUNDS[fundo]}>
       {fundo === 'telao' && (
         <TvFrame>
           {state.view?.scene === 'idle' ? <IdleScreen brand={brand} /> : (
