@@ -54,7 +54,7 @@ function duck(on: boolean) {
 }
 
 /** Toca [from, to] segundos de `src`, com fade no último `fadeOutS`. */
-export function playClip(src: string, [from, to]: Clip, opts: { fadeOutS?: number; duckBg?: boolean } = {}) {
+export function playClip({ src, from, to }: Clip, opts: { fadeOutS?: number; duckBg?: boolean } = {}) {
   const c = ensure();
   if (!c || c.state !== 'running') return;   // sem gesto ainda: não enfileira som velho
   load(src).then(buf => {
@@ -73,7 +73,7 @@ export function playClip(src: string, [from, to]: Clip, opts: { fadeOutS?: numbe
 }
 
 /** Liga a trilha de fundo em loop (sem emenda) no trecho [from, to]. */
-export function startBg(src: string, [from, to]: Clip) {
+export function startBg({ src, from, to }: Clip) {
   const c = ensure();
   if (!c || c.state !== 'running') return;
   if (bg && bg.src === src && bg.from === from && bg.to === to) return;

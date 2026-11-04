@@ -30,11 +30,11 @@ export function useAudioBed(channel: Channel, brand: BrandId, audio: AudioSettin
     preload(URNA.src);
     return onAudioState(() => setRunning(audioRunning()));
   }, []);
-  useEffect(() => { if (cfg) preload(cfg.src); }, [cfg]);
+  useEffect(() => { if (cfg) [cfg.bg, cfg.breaking, cfg.stinger].forEach(c => preload(c.src)); }, [cfg]);
   useEffect(() => { setVolumes({ bg: a.bgVolume, sfx: a.sfxVolume }); }, [a.bgVolume, a.sfxVolume]);
   const on = channel === 'telao' ? a.bgTelao : a.bgCg;
   useEffect(() => {
-    if (on && cfg && running) startBg(cfg.src, cfg.bg);
+    if (on && cfg && running) startBg(cfg.bg);
     else stopBg();
     return () => stopBg(0.3);
   }, [on, cfg, running]);
@@ -53,12 +53,12 @@ export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
     if (!breaking && urgent.kind !== 'result') return;
     if (breaking && cfg) {                       // plantão: trecho de breaking da marca
       inRun.current = true;
-      playClip(cfg.src, cfg.breaking, { fadeOutS: cfg.fadeOutS, duckBg: true });
+      playClip(cfg.breaking, { fadeOutS: cfg.fadeOutS, duckBg: true });
       return;
     }
     if (inRun.current) return;                   // uma vez só por fila
     inRun.current = true;
-    playClip(URNA.src, URNA.clip, { duckBg: true });
+    playClip(URNA, { duckBg: true });
   }, [urgent, cfg]);
 }
 
@@ -67,7 +67,7 @@ export function useStingerSound(stingerKey: number | null, brand: BrandId) {
   const cfg = BRAND_AUDIO[brand];
   useEffect(() => {
     if (stingerKey === null || !cfg) return;
-    playClip(cfg.src, cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true });
+    playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true });
   }, [stingerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
@@ -84,7 +84,7 @@ export function useProjectionSound(snap: ElectionSnapshot | null, seed: number, 
     }
     const fresh = Array.from(now).some(f => !seen.current!.fronts.has(f));
     seen.current = { seed, progress: Math.max(seen.current.progress, snap.progress), fronts: now };
-    if (fresh) playClip(URNA.src, URNA.clip, { duckBg: true });
+    if (fresh) playClip(URNA, { duckBg: true });
   }, [snap, seed, ready]);
 }
 
