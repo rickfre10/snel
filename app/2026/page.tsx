@@ -15,6 +15,7 @@ import { Stage, Ticker, LowerThird } from '@/components/tv/TvChrome';
 import { fmtPct } from '@/components/tv/ui';
 import ControlPanel from '@/components/tv/ControlPanel';
 import { useBreaking } from '@/lib/haagar2026/useBreaking';
+import { useTelaoSounds } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import IdleScreen from '@/components/tv/IdleScreen';
 import TelaoScene from '@/components/tv/TelaoScene';
@@ -96,6 +97,8 @@ export default function Telao2026() {
 
   // ---- Última hora: viradas confirmadas e maioria
   const breaking = useBreaking(snap, state.seed, { ready: el.ready });
+  // ---- Som da urna: fila de cadeiras decididas e projeção de maioria
+  useTelaoSounds(snap, state.seed, el.ready);
   // ---- Vinheta "ÚLTIMA HORA" (disparada pelo operador)
   const stinger = useStinger(state.stinger, el.clockOffset, el.ready);
   const tickerItems = useMemo(() => (snap ? buildTicker(snap) : []), [snap]);

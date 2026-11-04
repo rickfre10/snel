@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
+import { useQueueSound, useProjectionSound } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
@@ -48,6 +49,9 @@ export default function Cg2026() {
     results: autoResults, ready, skipRev: cg.queueSkip ?? 0, clearRev: cg.queueClear ?? 0,
   });
   const urgentOn = !!urgent && (urgent.kind === 'result' ? autoResults : !!cg.breaking);
+  // Som da urna: uma vez quando a fila de cadeiras decididas começa
+  useQueueSound(urgentOn ? urgent : null);
+  useProjectionSound(snap, state.seed, ready);
   // Mantém o último item montado durante a animação de saída
   const [lastUrgent, setLastUrgent] = useState<Breaking | null>(null);
   useEffect(() => { if (urgent) setLastUrgent(urgent); }, [urgent]);
