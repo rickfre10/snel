@@ -8,14 +8,16 @@ import HexMap, { type ArrowSpec } from '../HexMap';
 
 type Metric = 'share' | 'margin';
 
-/** Cor das setas por frente. Na Smartv (fundo azul) o PSH vai de rosa e o UNI de azul-celeste, para dar contraste. */
-const SMARTV_ARROW: Record<string, string> = { PSH: '#ff8fb8', UNI: '#5ec8ff' };
-const arrowColorOf = (front: string, brandId?: string) => (brandId === 'smartv' && SMARTV_ARROW[front]) || frontColor(front);
+/** Cor das setas por frente, clareada para ter contraste nos fundos vermelho (Smartv) e azul (SmartvNews):
+ *  PSH em rosa e UNI em azul-celeste; as demais frentes usam a própria cor. */
+const ARROW_COLOR: Record<string, string> = { PSH: '#ff9ec4', UNI: '#8fdcff' };
+const arrowColorOf = (front: string) => ARROW_COLOR[front] ?? frontColor(front);
+
 type View = 'mapa' | 'pontos';
 
 const W = 860, H = 620, PAD = 64;
 
-export default function SceneComparativo({ snap, onDistrict, brandId }: { snap: ElectionSnapshot; onDistrict: (id: number) => void; brandId?: string }) {
+export default function SceneComparativo({ snap, onDistrict }: { snap: ElectionSnapshot; onDistrict: (id: number) => void }) {
   const [front, setFront] = useState('TDS');
   const [metric, setMetric] = useState<Metric>('share');
   const [ufFilter, setUfFilter] = useState<string | null>(null);
@@ -62,11 +64,11 @@ export default function SceneComparativo({ snap, onDistrict, brandId }: { snap: 
           const v = (d.shares[f] ?? 0) - (d.prev.shares[f] ?? 0);
           if (v > bestV) { bestV = v; best = f; }
         });
-        if (best) out[d.id] = { value: bestV, color: arrowColorOf(best, brandId), label: `${best} cresceu` };
+        if (best) out[d.id] = { value: bestV, color: arrowColorOf(best), label: `${best} cresceu` };
       }
     });
     return out;
-  }, [snap, metric, front, ufFilter, brandId]);
+  }, [snap, metric, front, ufFilter]);
   const dotColor = (d: DistrictSnapshot) => metric === 'share' ? frontColor(front) : frontColor(d.leader?.front ?? null);
 
   return (
@@ -95,7 +97,7 @@ export default function SceneComparativo({ snap, onDistrict, brandId }: { snap: 
             ) : (
               <>
                 <div className="flex-1 min-h-0"><HexMap districts={snap.districtById} uf={ufFilter} arrows={arrows} onSelect={onDistrict} /></div>
-                <ArrowLegend metric={metric} front={front} brandId={brandId} />
+                <ArrowLegend metric={metric} front={front} />
               </>
             )}
           </Panel>
@@ -169,7 +171,7 @@ function MiniArrow({ color, dir, pp }: { color: string; dir: 1 | -1; pp: number 
   );
 }
 
-function ArrowLegend({ metric, front, brandId }: { metric: Metric; front: string; brandId?: string }) {
+function ArrowLegend({ metric, front }: { metric: Metric; front: string }) {
   return (
     <div className="flex items-center gap-5 text-[15px] text-tv-muted">
       {metric === 'share' ? (
@@ -182,7 +184,7 @@ function ArrowLegend({ metric, front, brandId }: { metric: Metric; front: string
       ) : (
         <>
           {FRONT_ORDER.map(f => (
-            <span key={f} className="inline-flex items-end gap-1 font-bold text-tv-text"><MiniArrow color={arrowColorOf(f, brandId)} dir={1} pp={5} />{f}</span>
+            <span key={f} className="inline-flex items-end gap-1 font-bold text-tv-text"><MiniArrow color={arrowColorOf(f)} dir={1} pp={5} />{f}</span>
           ))}
           <span>· tamanho: +5 / +10 p.p.</span>
         </>

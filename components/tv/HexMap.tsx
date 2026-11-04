@@ -105,6 +105,9 @@ function Arrow({ cx, cy, spec, scale }: { cx: number; cy: number; spec: ArrowSpe
   const px = -uy * wing, py = ux * wing;           // perpendicular
   return (
     <g style={{ pointerEvents: 'none' }}>
+      {/* halo escuro fino: segura o contraste em fundo vermelho, azul ou claro */}
+      <line x1={cx} y1={cy} x2={bx} y2={by} stroke="rgb(0 0 0)" strokeOpacity={0.45} strokeWidth={130} strokeLinecap="round" />
+      <polygon points={`${x2},${y2} ${bx + px},${by + py} ${bx - px},${by - py}`} fill="rgb(0 0 0)" fillOpacity={0.45} stroke="rgb(0 0 0)" strokeOpacity={0.45} strokeWidth={70} strokeLinejoin="round" />
       <line x1={cx} y1={cy} x2={bx} y2={by} stroke={spec.color} strokeWidth={62} strokeLinecap="round" />
       <polygon points={`${x2},${y2} ${bx + px},${by + py} ${bx - px},${by - py}`} fill={spec.color} />
     </g>
