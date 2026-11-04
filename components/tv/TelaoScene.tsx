@@ -33,7 +33,7 @@ const noop = () => {};
 
 export default function TelaoScene({ brand, snap, scene, uf, districtId, onScene = noop, onDistrict = noop, onUf = noop, onLogoLongPress = noop }: TelaoSceneProps) {
   const nav = [
-    { id: 'geral', label: caseOf(brand, 'Visão geral') },
+    // "Visão geral" saiu do menu: o logo leva de volta a ela
     { id: 'parlamento', label: caseOf(brand, 'Parlamento') },
     { id: 'proporcional', label: caseOf(brand, 'Proporcional') },
     { id: 'pendulo', label: caseOf(brand, 'Pêndulo') },
@@ -47,7 +47,7 @@ export default function TelaoScene({ brand, snap, scene, uf, districtId, onScene
 
   return (
     <>
-      <TopBar brand={brand} snap={snap} nav={nav} onLogoLongPress={onLogoLongPress} />
+      <TopBar brand={brand} snap={snap} nav={nav} onLogoLongPress={onLogoLongPress} onLogoClick={() => onScene('geral')} />
       <main className="absolute left-10 right-10 top-[132px] bottom-[100px]">
         {!snap ? (
           <div className="h-full flex flex-col items-center justify-center gap-6 text-tv-muted">

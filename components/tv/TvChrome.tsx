@@ -65,15 +65,19 @@ export function Backdrop({ brand }: { brand: BrandTheme }) {
 // ------------------------------------------------------- Barra superior ---
 export interface NavItem { id: string; label: string; active: boolean; onClick: () => void }
 
-export function TopBar({ brand, snap, nav, onLogoLongPress }: { brand: BrandTheme; snap: ElectionSnapshot | null; nav: NavItem[]; onLogoLongPress: () => void }) {
+export function TopBar({ brand, snap, nav, onLogoLongPress, onLogoClick }: { brand: BrandTheme; snap: ElectionSnapshot | null; nav: NavItem[]; onLogoLongPress: () => void; onLogoClick?: () => void }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const start = () => { timer.current = setTimeout(onLogoLongPress, 1200); };
+  const longFired = useRef(false);
+  const start = () => { longFired.current = false; timer.current = setTimeout(() => { longFired.current = true; onLogoLongPress(); }, 1200); };
   const cancel = () => { if (timer.current) clearTimeout(timer.current); };
+  // toque curto no logo = volta à tela inicial; segurar = abre o controle
+  const click = () => { if (!longFired.current) onLogoClick?.(); longFired.current = false; };
   const reported = snap?.reported ?? 0;
 
   return (
     <header className="absolute left-10 right-10 top-7 h-[84px] flex items-center gap-6">
-      <div className="flex items-center gap-5 shrink-0 select-none" onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel}>
+      <div className={`flex items-center gap-5 shrink-0 select-none ${onLogoClick ? 'cursor-pointer' : ''}`} onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel} onClick={click}
+        role={onLogoClick ? 'button' : undefined} title={onLogoClick ? 'Visão geral' : undefined}>
         {/* Smartv: só o símbolo ◎; News: o logo "news°" */}
         {brand.logo.kind === 'target' ? (
           // Smartv: só o selo "◎ ELEIÇÕES"
