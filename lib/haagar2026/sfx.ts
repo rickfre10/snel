@@ -9,6 +9,7 @@ let bgVol: GainNode, bgDuck: GainNode, bgFade: GainNode, sfxVol: GainNode;
 const buffers = new Map<string, Promise<AudioBuffer>>();
 const listeners = new Set<() => void>();
 let ducks = 0;
+const activeClips = new Set<{ g: GainNode; s: AudioBufferSourceNode }>();
 let vols = { bg: 0.35, sfx: 1 };
 
 function ensure(): AudioContext | null {
@@ -69,8 +70,11 @@ export function playClip({ src, from, to }: Clip, opts: { fadeInS?: number; fade
     const fin = Math.min(opts.fadeInS ?? 0, dur / 2);
     if (fin > 0) { g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(1, t0 + fin); } else g.gain.setValueAtTime(1, t0);
     if (fade > 0) { g.gain.setValueAtTime(1, t0 + dur - fade); g.gain.setValueCurveAtTime(curve(false), t0 + dur - fade, fade); } // curva suave (cosseno)
+    const h = { g, s };
+    activeClips.add(h);
     s.start(t0, from, dur);
-    if (opts.duckBg) { duck(true); s.onended = () => duck(false, opts.releaseS); }
+    if (opts.duckBg) duck(true);
+    s.onended = () => { activeClips.delete(h); if (opts.duckBg) duck(false, opts.releaseS); };
   }).catch(() => {});
 }
 
@@ -143,4 +147,15 @@ export function setVolumes(v: { bg: number; sfx: number }) {
   if (!ctx) return;
   bgVol.gain.setTargetAtTime(v.bg, ctx.currentTime, 0.05);
   sfxVol.gain.setTargetAtTime(v.sfx, ctx.currentTime, 0.05);
+}
+
+/** Para os efeitos que estão tocando (vinheta, plantão...) com um fade curto. */
+export function stopClips(fadeS = 1.5) {
+  const c = ctx; if (!c) return;
+  activeClips.forEach(({ g, s }) => {
+    g.gain.cancelScheduledValues(c.currentTime);
+    g.gain.setValueAtTime(g.gain.value, c.currentTime);
+    g.gain.linearRampToValueAtTime(0, c.currentTime + fadeS);
+    try { s.stop(c.currentTime + fadeS + 0.05); } catch { /* já parou */ }
+  });
 }

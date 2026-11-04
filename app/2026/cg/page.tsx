@@ -11,7 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
-import { useAudioBed, useQueueSound, useProjectionSound, useStingerSound } from '@/lib/haagar2026/useSfx';
+import { useAudioBed, useAudioCue, useQueueSound, useProjectionSound, useStingerSound } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
@@ -74,6 +74,7 @@ export default function Cg2026() {
   // ---- Vinheta "ÚLTIMA HORA" em tela cheia (por cima de tudo, só quando o operador solta)
   const stinger = useStinger(state.stinger, clockOffset, ready);
   useStingerSound(stinger, brand.id);
+  useAudioCue(state.audioCue, clockOffset, ready, brand.id);
 
   const [fundo, setFundo] = useState('transparente');
   useEffect(() => {

@@ -34,7 +34,11 @@ export interface ControlState {
   cgPresets?: CgItem[];           // GCs prontos salvos pelo operador
   cgHistory?: CgItem[];           // últimos GCs que foram ao ar (mais recente primeiro)
   audio?: AudioSettings;          // trilha de fundo e volumes (telão e CG)
+  audioCue?: AudioCue;            // música da vinheta solta à mão (intervalos, etc.)
 }
+
+/** Disparo da música da vinheta (sem animação): cada novo `rev` toca/para uma vez em telão e CG. */
+export interface AudioCue { rev: number; at: number; kind: 'play' | 'stop' }
 
 /** Trilha de fundo (por canal) e volumes; os trechos de cada marca ficam em audio.ts. */
 export interface AudioSettings {
@@ -114,6 +118,7 @@ export type ControlAction =
   | { type: 'setCgText'; patch: Partial<CgText> }
   | { type: 'setView'; view: TelaoView }
   | { type: 'setAudio'; patch: Partial<AudioSettings> }
+  | { type: 'audioCue'; kind: 'play' | 'stop' }
   // Contagem regressiva do CG: `inSeconds` reinicia a partir de agora; `addSeconds`
   // ajusta a atual; `label` troca o texto; `show: false` tira do ar.
   | { type: 'setCountdown'; show?: boolean; inSeconds?: number; addSeconds?: number; label?: string }
@@ -218,6 +223,9 @@ export function applyControlAction(prev: ControlState, action: ControlAction, no
       next = { ...prev, cg: { ...off, countdown: { show: true, endsAt, label: action.label ?? cur?.label ?? '' } } };
       break;
     }
+    case 'audioCue':
+      next = { ...prev, audioCue: { rev: (prev.audioCue?.rev ?? 0) + 1, at: now, kind: action.kind } };
+      break;
     case 'setAudio': {
       const a = { ...DEFAULT_AUDIO, ...prev.audio, ...action.patch };
       next = { ...prev, audio: { ...a, bgVolume: clamp(a.bgVolume, 0, 1), sfxVolume: clamp(a.sfxVolume, 0, 1) } };

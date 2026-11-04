@@ -67,6 +67,7 @@ export default function ControlDesk({ state, dispatch, progress, snap, mode, sto
       else if (n >= 1 && n <= SCENES.length) showScene(SCENES[n - 1].id);
       else if (e.key === 'Escape') clearTarjas();
       else if (e.key === 'u' || e.key === 'U') dispatch({ type: 'stinger' });
+      else if (e.key === 'm' || e.key === 'M') dispatch({ type: 'audioCue', kind: e.shiftKey ? 'stop' : 'play' });
       else if (e.key === '/') { e.preventDefault(); document.getElementById('desk-search')?.focus(); }
       else if (e.key === '?') setHelp(h => !h);
     };
@@ -364,6 +365,7 @@ function Shortcuts() {
     ['Esc', 'tirar as tarjas manuais do CG'],
     ['Shift + 1 – 9', 'pôr no ar o GC pronto daquela posição'],
     ['U', 'soltar a vinheta "ÚLTIMA HORA" (tela cheia)'],
+    ['M', 'tocar a música da vinheta (Shift + M para parar)'],
     ['?', 'mostrar / esconder esta ajuda'],
   ];
   return (

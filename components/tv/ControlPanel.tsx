@@ -593,6 +593,11 @@ export function AudioSection({ state, dispatch }: { state: ControlState; dispatc
         <Btn active={a.bgTelao} onClick={() => dispatch({ type: 'setAudio', patch: { bgTelao: !a.bgTelao } })}>Trilha no telão</Btn>
         <Btn active={a.bgCg} onClick={() => dispatch({ type: 'setAudio', patch: { bgCg: !a.bgCg } })}>Trilha no CG</Btn>
       </div>
+      <div className="text-[11px] text-white/50 mt-3 mb-1">Música da vinheta (inteira, sem animação) — para intervalos e outros momentos</div>
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <Btn onClick={() => dispatch({ type: 'audioCue', kind: 'play' })} className={hasBed ? '' : 'opacity-40 pointer-events-none'}>▶ Tocar vinheta (música)</Btn>
+        <Btn onClick={() => dispatch({ type: 'audioCue', kind: 'stop' })}>■ Parar</Btn>
+      </div>
       <VolumeSlider label="Volume da trilha" value={a.bgVolume} onCommit={v => dispatch({ type: 'setAudio', patch: { bgVolume: v } })} />
       <VolumeSlider label="Volume dos efeitos" value={a.sfxVolume} onCommit={v => dispatch({ type: 'setAudio', patch: { sfxVolume: v } })} />
       <p className="text-[11px] text-white/50 mt-2">
