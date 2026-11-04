@@ -63,12 +63,21 @@ export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
   }, [urgent, cfg]);
 }
 
-/** Vinheta de última hora em tela cheia (disparada pelo operador). */
+/** Vinheta de última hora em tela cheia disparada pelo operador: toca a música da vinheta (trecho inteiro). */
 export function useStingerSound(stingerKey: number | null, brand: BrandId) {
   const cfg = BRAND_AUDIO[brand];
   useEffect(() => {
     if (stingerKey === null || !cfg) return;
     playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true, releaseS: 3 });
+  }, [stingerKey]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** Vinheta automática (antes da maioria / projeção de maioria): toca só o trecho de BREAKING, com fade-in e fade-out. */
+export function useAutoStingerSound(stingerKey: number | null, brand: BrandId) {
+  const cfg = BRAND_AUDIO[brand];
+  useEffect(() => {
+    if (stingerKey === null || !cfg) return;
+    playClip(cfg.breaking, { fadeInS: cfg.breakingFadeInS, fadeOutS: cfg.breakingFadeS, duckBg: true, releaseS: 4 });
   }, [stingerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
@@ -86,10 +95,11 @@ export function useAudioCue(cue: AudioCue | undefined, clockOffset: number, read
 }
 
 /** Telão: mesma regra do CG, com fila própria só para o som. */
-export function useTelaoSounds(snap: ElectionSnapshot | null, seed: number, ready: boolean, brand: BrandId, audio: AudioSettings | undefined, stingerKey: number | null, cue: AudioCue | undefined, clockOffset: number) {
+export function useTelaoSounds(snap: ElectionSnapshot | null, seed: number, ready: boolean, brand: BrandId, audio: AudioSettings | undefined, stingerKey: number | null, autoStingerKey: number | null, cue: AudioCue | undefined, clockOffset: number) {
   const queue = useBreaking(snap, seed, { results: true, ready });
   useAudioBed('telao', brand, audio);
   useQueueSound(queue, brand);
   useStingerSound(stingerKey, brand);
+  useAutoStingerSound(autoStingerKey, brand);
   useAudioCue(cue, clockOffset, ready, brand);
 }

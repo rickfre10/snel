@@ -99,9 +99,10 @@ export default function Telao2026() {
   const [localStinger, fireStinger] = useLocalStinger();   // vinheta automática antes da maioria / projeção
   const breaking = useBreaking(snap, state.seed, { ready: el.ready, preStinger: { fire: fireStinger } });
   // ---- Vinheta "ÚLTIMA HORA" (disparada pelo operador)
-  const stinger = useStinger(state.stinger, el.clockOffset, el.ready) ?? localStinger;
+  const opStinger = useStinger(state.stinger, el.clockOffset, el.ready);
+  const stinger = opStinger ?? localStinger;
   // ---- Sons: urna, plantão, vinheta e trilha de fundo
-  useTelaoSounds(snap, state.seed, el.ready, state.brand, state.audio, stinger, state.audioCue, el.clockOffset);
+  useTelaoSounds(snap, state.seed, el.ready, state.brand, state.audio, opStinger, localStinger, state.audioCue, el.clockOffset);
   const tickerItems = useMemo(() => (snap ? buildTicker(snap) : []), [snap]);
 
   return (
