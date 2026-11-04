@@ -79,7 +79,7 @@ export default function Cg2026() {
 
   // ---- Vinheta "ÚLTIMA HORA" em tela cheia (por cima de tudo, só quando o operador solta)
   const stinger = useStinger(state.stinger, clockOffset, ready) ?? localStinger;
-  useStingerSound(stinger, brand.id);
+  useStingerSound(stinger, brand.id);   // última hora (botão ou automática): trecho de breaking
   useAudioCue(state.audioCue, clockOffset, ready, brand.id);
 
   const [fundo, setFundo] = useState('transparente');

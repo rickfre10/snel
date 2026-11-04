@@ -5,7 +5,8 @@
 //    (se a fila esvazia e volta, toca de novo) e quando uma frente passa a
 //    projetar maioria;
 //  • plantão (virada / maioria): trecho "breaking" da marca, com fade;
-//  • vinheta de última hora: trecho "stinger" da marca;
+//  • última hora (botão / tecla U / vinheta automática): trecho "breaking" da marca;
+//  • vinheta do programa (música estendida): só no botão "Tocar vinheta";
 //  • trilha de fundo em loop, ligada e com volume pelo painel (por canal).
 import { useEffect, useRef, useState } from 'react';
 import type { BrandId } from '@/lib/brand';
@@ -29,7 +30,7 @@ export function useAudioBed(channel: Channel, brand: BrandId, audio: AudioSettin
     preload(URNA.src);
     return onAudioState(() => setRunning(audioRunning()));
   }, []);
-  useEffect(() => { if (cfg) [cfg.bg, cfg.breaking, cfg.stinger].forEach(c => preload(c.src)); }, [cfg]);
+  useEffect(() => { if (cfg) [cfg.bg, cfg.breaking, cfg.vinheta].forEach(c => preload(c.src)); }, [cfg]);
   useEffect(() => { setVolumes({ bg: a.bgVolume, sfx: a.sfxVolume }); }, [a.bgVolume, a.sfxVolume]);
   const on = channel === 'telao' ? a.bgTelao : a.bgCg;
   useEffect(() => {
@@ -63,12 +64,12 @@ export function useQueueSound(urgent: Breaking | null, brand: BrandId) {
   }, [urgent, cfg]);
 }
 
-/** Vinheta de última hora em tela cheia (disparada pelo operador). */
+/** ÚLTIMA HORA (animação em tela cheia, disparada pelo operador ou automática antes da maioria): toca o trecho de BREAKING (curto), com fades. */
 export function useStingerSound(stingerKey: number | null, brand: BrandId) {
   const cfg = BRAND_AUDIO[brand];
   useEffect(() => {
     if (stingerKey === null || !cfg) return;
-    playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true, releaseS: 3 });
+    playClip(cfg.breaking, { fadeInS: cfg.breakingFadeInS, fadeOutS: cfg.breakingFadeS, duckBg: true, releaseS: 4 });
   }, [stingerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
@@ -81,7 +82,7 @@ export function useAudioCue(cue: AudioCue | undefined, clockOffset: number, read
     lastRev.current = cue.rev;
     if (Date.now() + clockOffset - cue.at > 3000) return;   // disparo velho (tela aberta depois): não toca
     if (cue.kind === 'stop') stopClips(1.5);
-    else if (cfg) playClip(cfg.stinger, { fadeOutS: cfg.fadeOutS, duckBg: true, releaseS: 3 });
+    else if (cfg) playClip(cfg.vinheta, { fadeOutS: cfg.fadeOutS, duckBg: true, releaseS: 3 });
   }, [cue?.rev, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 

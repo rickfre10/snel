@@ -7,17 +7,17 @@ import type { BrandId } from '@/lib/brand';
 export interface Clip { src: string; from: number; to: number }
 
 export interface BrandAudio {
-  stinger: Clip;      // vinheta de última hora em tela cheia (disparada pelo operador)
-  breaking: Clip;     // plantão automático (virada / maioria)
+  vinheta: Clip;      // vinheta DO PROGRAMA (música estendida): só no botão "▶ Tocar vinheta (música)"
+  breaking: Clip;     // ÚLTIMA HORA / breaking news (curto, o "punch"): botão e tecla U, vinheta automática da maioria e plantão de virada
   bg: Clip;           // trilha de fundo em loop
-  fadeOutS: number;   // fade no fim da vinheta de última hora
+  fadeOutS: number;   // fade no fim da vinheta do programa
   breakingFadeInS?: number; // fade-in do plantão
   breakingFadeS: number;    // fade de saída do plantão
 }
 
 export const BRAND_AUDIO: Partial<Record<BrandId, BrandAudio>> = {
   smartv: {
-    stinger: { src: '/audio/smartv.mp3', from: 0, to: 11 },
+    vinheta: { src: '/audio/smartv.mp3', from: 0, to: 11 },
     breaking: { src: '/audio/smartv.mp3', from: 4, to: 8 },
     bg: { src: '/audio/smartv.mp3', from: 12, to: 50 },
     fadeOutS: 1,
@@ -28,7 +28,7 @@ export const BRAND_AUDIO: Partial<Record<BrandId, BrandAudio>> = {
   // navegador), então os trechos foram cortados em arquivos próprios:
   //   vinheta 00:58–01:20 · breaking 13:22–13:30 · fundo 16:45–19:38
   smartvnews: {
-    stinger: { src: '/audio/snews-vinheta.mp3', from: 0, to: 22 },
+    vinheta: { src: '/audio/snews-vinheta.mp3', from: 0, to: 22 },
     breaking: { src: '/audio/snews-breaking.mp3', from: 0, to: 8 },
     bg: { src: '/audio/snews-bg.mp3', from: 0, to: 173 },
     fadeOutS: 1,
