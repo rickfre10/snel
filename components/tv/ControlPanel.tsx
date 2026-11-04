@@ -176,10 +176,11 @@ export default function ControlPanel({ state, dispatch, progress, snap, mode, er
           const cg = { ...DEFAULT_CG, ...state.cg };
           return (
             <>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Btn active={cg.seats} onClick={() => dispatch({ type: 'setCg', patch: { seats: !cg.seats } })}>Cadeiras</Btn>
                 <Btn active={cg.ticker} onClick={() => dispatch({ type: 'setCg', patch: { ticker: !cg.ticker } })}>Faixa distritos</Btn>
                 <Btn active={cg.bug} onClick={() => dispatch({ type: 'setCg', patch: { bug: !cg.bug } })}>Logo</Btn>
+                <Btn active={cg.tv !== false} onClick={() => dispatch({ type: 'setCg', patch: { tv: cg.tv === false } })}>Telão (fundo=telao)</Btn>
               </div>
               <MajorityToggle cg={cg} snap={snap} dispatch={dispatch} />
               <PlaceInput value={cg.place ?? ''} onSave={place => dispatch({ type: 'setCg', patch: { place } })} />

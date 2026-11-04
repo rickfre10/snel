@@ -35,6 +35,12 @@ const BACKGROUNDS: Record<string, string> = {
   telao: 'telao',
 };
 
+/** Fundo do telão no CG: o estúdio de cada marca (a TV entra por cima). */
+const STUDIO: Partial<Record<string, string>> = {
+  smartv: "#1a0a0a url('/brand/studio-smartv.jpg') center / cover no-repeat",
+  smartvnews: "#0b1b3a url('/brand/studio-snews.webp') center / cover no-repeat",
+};
+
 export default function Cg2026() {
   const { state, snapshot: snap, ready, clockOffset } = useElection2026();
   const brand = BRANDS[state.brand] ?? BRANDS.smartv;
@@ -89,9 +95,9 @@ export default function Cg2026() {
   const manualDistrict = lastDistrictId ? snap?.districtById[lastDistrictId] : null;
 
   return (
-    <Stage brand={brand} background={fundo === 'telao' ? undefined : BACKGROUNDS[fundo]}>
+    <Stage brand={brand} background={fundo === 'telao' ? STUDIO[brand.id] : BACKGROUNDS[fundo]}>
       {fundo === 'telao' && (
-        <TvFrame>
+        <TvFrame show={cg.tv !== false}>
           {state.view?.scene === 'idle' ? <IdleScreen brand={brand} /> : (
             <>
               <Backdrop brand={brand} />
@@ -875,10 +881,12 @@ const TV_W = 1180;                 // largura da tela dentro da moldura
 const TV_H = Math.round(TV_W * 9 / 16);
 const TV_TOP = 40;
 
-function TvFrame({ children }: { children: React.ReactNode }) {
+function TvFrame({ children, show = true }: { children: React.ReactNode; show?: boolean }) {
   const scale = TV_W / 1920;
   return (
-    <div className="absolute pointer-events-none" style={{ left: (1920 - TV_W) / 2 - 22, top: TV_TOP }}>
+    // Com `show` falso o telão sobe e sai da tela (a transição do transform dá a animação)
+    <div className="absolute pointer-events-none transition-transform duration-[900ms] ease-in-out"
+      style={{ left: (1920 - TV_W) / 2 - 22, top: TV_TOP, transform: show ? 'translateY(0)' : 'translateY(-130%)' }}>
       {/* moldura */}
       <div className="relative rounded-[30px] p-[22px] pb-[30px]"
         style={{ background: 'linear-gradient(180deg, #2a2a30 0%, #121216 100%)', boxShadow: '0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.6)' }}>
