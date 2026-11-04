@@ -38,7 +38,7 @@ const BACKGROUNDS: Record<string, string> = {
 /** Fundo do telão no CG: o estúdio de cada marca (a TV entra por cima). */
 const STUDIO: Partial<Record<string, string>> = {
   smartv: "#1a0a0a url('/brand/studio-smartv.jpg') center / cover no-repeat",
-  smartvnews: "#0b1b3a url('/brand/studio-snews.jpg') center / cover no-repeat",
+  smartvnews: "#0b1b3a url('/brand/studio-snews.webp') center / cover no-repeat",
 };
 
 export default function Cg2026() {
