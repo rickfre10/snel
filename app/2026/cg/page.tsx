@@ -11,7 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BRANDS } from '@/lib/brand';
 import { useElection2026 } from '@/lib/haagar2026/useElection2026';
 import { Breaking, useBreaking } from '@/lib/haagar2026/useBreaking';
-import { useAudioBed, useAudioCue, useAutoStingerSound, useQueueSound, useStingerSound } from '@/lib/haagar2026/useSfx';
+import { useAudioBed, useAudioCue, useQueueSound, useStingerSound } from '@/lib/haagar2026/useSfx';
 import { buildTicker } from '@/lib/haagar2026/ticker';
 import { DEFAULT_CG, DEFAULT_CG_TEXT, CgText } from '@/lib/haagar2026/control';
 import type { CandidateResult, DistrictSnapshot, ElectionSnapshot, FrontTotals } from '@/lib/haagar2026/model';
@@ -78,10 +78,8 @@ export default function Cg2026() {
   useEffect(() => { if (cg.district?.id) setLastDistrictId(cg.district.id); }, [cg.district?.id]);
 
   // ---- Vinheta "ÚLTIMA HORA" em tela cheia (por cima de tudo, só quando o operador solta)
-  const opStinger = useStinger(state.stinger, clockOffset, ready);
-  const stinger = opStinger ?? localStinger;
-  useStingerSound(opStinger, brand.id);        // operador: música da vinheta
-  useAutoStingerSound(localStinger, brand.id); // automática (maioria / projeção): trecho de breaking
+  const stinger = useStinger(state.stinger, clockOffset, ready) ?? localStinger;
+  useStingerSound(stinger, brand.id);   // última hora (botão ou automática): trecho de breaking
   useAudioCue(state.audioCue, clockOffset, ready, brand.id);
 
   const [fundo, setFundo] = useState('transparente');
